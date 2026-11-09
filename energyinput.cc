@@ -127,7 +127,7 @@ auto get_cumulative_fraction_released(const double time_after_explosion) -> doub
 
 auto get_released_fraction_after_expansion(const double time_after_explosion) -> double {
   assert_always(!release_times.empty());
-  if (time_after_explosion < release_times.front()) {
+  if (time_after_explosion <= release_times.front()) {
     return 0.;
   }
 
