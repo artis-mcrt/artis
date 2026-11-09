@@ -169,8 +169,8 @@ void setup_thermal_input_pellet(const double e_cmf_per_packet, Packet& pkt) {
   const auto row = index_lowerbound(cumulative_fractions_released, fraction_sample);
   assert_always(row < std::ssize(cumulative_fractions_released));
   if (row == 0) {
-    // the release of the fraction of the first row at the time of that row
-    pkt.tdecay = release_times.front();
+    // the release of the fraction of the first row occurs just after the time of that row
+    pkt.tdecay = std::nextafter(release_times.front(), globals::tmax);
   } else {
     const double fraction_of_row_interval =
         (fraction_sample - cumulative_fractions_released[row - 1]) /
