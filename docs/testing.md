@@ -9,7 +9,7 @@ triangular solve of the Spencer-Fano matrix. Build and run them:
 make unittests && ./unittests
 ```
 
-CI runs them for the classic and the NLTE nebular presets. The harness is hand-written, so there is no gtest and no
+CI runs them for the classic and the {term}`NLTE` nebular {term}`presets <preset>`. The harness is hand-written, so there is no gtest and no
 catch.
 
 ## The end-to-end tests
@@ -24,7 +24,7 @@ Run the script without arguments to see the names of the tests and of the steps.
 [ci.yml](https://github.com/artis-mcrt/artis/blob/main/.github/workflows/ci.yml) calls the same script. The script does
 these steps:
 
-1. It removes the model folder `tests/kilonova_1d_testrun` of an earlier run. Then it runs
+1. It removes the {term}`model folder` `tests/kilonova_1d_testrun` of an earlier run. Then it runs
    `tests/setup_kilonova_1d.sh`, which downloads the atomic data of the test and makes the model folder again with the
    input files and an `artisoptions.h` for the test.
 2. It builds `sn3d` and `exspec` from that `artisoptions.h` with the make options of CI, and copies them into the model
@@ -34,7 +34,7 @@ these steps:
    `sn3d` and `exspec` symlinks of the repository folder then point at the build of the test.
 3. It checks the input with `sn3d -c` (see [Running sn3d](running.md)). Then it starts a new simulation and compares
    the checksums of the output files with `tests/kilonova_1d_inputfiles/results_md5_job0.txt`.
-4. It checks the input and the restart files with `sn3d -c`, and it resumes the simulation from the restart files. It
+4. It checks the input and the {term}`restart files <restart file>` with `sn3d -c`, and it resumes the simulation from the restart files. It
    then removes the restart files and runs `exspec`.
 5. It compares the checksums of the output files with `results_md5_final.txt`.
 

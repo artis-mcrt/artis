@@ -181,6 +181,7 @@ void read_gamma_tables() {
       assert_always(z != 24 || a != 48);  // Cr-48 must have a gamma spectrum
       assert_always(z != 28 || a != 57);  // Ni-57 must have a gamma spectrum if present in list of nuclides
       assert_always(z != 27 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
+      assert_always(z != 21 || a != 44);  // Sc-44 must have a gamma spectrum if present in list of nuclides
       if (decay::nucdecayenergygamma(nucindex) > 0.) {
         set_trivial_gamma_spectrum(nucindex);
         nuclides_without_table++;

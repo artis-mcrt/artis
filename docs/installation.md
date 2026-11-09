@@ -57,7 +57,7 @@ macOS has no `nproc` command, so the `sysctl` command gives the processor count 
 
 ## Select a preset and build
 
-The build needs an `artisoptions.h` in the repository root. That file is gitignored. Symlink one of the presets to it:
+The build needs an `artisoptions.h` in the repository root. That file is gitignored. Symlink one of the {term}`presets <preset>` to it:
 
 ```sh
 ln -s artisoptions_classic.h artisoptions.h
@@ -72,10 +72,8 @@ Symlink the preset. Do not copy it. The symlink keeps `artisoptions.h` correct w
 
 `make` builds `sn3d` and `exspec`. It puts the objects in `build/<configuration>/` and makes a symlink in the repository root to each program that it builds. `make unittests` builds the third program and makes its symlink (see [Testing](testing.md)).
 
-Each make option of [Make options](makeoptions.md) adds a suffix to the name of the build folder, so different sets of make options coexist. `GCCTOOLCHAIN` is the exception, so run `make clean` after you change its value. The name also ends with a checksum of the content of `artisoptions.h`, so the builds of different presets coexist too. A change of the preset or of an option value compiles every object in a new build folder. A change back to an earlier preset compiles nothing again.
-
-Each edit of an option keeps the build folder of the old value. `make clean` removes all build folders.
-
-Each symlink points to the most recent build of any configuration. Look at the symlink before you copy a binary. Copy a binary with `cp -L` from the repository root.
+[Make options](makeoptions.md) describes the names of the build folders and when a build compiles again. Each
+symlink points to the most recent build of any configuration, so look at the symlink before you copy a binary. Copy a
+binary with `cp -L` from the repository root.
 
 `make help` prints one line for each target and each option of `make`, and [Make options](makeoptions.md) describes them.

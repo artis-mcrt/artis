@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
-"""Write docs/options.md from artisoptions_doc.md and the artisoptions_*.h presets.
+"""Write docs/options.md and the comparison table of docs/presets.md from artisoptions_doc.md and the presets.
 
 artisoptions_doc.md holds one fenced C++ block. The block has a group marker of the form "// --- Name ---", and then
 for each option a comment block and a declaration. This script turns each group into a section of the page, and each
@@ -27,6 +27,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOC_PATH = REPO_ROOT / "artisoptions_doc.md"
 PAGE_PATH = REPO_ROOT / "docs" / "options.md"
+PRESETS_PAGE_PATH = REPO_ROOT / "docs" / "presets.md"
+PRESET_TABLE_BEGIN = "<!-- begin the table that scripts/make_options_docs.py writes -->"
+PRESET_TABLE_END = "<!-- end the table that scripts/make_options_docs.py writes -->"
+# a longer value, e.g. the body of a function option, stays on the options page
+MAX_PRESET_TABLE_VALUE_LENGTH = 40
 
 # the presets that the page leaves out, because they are work in progress and their values will change
 PRESETS_NOT_ON_PAGE = ("kilonova_nlte",)
@@ -248,6 +253,33 @@ def make_page(groups: list[Group], presets: dict[str, str]) -> str:
     return "\n\n".join(blocks) + "\n"
 
 
+def make_preset_table(groups: list[Group], presets: dict[str, str]) -> str:
+    """Give a markdown table of the options whose values differ between the presets of the page."""
+    shown_presets = [preset for preset in presets if preset not in PRESETS_NOT_ON_PAGE]
+    rows = [f"| Option | {' | '.join(shown_presets)} |", f"| --- |{' --- |' * len(shown_presets)}"]
+    for option in (option for group in groups for option in group.options):
+        values = [find_preset_value(presets[preset], option.name) or "no value" for preset in shown_presets]
+        if len(set(values)) > 1:
+            cells = [
+                f"`{value}`".replace("|", "\\|")
+                if "\n" not in value and len(value) <= MAX_PRESET_TABLE_VALUE_LENGTH
+                else "see the option"
+                for value in values
+            ]
+            rows.append(f"| [{option.name}](options.md#{option.name.lower()}) | {' | '.join(cells)} |")
+    return "\n".join(rows)
+
+
+def replace_preset_table(presets_page: str, table: str) -> str:
+    """Give the text of docs/presets.md with a new comparison table between its two markers."""
+    before, begin_marker, remainder = presets_page.partition(PRESET_TABLE_BEGIN)
+    _, end_marker, after = remainder.partition(PRESET_TABLE_END)
+    if not begin_marker or not end_marker:
+        message = f"{PRESETS_PAGE_PATH.name} does not hold the two markers of the comparison table"
+        raise ValueError(message)
+    return f"{before}{PRESET_TABLE_BEGIN}\n\n{table}\n\n{PRESET_TABLE_END}{after}"
+
+
 def read_presets() -> dict[str, str]:
     """Give the text of each preset that the repository tracks, by the name of the preset."""
     try:
@@ -279,8 +311,8 @@ def check_every_option_documented(presets: dict[str, str], documented: set[str])
             raise ValueError(message)
 
 
-def build_page() -> tuple[str, int, int]:
-    """Give the content of the page, the number of options, and the number of presets."""
+def build_pages() -> tuple[str, str, int, int]:
+    """Give the content of the options page and of the presets page, and the numbers of options and presets."""
     presets = read_presets()
     groups = parse_doc(DOC_PATH.read_text(encoding="utf-8"))
     documented = {option.name for group in groups for option in group.options}
@@ -289,13 +321,16 @@ def build_page() -> tuple[str, int, int]:
     if untracked:
         message = f"PRESETS_NOT_ON_PAGE names {', '.join(untracked)}, which the repository does not track"
         raise ValueError(message)
-    return make_page(groups, presets), len(documented), len(presets) - len(PRESETS_NOT_ON_PAGE)
+    presets_page = replace_preset_table(
+        PRESETS_PAGE_PATH.read_text(encoding="utf-8"), make_preset_table(groups, presets)
+    )
+    return make_page(groups, presets), presets_page, len(documented), len(presets) - len(PRESETS_NOT_ON_PAGE)
 
 
 def main() -> int:
-    """Write docs/options.md, and give the status 1 for an error."""
+    """Write docs/options.md and docs/presets.md, and give the status 1 for an error."""
     try:
-        page, noptions, npresets = build_page()
+        page, presets_page, noptions, npresets = build_pages()
     except ValueError as exc:
         print(f"[error] {exc}", file=sys.stderr)
         return 1
@@ -303,6 +338,9 @@ def main() -> int:
     if page != (PAGE_PATH.read_text(encoding="utf-8") if PAGE_PATH.exists() else ""):
         PAGE_PATH.write_text(page, encoding="utf-8")
         print(f"{PAGE_PATH.name}: {noptions} options of {npresets} presets")
+    if presets_page != PRESETS_PAGE_PATH.read_text(encoding="utf-8"):
+        PRESETS_PAGE_PATH.write_text(presets_page, encoding="utf-8")
+        print(f"{PRESETS_PAGE_PATH.name}: new comparison table")
     return 0
 
 

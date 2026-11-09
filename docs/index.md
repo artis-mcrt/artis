@@ -5,7 +5,12 @@ It follows indivisible energy packets through the ejecta, and it gives the light
 [Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)
 describes the packets, and [How a simulation works](simulation.md) describes the method of ARTIS.
 
-New users start with the [Quickstart](quickstart.md). It gives a first simulation and a plot on a laptop.
+Go to the page for your task:
+
+- **A first run.** The [Quickstart](quickstart.md) gives a first simulation and a plot on a laptop.
+- **A production run.** Start with [Make your own model](ownmodel.md), [Plan a simulation](planning.md), and
+  [Runs on a cluster](clusters.md). Then use [Analyse the results](analysis.md).
+- **A change of the code.** Start with [Development setup](development.md) and the [Code map](codemap.md).
 
 ## Key features
 
@@ -74,16 +79,16 @@ output files.
 
 ## Citing ARTIS
 
-We maintain a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg) and
-[papers that use ARTIS with non-LTE enabled](https://ui.adsabs.harvard.edu/user/libraries/CX8fnPInSu2q1rAE4wWQrg).
+ADS holds a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg) and a
+list of [papers that use ARTIS with non-LTE enabled](https://ui.adsabs.harvard.edu/user/libraries/CX8fnPInSu2q1rAE4wWQrg).
 
 If you use ARTIS, please cite it using the [DOI from Zenodo](https://zenodo.org/records/18670358).
 
-An early version of the code is described in [Sim (2007), MNRAS, 375, 154-162,
+These papers describe an early version of the code: [Sim (2007), MNRAS, 375, 154-162,
 doi:10.1111/j.1365-2966.2006.11271.x](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract) and
 [Kromer & Sim (2009), MNRAS, 398, 1809-1826,
-doi:10.1111/j.1365-2966.2009.15256.x](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract). Some specific
-features are described in:
+doi:10.1111/j.1365-2966.2009.15256.x](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract). These papers describe
+specific features:
 
 - Polarisation and virtual packets: [Bulla, Sim & Kromer (2015), MNRAS, 450, 967-981,
   doi:10.1093/mnras/stv657](https://ui.adsabs.harvard.edu/abs/2015MNRAS.450..967B/abstract)
@@ -106,11 +111,8 @@ that you cite us as described above and star the repository to help show impact 
 ## Support
 
 No one is employed specifically to maintain ARTIS. The developers improve the code when their own research needs it.
-Thus ARTIS comes as it is, and the developers do not promise to correct a defect or to answer a question.
-
-They accept a [pull request](https://github.com/artis-mcrt/artis/pulls) sometimes. You can open an
-[issue](https://github.com/artis-mcrt/artis/issues), but it can stay without an answer. The log file of rank 0 holds
-the git version and the compile-time options of the run. Give both in an issue.
+Thus ARTIS comes as it is, and the developers do not promise to correct a defect or to answer a question. They accept
+a [pull request](https://github.com/artis-mcrt/artis/pulls) sometimes.
 
 :::{toctree}
 :caption: Getting started
@@ -122,6 +124,7 @@ installation
 presets
 data
 example
+ownmodel
 :::
 
 :::{toctree}
@@ -136,6 +139,7 @@ running
 clusters
 outputfiles
 exspec
+analysis
 troubleshooting
 :::
 
@@ -157,5 +161,6 @@ glossary
 :hidden:
 
 development
+codemap
 testing
 :::

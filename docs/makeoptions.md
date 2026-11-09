@@ -26,7 +26,7 @@ Each option of the table above adds a suffix to the name of the build folder, so
 objects of the previous toolchain. Run `make clean` after you change its value.
 
 The name of the build folder ends with `_options` and a checksum of the content of `artisoptions.h`, so the builds of
-different presets coexist too. A change of the preset or of an option value compiles every object in a new build
+different {term}`presets <preset>` coexist too. A change of the preset or of an option value compiles every object in a new build
 folder, and a change back to an earlier content compiles nothing again. The timestamp of `artisoptions.h` has no
 effect. Each edit of an option keeps the build folder of the old value, so run `make clean` when `build/` becomes
 large.
