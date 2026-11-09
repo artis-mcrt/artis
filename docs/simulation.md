@@ -71,9 +71,4 @@ The radiation field model fits a diluted blackbody to the full spectrum of each 
 frequency bin (Shingles et al. (2020), MNRAS, 492, 2029-2043, section 2.2, doi:10.1093/mnras/stz3412). The rates of
 the photoionisation and of the heating use these fits.
 
-## The work of each rank
-
-Each rank updates a range of the model grid cells, and `modelgridrankassignments.out` gives the range of each rank.
-Each rank also keeps an equal share of [NUM_PACKETS](options.md#num_packets). The ranks on one node share the large
-read-mostly arrays, e.g. the atomic data, so a node holds one copy of them. [Running sn3d](running.md) describes the
-ranks, the threads, and the memory of a run.
+[Plan a simulation](planning.md#the-ranks) describes the work and the memory of each rank.

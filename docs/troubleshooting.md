@@ -12,13 +12,12 @@ The build needs an `artisoptions.h` in the repository root, and git does not tra
 ln -s artisoptions_classic.h artisoptions.h
 ```
 
-[Option presets](presets.md) says what each preset is for. Use a symlink and not a copy, because the symlink follows
-each change of the preset file.
+[Option presets](presets.md) says what each preset is for.
 
 ### The build folder is large
 
-Each set of make options and each content of `artisoptions.h` has its own folder in `build/`. An edit of an option
-value makes a new build folder and keeps the old one. `make clean` removes all build folders and the program symlinks.
+Each set of make options and each content of `artisoptions.h` has its own folder in `build/` (see
+[Make options](makeoptions.md#the-build-folders)). `make clean` removes all build folders and the program symlinks.
 
 ### make cannot run 'mpicxx --version'
 
@@ -32,11 +31,9 @@ The build needs gcc 14 or a later version. Load a newer gcc. With Open MPI you c
 
 ### The binary does not hold your change
 
-`make` puts the objects in `build/<configuration>/` and makes a symlink in the repository root to each program. Each
-make option adds a suffix to the name of the build folder, and the name ends with a checksum of the content of
-`artisoptions.h`, so the builds of different options stay apart. The symlink points at the most recent build of any
-configuration, e.g. at the build of a test after `tests/runtest.sh`. Look at the symlink before you copy a binary, and
-copy it with `cp -L` from the repository root. A build folder of an older compiler otherwise gives you the old binary.
+The `sn3d` symlink of the repository root points at the most recent build of any configuration, e.g. at the build of a
+test after `tests/runtest.sh`. Look at the symlink before you copy a binary, and copy it with `cp -L` from the
+repository root (see [Make options](makeoptions.md#the-build-folders)).
 
 ## The run
 
@@ -74,18 +71,16 @@ job, because it continues the simulation.
 
 ### artistools draws fewer times than the run holds
 
-artistools accepts only the times at which the whole model can have sent light to the observer. The fastest ejecta set
-that limit, so the limit is earlier than the last timestep of the run. `--plotinvalidpart` draws the later times.
+The light of the far side of the ejecta reaches the observer later than the light of the near side. artistools
+therefore accepts only the observer times that have light from the whole model. The fastest ejecta set that range, so
+it is shorter than the time range of the run. The row `arrival times` of `artistools check` gives it, and
+`--plotinvalidpart` draws the other times.
 
 ## The log
 
-`sn3d` writes one log file for each rank and each thread into the job folder, with the name `output_n-t.txt` for
-the rank n and the thread t. `output_0-0.txt` in the model folder is a symlink to the log of rank 0 and thread 0
-(see [Running sn3d](running.md)). Each line starts with the time in Coordinated Universal Time (UTC). A rank writes
-the messages of the cells that it updates, so the message about a cell can be in the log of a different rank or
-thread.
-
-This section uses LTE for the local thermodynamic equilibrium, and NLTE for a state that is not in LTE.
+[Running sn3d](running.md#the-logs) gives the names of the log files. Each line starts with the time in Coordinated
+Universal Time (UTC). A rank writes the messages of the cells that it updates, so the message about a cell can be in
+the log of a rank other than rank 0.
 
 ### The tags of the log lines
 

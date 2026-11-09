@@ -17,8 +17,7 @@ so an answer can take time.
 
 1. Make a branch from `main`.
 2. Install the pre-commit hooks with `prek install`.
-3. Symlink a preset to `artisoptions.h`, e.g. `ln -s artisoptions_classic.h artisoptions.h`. Do not copy the preset,
-   because the symlink follows each change of the preset file.
+3. Symlink a preset to `artisoptions.h`, e.g. `ln -s artisoptions_classic.h artisoptions.h`.
 4. Build with `make`. Run the unit tests with `make OPTIMIZE=OFF unittests && ./unittests` when you change a function
    that `unittests.cc` calls.
 5. Run one end-to-end test that your change can affect, e.g. `tests/runtest.sh nebular_1d_3dgrid`. Do not run the

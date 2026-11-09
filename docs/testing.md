@@ -59,14 +59,7 @@ Each test uses one preset and a reduced atomic dataset from a release of this re
 `kilonova_1d` is the quickest test. `nebular_1d_3dgrid` covers the physics that most changes touch, so it is the
 default test for a change of the code.
 
-The script needs Open MPI and libzstd. It also calls these commands:
-
-- `zstd` and `md5sum`, because the test input files are zstd compressed;
-- `curl`, `tar`, and `xz`, because the setup step downloads and unpacks the atomic data;
-- `python3`, for `scripts/mergeangleres.py` of the `exspec` step;
-- `perl` and `rsync`, for the setup step.
-
-The script writes the checksums of the run into the model folder, e.g.
+[Installation](installation.md) lists the library and the commands that the script needs. The script writes the checksums of the run into the model folder, e.g.
 `tests/kilonova_1d_testrun/results_md5_job0.txt`.
 
 :::{note}

@@ -24,6 +24,9 @@ k-packet
   energy, because the diffusion step takes the adiabatic loss of the radiation, and the thermal balance of the cell
   gives the share that becomes radiation.
 
+LTE
+  Local thermodynamic equilibrium. The Saha and the Boltzmann relations give the populations at one temperature.
+
 macro atom
   The state of a packet between an absorption and the next emission. The macro atom makes internal radiative and
   collisional transitions between the levels and the ions, until it emits radiation or becomes a k-packet. Lucy
@@ -36,6 +39,10 @@ model folder
 model grid cell
   A cell of the input model. `model.txt` gives its density and its composition. More than one propagation cell can
   share one model grid cell. The code calls its index `modelgridindex`, or `mgi`.
+
+NLTE
+  A state that is not in LTE. The code then solves the populations from the rates of the radiative, the collisional,
+  and the non-thermal processes.
 
 packet
   An indivisible energy packet. The code never splits a packet, and `sn3d` follows it until it escapes or the

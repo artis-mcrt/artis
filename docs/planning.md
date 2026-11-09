@@ -6,8 +6,6 @@ model. [Example: a nebular spectrum](example.md) shows the effect of some of the
 
 ## The values
 
-This page uses LTE for the local thermodynamic equilibrium, and NLTE for a state that is not in LTE.
-
 | Value | Where | What it sets |
 | --- | --- | --- |
 | `NUM_PACKETS` | `artisoptions.h` | the memory of the packets, the work of the propagation, and the noise |
@@ -84,11 +82,9 @@ The time range also sets how the packets divide over the time:
   hold at `tmin_days`. With this option, the decay times of the pellets start at the snapshot time of `model.txt`,
   and not at `tmin_days`. A pellet that decays before `tmin_days` becomes a packet of that initial energy.
 
-The light of the far side of the ejecta reaches the observer later than the light of the near side. artistools
-therefore accepts only the observer times that have light from the whole model, and that range is shorter than the
-time range of the run. The row `arrival times` of `artistools check` gives it. For the model of
-[Example: a nebular spectrum](example.md), which has a maximum velocity of 12415 km/s, a run from 170 to 250 days
-gives the range from 177.04 to 232.07 days.
+artistools plots only the observer times that have light from the whole model, and that range is shorter than the
+time range of the run (see [Troubleshooting](troubleshooting.md#the-results)). For the model of
+[Example: a nebular spectrum](example.md), a run from 170 to 250 days gives the range from 177.04 to 232.07 days.
 
 ### The first timesteps
 

@@ -61,13 +61,8 @@ Run `artis/sn3d -h` to list all command-line options.
 
 ## The ranks and the threads
 
-Each MPI rank gets an equal share of `NUM_PACKETS`, and the first ranks also get one packet each of the remainder. Each
-rank keeps its share in memory, so the rank count and `NUM_PACKETS` together set the memory of a run.
+Each MPI rank holds an equal share of `NUM_PACKETS` in memory, and it updates its own range of the cells (see
+[Plan a simulation](planning.md#the-ranks)).
 
-The ranks on one node share the large read-mostly arrays, e.g. the atomic data, through MPI shared-memory windows. A
-run with `OPENMP=ON` adds OpenMP threads inside each rank, and a run with `STDPAR=ON` gives the loops to the
-parallel algorithms of the standard library. Those algorithms use threads only with a compiler and a standard library
-that supply a parallel backend (see [Make options](makeoptions.md)). A multithreaded run gives no reproducible
-results, because each thread seeds its own random generator. A run with
-`STDPAR=ON GPU=ON` is different. The parallel algorithms then run on a GPU and not on the threads of the rank, and
-each packet holds its own generator state.
+A build with `OPENMP=ON` or with `STDPAR=ON` adds threads inside each rank, and `STDPAR=ON GPU=ON` runs the loops on
+a GPU (see [Make options](makeoptions.md)). A multithreaded run gives no reproducible results.

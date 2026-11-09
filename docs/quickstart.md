@@ -11,20 +11,9 @@ brew install llvm open-mpi pkgconf zstd coreutils
 export PATH="$(brew --prefix coreutils)/libexec/gnubin:$PATH"
 ```
 
-`tests/runtest.sh` needs the `md5sum` command of the next step. Homebrew installs that command as `gmd5sum`, and the
-`gnubin` folder of the export holds it under the plain name.
-
-On Linux, get a compiler, Open MPI, git, and make from your package manager, from a module, or from pixi.
-[Installation](installation.md) gives the detail and the version that the build needs. `tests/runtest.sh` gives
-`mpirun` the options `--oversubscribe` and `--mca`, which only Open MPI accepts.
-
-The next step also needs libzstd, because `tests/runtest.sh` builds with `ZSTD=ON` and reads the compressed output
-files. The package of the library is `libzstd-dev` on Debian and Ubuntu, and `libzstd-devel` on Fedora. The scripts
-of the test, and the model folder of section 5 below, call these commands:
-
-- `zstd` and `md5sum`, for the compressed files and for the checksums;
-- `curl`, `tar`, and `xz`, for the atomic data;
-- `python3`, `perl`, and `rsync`.
+On Linux, get a compiler, Open MPI, libzstd, git, and make from your package manager, from a module, or from pixi.
+[Installation](installation.md) gives the versions, the packages, and the other commands that the test of step 3
+calls.
 
 ## 2. Clone the repository
 
@@ -39,32 +28,15 @@ cd artis
 tests/runtest.sh kilonova_1d
 ```
 
-This is the quickest complete simulation of the repository. The script does these steps:
+This is the quickest complete simulation of the repository. The script downloads the atomic data of the test (about
+15 MB), builds `sn3d` and `exspec`, and makes the model folder `tests/kilonova_1d_testrun`. It then runs the
+simulation in two jobs, and it compares the checksums of the output files with the stored checksums.
 
-1. It downloads the atomic data of the test (about 15 MB) into `tests/` and keeps the archive for a later run.
-2. It makes the model folder `tests/kilonova_1d_testrun` with the input files and an `artisoptions.h` for the test.
-3. It builds `sn3d` and `exspec`, and copies them into the model folder.
-4. It checks the input with `sn3d -c`, and then it starts a new simulation.
-5. It compares the checksums of the output files with `results_md5_job0.txt`.
-6. It resumes the simulation from the restart files, and then runs `exspec`.
-7. It compares the checksums again with `results_md5_final.txt`.
+A different compiler or CPU type can give different checksums, and the script then stops at the comparison. The
+output files of the first job are complete at that point, so the next section still works. [Testing](testing.md)
+describes the steps and how you run one step by name.
 
-A different compiler or CPU type can give checksums that differ from the stored checksums. Examine a mismatch first
-as a real change of the results. Let CI give the decision. The script stops at the step that finds the mismatch, so
-a mismatch at step 5 leaves the resume run and `exspec` undone. To get the complete result of a mismatch that you
-accept, run the remaining steps by name:
-
-```sh
-tests/runtest.sh kilonova_1d resume
-tests/runtest.sh kilonova_1d exspec
-```
-
-The `exspec` step removes the restart files, so run `resume` again only after a new `job0` step.
-
-The comparison of step 7 then differs for the same reason. [Testing](testing.md) describes the steps and the
-reference checksums.
-
-The repository has eleven test models. `tests/runtest.sh` without arguments lists them.
+`tests/runtest.sh` without arguments lists the other test models.
 
 ## 4. Look at the results
 
@@ -91,8 +63,8 @@ uv tool install artistools
 export PATH="$(uv tool dir --bin):$PATH"
 ```
 
-`uv` puts the executable of a tool in a folder of its own, which the standard path of macOS and of Linux does not
-hold. The export gives that folder to the current shell. `uv tool update-shell` adds it to the profile of your shell.
+The export gives the tool folder of `uv` to the current shell, and `uv tool update-shell` adds it to the profile of
+your shell.
 
 Then describe the model, check the results, and plot them:
 
@@ -118,9 +90,8 @@ The spectrum that `plotspectra -t 1` gives.
 `artistools check` gives one row for each check of the results, so it is the quickest test that a run deserves trust.
 It gives a warning for this test model, because the reduced atomic data and the low packet count limit its accuracy.
 
-`plotspectra` needs a time in days (`-t`). artistools accepts only the times at which the whole model can have sent
-light to the observer. The ejecta of this model reach 0.48 c, so that range ends at about 1.7 days, although the model
-runs to 10 days. `--plotinvalidpart` draws the later times anyway.
+`plotspectra` needs a time in days (`-t`). artistools plots only the times that have light from the whole model,
+which end at about 1.7 days for this model (see [Troubleshooting](troubleshooting.md#the-results)).
 
 ## 5. Make your own model folder
 
@@ -158,10 +129,8 @@ cd ..
 [Option presets](presets.md) says what each preset is for.
 
 :::{note}
-`artisoptions.h` is a symlink, so an editor changes the preset file of your clone. Do not replace the symlink with a
-copy. The `artis` folder of this section is a symlink to the clone of step 2, so the edit changes a tracked file
-there. `git status` shows the change, and `git restore artisoptions_kilonova_lte.h` removes it. Each model folder
-that shares this clone gets the same options. Give a model folder its own clone when it needs its own options.
+`artisoptions.h` is a symlink, so an edit changes the preset file of the clone, and each model folder that shares the
+clone gets the same options. Give a model folder its own clone when it needs its own options.
 :::
 
 The preset has a value of `NUM_PACKETS` for about 1000 MPI ranks. A laptop needs a much smaller value. Change it in
@@ -187,9 +156,8 @@ mpirun -np 4 artis/sn3d &
 tail -F output_0-0.txt
 ```
 
-`sn3d` writes one line with the name of the job folder to the standard output, and then nothing more unless a crash occurs. Each rank writes its own log file. `output_0-0.txt` in the model folder is a symlink to the log of rank 0, and `tail -F` waits until `sn3d` makes it. Press Ctrl+C to stop following the log file.
-
-[Running sn3d](running.md) describes the command-line options, the logs, and the restart of a long run.
+`output_0-0.txt` is the log of rank 0, and `tail -F` waits until `sn3d` makes it. Press Ctrl+C to stop following the
+log file. [Running sn3d](running.md) describes the command-line options, the logs, and the restart of a long run.
 
 ## Next steps
 
