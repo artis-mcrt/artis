@@ -59,6 +59,9 @@ Keep the British spellings that this repository uses, e.g. "parallelised" and
 "normalise". STE controls the choice of words and the structure of the
 sentences. It does not control the spelling variant here.
 
+Do not tell a reader of the documentation to contact the developers, e.g. to
+ask a question or to open an issue for help. The developers give no support.
+
 ## References
 
 When mentioning a scientific paper, always give the full reference:

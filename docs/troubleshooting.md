@@ -1,7 +1,7 @@
 # Troubleshooting
 
 This page gives the messages that stop a build or a run, and what each one needs. The log file of {term}`rank` 0 holds the git
-version and the compile-time options of a run, so give both in an [issue](https://github.com/artis-mcrt/artis/issues).
+version and the compile-time options of a run.
 
 ## The build
 
