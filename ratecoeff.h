@@ -30,8 +30,8 @@ void setup_photoion_luts();
 [[nodiscard]] auto iongamma_is_zero(int nonemptymgi, int element, int ion) -> bool;
 
 [[nodiscard]] auto calculate_iongamma_per_gspop(int nonemptymgi, int element, int ion) -> double;
-[[nodiscard]] auto calculate_iongamma_per_ionpop(int nonemptymgi, int element, int lowerion,
-                                                 bool collisional_not_radiative, bool force_bfintegral) -> double;
+[[nodiscard]] auto calculate_iongamma_per_ionpop(int nonemptymgi, int element, int lowerion, bool force_bfintegral)
+    -> double;
 
 // Population that the ion recombination coefficient returned by calculate_ionrecombcoeff() is normalised to
 // (i.e. what it must be multiplied by, along with nne, to give a rate)

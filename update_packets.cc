@@ -12,9 +12,7 @@
 #include <cstdlib>
 #include <limits>
 #include <optional>
-#ifdef GPU_ON
 #include <ranges>
-#endif
 #include <span>
 #include <tuple>
 #include <vector>
@@ -368,11 +366,10 @@ auto get_packet_cellcachegroupid(const Packet& pkt) -> std::optional<int> {
   if (std::ranges::find(nocache_packettypes, pkt.type) != nocache_packettypes.end()) {
     return std::nullopt;  // these types do not use the cell cache
   }
-  const auto mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
-  if (mgi < 0) {
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
+  if (nonemptymgi < 0) {
     return std::nullopt;  // for empty cell, no cell cache required
   }
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   if (grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {
     return std::nullopt;  // for thick cell, no cell cache required
   }

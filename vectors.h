@@ -83,7 +83,7 @@ template <size_t VECDIM>
   });
 }
 
-// Doppler factor either to first order v/c or fully relativisitic depending on USE_RELATIVISTIC_DOPPLER_SHIFT
+// Doppler factor either to first order v/c or fully relativistic depending on USE_RELATIVISTIC_DOPPLER_SHIFT
 // Arguments:
 //   pos_rf: the rest frame position of the packet
 //   dir_rf: the rest frame direction (unit vector) of light propagation

@@ -202,7 +202,7 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
   if (levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex] != -1 &&
       levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex] != phixstargetstart) {
-    fatal_crash("Z={} ionstage {} level {} has a photoionisation table in both phixsdata files",
+    fatal_crash("Z={} ionstage {} level {} has two photoionisation tables in the phixsdata files",
                 get_atomicnumber(element), get_ionstage(element, lowerion), lowerlevel);
   }
   levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex] = phixstargetstart;

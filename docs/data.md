@@ -64,7 +64,7 @@ quicker run. A build without libzstd reads no compressed input file, so decompre
 
 The maintainers will publish the databases of the other model types. Until then, make a database with
 [artisatomic](https://github.com/artis-mcrt/artisatomic), which converts atomic data of several published sources into
-the ARTIS format. The `atomic_data_logs` folder of each archive holds the log of that conversion for each ion.
+the ARTIS format. An archive that artisatomic made holds an `atomic_data_logs` folder with the log of that conversion for each ion.
 
 ## The model of the ejecta
 

@@ -512,13 +512,13 @@ void get_element_superlevelpartfuncs(const int nonemptymgi, const int element,
   return nlte_dimension;
 }
 
-// get the maximum NLTE dimension for any of the included elements
+// get the maximum NLTE dimension of the elements that the NLTE solver handles
 [[nodiscard]] auto get_max_nlte_dimension() -> int {
   int max_nlte_dimension = 0;
   for (int element = 0; element < get_nelements(); element++) {
-    const int first_ion_used = 0;
-    const int nions_used = get_nions(element);
-    max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element, first_ion_used, nions_used));
+    if (elem_has_nlte_levels(element)) {
+      max_nlte_dimension = std::max(max_nlte_dimension, get_element_nlte_dimension(element, 0, get_nions(element)));
+    }
   }
   return max_nlte_dimension;
 }

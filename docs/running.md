@@ -47,9 +47,10 @@ A check differs from a run in these points:
 
 ## A simulation in several jobs
 
-To split a long simulation across several queued jobs, run `sn3d` with `-w WALLTIMELIMITHOURS`. When too little wall
-time remains to complete another timestep, the run finishes cleanly and prints `RESTART_NEEDED` into the log. It then
-writes the restart files and updates `input.txt`. The bundled cluster job scripts detect that text and submit a
+To split a long simulation across several queued jobs, run `sn3d` with `-w WALLTIMELIMITHOURS`. From the second
+timestep of a job, `sn3d` writes the restart files and updates `input.txt` at the start of each timestep. Then it tests
+the remaining wall time. When too little wall time remains to complete another timestep, the job stops cleanly, and the
+log then ends with `RESTART_NEEDED`. The bundled cluster job scripts detect that text and submit a
 continuation job, and they pass the remaining Slurm allocation time automatically (see
 [Runs on a cluster](clusters.md)).
 

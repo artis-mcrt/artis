@@ -196,16 +196,14 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
       continue;
     }
 
-    print_perion_line("gamma_R", element, nions - 1, [&](const int ion) {
-      return calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false, false);
-    });
+    print_perion_line("gamma_R", element, nions - 1,
+                      [&](const int ion) { return calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false); });
 
     // if we have bound-free estimators, we might want to compare how gamma_R would be if we used the radiation field
     // model instead
     if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
-      print_perion_line("gamma_R_integral", element, nions - 1, [&](const int ion) {
-        return calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false, true);
-      });
+      print_perion_line("gamma_R_integral", element, nions - 1,
+                        [&](const int ion) { return calculate_iongamma_per_ionpop(nonemptymgi, element, ion, true); });
     }
 
     if (NT_SCHEME != NonThermalScheme::NT_OFF) {

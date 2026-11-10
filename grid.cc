@@ -782,7 +782,7 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
       // parse_next_token() gives false at the end of the row and also for a token that is not a
       // number, e.g. "nan". The loop above stops on both, so a bad token would silently zero every
       // later element. Only whitespace may remain here.
-      remainder.remove_prefix(std::min(remainder.find_first_not_of(" \t\r"), remainder.size()));
+      remainder.remove_prefix(std::min(remainder.find_first_not_of(token_whitespace), remainder.size()));
       if (!remainder.empty()) {
         fatal_crash("read_elem_abundances: cell {} has an unreadable token at '{}'", mgi, remainder);
       }

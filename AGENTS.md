@@ -247,8 +247,8 @@ the second argument.
 - `exspec` removes the `*.tmp` files, runs `exspec`, and then runs
   `scripts/mergeangleres.py`. That script merges the direction bin files into
   `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. The tests with
-  a 2D or a 3D model, e.g. `kilonova_2d`, have these files in
-  `results_md5_final.txt`.
+  a 2D or a 3D model, e.g. `kilonova_2d`, have the first two files in
+  `results_md5_final.txt`. Only `classicmode_3d` also has `specpol_res.out`.
 - `checksums_final` writes `results_md5_final.txt` into the model folder and
   compares it with the reference file.
 
@@ -469,8 +469,8 @@ comment above `get_propcell_modelgridindex()` in `grid.h` defines them:
 
 Convert between the last two with `grid::get_nonemptymgi_of_mgi()` and
 `grid::get_mgi_of_nonemptymgi()`. Do not call
-`grid::get_nonemptymgi_of_mgi()` for an empty model cell. It has an assertion
-for this, which only a `TESTMODE=ON` build finds.
+`grid::get_nonemptymgi_of_mgi()` for an empty model cell. Its `assert_always()`
+stops the run in every build.
 
 `get_propcell_modelgridindex()` and `get_propcell_nonemptymgi()` give -1 for an
 empty cell. Test for -1 before you use the result as an index. These two
@@ -610,13 +610,14 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   files. Do not add a format version or a fallback for a restart file of a
   different option set or of an older binary.
 - `input.txt` is positional. Each line has its fixed meaning, and some lines
-  are unused placeholders that must stay. `read_parameterfile()` reads a line
-  with `get_noncommentline()` and then takes the numbers with a
-  `std::istringstream`. Follow that pattern for a new line. At the start of a
+  are unused placeholders that must stay. `read_parameterfile()` reads each
+  line with `read_inputtxt_line()`, which stops the run for a missing or an
+  unreadable line. Use that helper for a new line. At the start of a
   new simulation, `sn3d` writes `input.txt` again with the standard comments
   and with its rank count in the `nprocs_exspec` line, and it writes the same
   content to `input-newrun.txt`. If `input.txt` is absent at the start of a
-  run, rank 0 restores it from that copy. `exspec` changes no input file.
+  run, rank 0 restores it from that copy. `exspec` does the same and changes no other
+  input file.
 - The model files use a different helper. `model.txt`, `abundances.txt`, and
   `transitiondata.txt` take each number with `parse_next_token()`, which
   advances a `std::string_view`.

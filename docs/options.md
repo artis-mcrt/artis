@@ -608,7 +608,7 @@ How the code deposits the energy of the non-thermal leptons. NT_OFF: no non-ther
 
 `double SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF`
 
-After the LTE timesteps, the code solves the Spencer-Fano equation at the first NLTE iteration of each timestep. A later iteration of the same timestep keeps that solution, unless nne per ion (nne divided by the total ion density) changed by this fraction or more, e.g. 0.5 for 50 percent. A value of 0 gives a new solution at each iteration. This value has an effect only with NT_SPENCERFANO.
+From timestep num_lte_timesteps + 1, the code solves the Spencer-Fano equation at the first NLTE iteration of each timestep. Before that timestep, the code uses the work function approximation. A later iteration of the same timestep keeps that solution, unless nne per ion (nne divided by the total ion density) changed by this fraction or more, e.g. 0.5 for 50 percent. A value of 0 gives a new solution at each iteration. This value has an effect only with NT_SPENCERFANO.
 
 **Every preset:** `0.05`
 
@@ -632,7 +632,7 @@ Include non-thermal excitation only from the lowest NTEXCITATION_MAXNLEVELS_LOWE
 
 `int MAX_NT_EXCITATIONS_STORED`
 
-The number of stored non-thermal excitation rates. The solver keeps the transitions with the largest deposition fractions. A transition outside the list gets no excitation rate, and an NTLEPTON packet that selects one becomes a k-packet. This value has an effect only with NT_SPENCERFANO.
+The number of stored non-thermal excitation rates. The solver keeps the transitions with the largest deposition fractions. A transition outside the list gets no excitation rate, and the transitions of the list get the whole excitation share of the NTLEPTON packets. This value has an effect only with NT_SPENCERFANO.
 
 **Every preset:** `25000`
 

@@ -143,7 +143,7 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 
   if constexpr (USE_RELATIVISTIC_DOPPLER_SHIFT) {
     // With special relativity, the Doppler shift formula has an extra factor of 1/gamma in it,
-    // which changes the distance reach a line resonance and creates a dependence on packet position and direction
+    // which changes the distance to reach a line resonance and creates a dependence on packet position and direction
 
     // use linear interpolation of frequency along the path
     return -delta_nu / dnu_on_dl;  // dnu_on_dl is negative, so this is a positive distance

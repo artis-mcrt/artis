@@ -86,7 +86,7 @@ The scripts of `scripts/` name the modules and the partitions of four clusters. 
 6. Stop if the status of `mpirun` is not zero, because that is a crash. `sn3d` gives zero when it writes
    `RESTART_NEEDED`.
 7. Search `output_0-0.txt` for `RESTART_NEEDED`. If the text is there, submit the same job script again.
-8. If the text is absent and `packets/packets00_0000.out*` exists, the model is complete. Submit the post-processing
+8. If the text is absent and `packets/packets00_0000.out*` exists, the requested range of timesteps is complete. Submit the post-processing
    job.
 
 Copy `scripts/exspec-zip-cosma8.sh` for the post-processing job, and change its modules. Add the host name of the

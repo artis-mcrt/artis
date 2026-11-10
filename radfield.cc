@@ -621,7 +621,7 @@ void init() {
 
     reserve_resize(bfrate_raw, nonempty_npts_model * bfestimcount);
 
-    printlnlog("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy {:.3f} MB",
+    printlnlog("[info] mem_usage: detailed bf estimator accumulators for non-empty cells occupy {:.3f} MB",
                nonempty_npts_model * bfestimcount * sizeof(double) / 1024. / 1024.);
   }
 
