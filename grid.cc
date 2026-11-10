@@ -903,12 +903,22 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
       // 2D and 3D models have rho [g/cm3] after the cell id and the position columns
       required_columnindex = (get_modelgridtype() == GridType::SPHERICAL1D) ? -1 : get_ndim(get_modelgridtype()) + 1;
     } else if (token.starts_with("X_") && token != "X_Fegroup") {
-      colnames.push_back(token);
       const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
       const int a = decay::get_nucstring_a(token.substr(2));
+      // two names can give one nuclide, e.g. X_Ni56 and X_ni56, and a second column then replaces the mass fraction
+      for (auto i = 0Z; i < std::ssize(colnames); i++) {
+        if (zlist[i] == z && alist[i] == a) {
+          fatal_crash("the model.txt header line has the columns {} and {}, which are the same nuclide (Z={} A={})",
+                      colnames[i], token, z, a);
+        }
+      }
+      colnames.push_back(token);
       zlist.push_back(z);
       alist.push_back(a);
     } else {
+      if (std::ranges::find(colnames, token) != colnames.end()) {
+        fatal_crash("the model.txt header line has the column {} two times", token);
+      }
       colnames.push_back(token);
       zlist.push_back(-1);
       alist.push_back(-1);

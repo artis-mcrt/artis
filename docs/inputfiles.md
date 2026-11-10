@@ -144,7 +144,7 @@ The columns of each cell:
 | `pos_x_min`, `pos_y_min`, `pos_z_min` | 3D | The corner of the cell with the lowest coordinates [cm] at `t_model`. |
 | `rho` | 2D, 3D | The density [g/cm^3] at `t_model`. A value of zero gives an empty cell, and a negative value stops the run. |
 | `X_Fegroup` | all | The mass fraction of the iron-group elements. The value must not be above 1.001, which permits a rounding error. `sn3d` treats a negative value as it treats a negative `X_<nuclide>` value. |
-| `X_<nuclide>` | all | The mass fraction of one nuclide at `t_model`, e.g. `X_Ni56`. The name has the element symbol and the mass number, and its case has no effect. `X_n1` is the mass fraction of the free neutrons, and each other mass number after `n` gives nitrogen, e.g. `X_N14`. A mass number below the atomic number stops the run. The value must be in the range from 0 to 1. `sn3d` sets a negative value above -1e-6 to 0, and a value below that limit stops the run. |
+| `X_<nuclide>` | all | The mass fraction of one nuclide at `t_model`, e.g. `X_Ni56`. The name has the element symbol and the mass number, and its case has no effect. `X_n1` is the mass fraction of the free neutrons, and each other mass number after `n` gives nitrogen, e.g. `X_N14`. A mass number below the atomic number stops the run. Two columns that give the same nuclide also stop the run, e.g. `X_Ni56` and `X_ni56`. The value must be in the range from 0 to 1. `sn3d` sets a negative value above -1e-6 to 0, and a value below that limit stops the run. |
 | `Ye` or `cellYe` | all | The electron fraction. |
 | `q` | all | The trapped radiation energy per mass [erg/g] at `t_model`. The value must not be negative. |
 
