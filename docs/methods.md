@@ -38,7 +38,8 @@ range of the simulation.
     - [NUM_PACKETS](options.md#num_packets) sets the number of packets of all ranks together.
     - [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies) gives each pellet the same energy. With the value
       false, the decay times are uniform instead, and the energy of each pellet follows the decay power at its time.
-    - [INITIAL_PACKETS_ON](options.md#initial_packets_on) adds packets for the initial energy of the cells.
+    - [INITIAL_PACKETS_ON](options.md#initial_packets_on) adds the initial energy of the cells to the energy that the
+      packets share. The number of packets stays the same.
 - References: Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 describes the packets. Sim (2007),
   MNRAS, 375, 154-162, doi:10.1111/j.1365-2966.2006.11271.x and Kromer & Sim (2009), MNRAS, 398, 1809-1826,
   doi:10.1111/j.1365-2966.2009.15256.x describe an early version of the code.
