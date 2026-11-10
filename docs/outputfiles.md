@@ -424,7 +424,7 @@ whose virtual packet escaped in one direction or more:
 ## A new simulation removes the files of the previous one
 
 A new simulation first removes the output files, the restart files, and the `job_from_ts*` folders of the previous
-simulation. `scripts/clean.sh` removes the same files.
+simulation. `scripts/clean.sh` removes the same files, and also the Slurm output files and the core files.
 
 ## Plotting and analysis
 

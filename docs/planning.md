@@ -33,7 +33,8 @@ These lines come from the run of [Example: a nebular spectrum](example.md). The 
 build, so read the value from your log.
 
 Each rank also writes its packets to a {term}`restart file`, `packets_nnnn_ts*.tmp`, which has approximately the size
-of its packets in memory.
+of its packets in memory. `sn3d` removes the files of the previous timestep only after it writes the new files,
+so the model folder needs space for two sets.
 
 The spectrum of a timestep holds the escaped packets that arrive at the observer in that timestep, so their number
 sets the noise of the spectrum. The relative noise of a sum of N packets of equal energy is 1/sqrt(N). The log of

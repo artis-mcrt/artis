@@ -9,9 +9,9 @@ ARTIS uses indivisible energy packets (Lucy (2002), A&A, 384, 725-735, doi:10.10
 never splits a packet into smaller packets, and it follows each packet until the packet escapes or the simulation
 ends. A packet changes its type as its energy changes its form:
 
-- each {term}`pellet` holds the same energy by default, which is the decay energy of the whole model between the first
-  and the last time of the simulation, divided by the number of packets of the {term}`rank`. A pellet moves with the
-  ejecta until the time of its decay;
+- each {term}`pellet` holds the same energy by default. That energy is the decay energy of the whole model in the time
+  range of the simulation, divided by the number of packets of the {term}`rank`. A pellet moves with the ejecta until
+  the time of its decay;
 - the decay makes a {term}`gamma packet`, or a packet of positrons, electrons, alpha particles, or fission fragments;
 - a gamma packet gives its energy to the gas by Compton scattering, by photoelectric absorption, or by pair
   production;

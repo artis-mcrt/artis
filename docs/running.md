@@ -60,5 +60,5 @@ Run `artis/sn3d -h` to list all command-line options.
 Each MPI rank holds an equal share of `NUM_PACKETS` in memory, and it updates its own range of the cells (see
 [Plan a simulation](planning.md#the-ranks)).
 
-A build with `OPENMP=ON` or with `STDPAR=ON` adds threads inside each rank, and `STDPAR=ON GPU=ON` runs the loops on
-a GPU (see [Make options](makeoptions.md)). A multithreaded run gives no reproducible results.
+A build with `OPENMP=ON` or with `STDPAR=ON` can add threads inside each rank, and `STDPAR=ON GPU=ON` runs the loops
+on a GPU. [Make options](makeoptions.md) says which compiler gives threads with each option. A multithreaded run gives no reproducible results.

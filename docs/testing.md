@@ -28,8 +28,9 @@ these steps:
    `tests/setup_kilonova_1d.sh`, which downloads the atomic data of the test and makes the model folder again with the
    input files and an `artisoptions.h` for the test.
 2. It builds `sn3d` and `exspec` from that `artisoptions.h` with the make options of CI, and copies them into the model
-   folder. Your own `artisoptions.h` stays as it is. The `sn3d` and `exspec` symlinks of the repository folder then
-   point at the build of the test.
+   folder. During the build, `artisoptions.h` of the repository folder is a symlink to the options of the test, so start
+   no other build at that time. The script then moves your `artisoptions.h` back. The `sn3d` and `exspec` symlinks of
+   the repository folder then point at the build of the test.
 3. It checks the input with `sn3d -c` (see [Running sn3d](running.md)). Then it starts a new simulation and compares
    the checksums of the output files with `tests/kilonova_1d_inputfiles/results_md5_job0.txt`.
 4. It checks the input and the {term}`restart files <restart file>` with `sn3d -c`, and it resumes the simulation from the restart files. It
