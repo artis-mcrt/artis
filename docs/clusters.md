@@ -68,7 +68,8 @@ the applicable job script. Run it in the model folder in place of `sbatch`.
 ## What the job scripts do
 
 The job scripts resubmit themselves until the simulation is finished. They then queue a post-processing job
-(`scripts/exspec-zip-*.sh`) that merges and compresses the output files. `sn3d` writes the spectra and light curves
+(`scripts/exspec-zip-*.sh`) that merges and compresses the output files. A job that stops at a `timestep_finish` before
+the last timestep of the model queues no job. `sn3d` writes the spectra and light curves
 itself, so this job runs `exspec` only if `emission.out` is absent. The post-processing job also converts the packets
 and the {term}`estimator` files to parquet format with [artistools](https://github.com/artis-mcrt/artistools), which it
 installs automatically with uv.
