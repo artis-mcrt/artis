@@ -210,14 +210,12 @@ struct NonThermalSolutionIon {
 MPI_shared_array<NonThermalSolutionIon> ion_data_all_cells{};
 
 struct NonThermalCellSolution {
-  float frac_heating = 1.;  // energy fractions should add up to 1.0 if the solution is good
+  // fraction of deposition energy going to heat, with the excitation of the transitions outside the stored list
+  float frac_heating = 1.;
   float frac_ionisation = 0.;  // fraction of deposition energy going to ionisation
-  float frac_excitation = 0.;  // fraction of deposition energy going to excitation
 
   int excitations_list_count = 0;
-  // The sum of frac_deposition over the stored excitation list. The list does not cover all of frac_excitation,
-  // because analyse_sf_solution() truncates it and excludes some ions.
-  double frac_excitation_of_stored_list = 0.;
+  double frac_excitation_of_stored_list = 0.;  // the sum of frac_deposition over the stored excitation list
 
   int timestep_last_solved = -1;  // the quantities above were calculated for this timestep
   float nneperion_when_solved{NAN};  // nne divided by the total ion density at the last solution
@@ -696,7 +694,6 @@ auto get_possible_nt_excitation_count() -> int {
 void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
   nt_solution[nonemptymgi].frac_heating = 0.97;
   nt_solution[nonemptymgi].frac_ionisation = 0.03;
-  nt_solution[nonemptymgi].frac_excitation = 0.;
 
   nt_solution[nonemptymgi].nneperion_when_solved = -1.;
   nt_solution[nonemptymgi].timestep_last_solved = -1;
@@ -1157,19 +1154,6 @@ auto get_nt_frac_ionisation(const int nonemptymgi) -> float {
   assert_always(nt_solution[nonemptymgi].frac_ionisation >= 0.);
 
   return nt_solution[nonemptymgi].frac_ionisation;
-}
-
-// fraction of deposited energy that goes into collisional excitation
-auto get_nt_frac_excitation(const int nonemptymgi) -> float {
-  if (NT_SCHEME != NonThermalScheme::NT_SPENCERFANO) {
-    return 0.;
-  }
-
-  const float frac_excitation = nt_solution[nonemptymgi].frac_excitation;
-  assert_always(frac_excitation >= 0.);
-  assert_always(std::isfinite(frac_excitation));
-
-  return frac_excitation;
 }
 
 // Reciprocal work per ion pair, 1/W, from the analytic estimate of Axelrod (1980): high-energy cross-section
@@ -1701,7 +1685,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     }
   }
 
-  nt_solution[nonemptymgi].frac_excitation_of_stored_list = 0.;
+  double frac_excitation_of_stored_list = 0.;
   if (nt_excitations_stored > 0) {
     // sort by descending frac_deposition
     std::ranges::SORT_OR_STABLE_SORT(tmp_excitation_list, std::ranges::greater{},
@@ -1772,12 +1756,18 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     std::ranges::SORT_OR_STABLE_SORT(get_cell_ntexcitations(nonemptymgi), std::ranges::less{},
                                      &NonThermalExcitation::alltransindex);
 
-    // sum in the order of the packet selection in do_ntlepton_deposit()
-    double frac_excitation_of_stored_list = 0.;
     for (const auto& ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
       frac_excitation_of_stored_list += ntexcitation.frac_deposition;
     }
-    nt_solution[nonemptymgi].frac_excitation_of_stored_list = frac_excitation_of_stored_list;
+    // A bad solution can give more than the deposition energy to ionisation and excitation. The packets then
+    // reach only the fraction 1 - frac_ionisation, so each stored transition gets its part of that fraction.
+    const double frac_not_ionisation = std::max(0., 1. - frac_ionisation_total);
+    if (frac_excitation_of_stored_list > frac_not_ionisation) {
+      for (auto& ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
+        ntexcitation.frac_deposition *= frac_not_ionisation / frac_excitation_of_stored_list;
+      }
+      frac_excitation_of_stored_list = frac_not_ionisation;
+    }
 
   }  // nt_excitations_stored > 0
 
@@ -1794,8 +1784,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     nne_nt_max += yscalefactor * yfunc[i] * oneovervelocity * delta_endash;
   }
 
-  nt_solution[nonemptymgi].frac_excitation = static_cast<float>(frac_excitation_total);
   nt_solution[nonemptymgi].frac_ionisation = static_cast<float>(frac_ionisation_total);
+  nt_solution[nonemptymgi].frac_excitation_of_stored_list = frac_excitation_of_stored_list;
   const auto frac_heating_calculated = calculate_frac_heating(nonemptymgi, yfunc);
   const double frac_sum = frac_heating_calculated + frac_excitation_total + frac_ionisation_total;
 
@@ -1808,19 +1798,25 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
     printlnlog("  frac_heating_tot:    {:g}", frac_heating_calculated);
     printlnlog("  frac_excitation_tot: {:g}", frac_excitation_total);
+    printlnlog("  frac_excitation of the stored list: {:g}", frac_excitation_of_stored_list);
     printlnlog("  frac_ionisation_tot: {:g}", frac_ionisation_total);
     printlnlog("  frac_sum:            {:g} (should be close to 1.0)", frac_sum);
   }
 
   // force frac_sum to be 1.0 by adjusting frac_heating. Clamp to [0, 1] so a bad solution (where
   // excitation + ionisation exceed 1) cannot feed a negative heating fraction into the T_e solver.
+  // The stored excitation list does not cover all of frac_excitation_total, because the list has a maximum
+  // length and excludes some ions. do_ntlepton_deposit() makes a k-packet from the energy of the transitions
+  // outside the list, so that energy is heating.
   nt_solution[nonemptymgi].frac_heating =
-      static_cast<float>(std::clamp(1. - frac_excitation_total - frac_ionisation_total, 0., 1.));
+      static_cast<float>(std::clamp(1. - frac_excitation_of_stored_list - frac_ionisation_total, 0., 1.));
 
   if (!ftol<0.002>(frac_sum, 1.0)) {
     printlnlog("[warning] frac_sum is {:g}, but should be 1.0", frac_sum);
-    printlnlog("  (replacing calculated frac_heating_tot {:g} with {:g} to make frac_sum = 1.0)",
-               frac_heating_calculated, nt_solution[nonemptymgi].frac_heating);
+    printlnlog(
+        "  (replacing calculated frac_heating_tot {:g} with {:g}, which is 1 - frac_ionisation - the excitation "
+        "fraction {:g} that the packets give to the stored list)",
+        frac_heating_calculated, nt_solution[nonemptymgi].frac_heating, frac_excitation_of_stored_list);
   }
 }
 
@@ -2465,28 +2461,15 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
       return;
     }
 
-    // Route the excitation share of the deposition to macroatoms. The remainder becomes a k-packet (heating)
-    // below, so the k-packet probability is 1 - frac_ionisation - frac_excitation. This is the frac_heating
-    // that analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
-    const double frac_excitation = get_nt_frac_excitation(nonemptymgi);
-    // analyse_sf_solution() permits frac_ionisation + frac_excitation > 1 and then sets frac_heating to zero.
-    // zrand < 1 then reaches only the part 1 - frac_ionisation of the excitation share.
-    const double frac_excitation_reachable = std::min(frac_excitation, 1. - frac_ionisation);
-    const auto ntexcitations = get_cell_ntexcitations(nonemptymgi);
-    const double frac_excitation_of_stored_list = nt_solution[nonemptymgi].frac_excitation_of_stored_list;
-    if (zrand < (frac_ionisation + frac_excitation) && frac_excitation_reachable > 0. && !ntexcitations.empty() &&
-        frac_excitation_of_stored_list > 0.) {
-      // The stored list does not cover all of frac_excitation: analyse_sf_solution() truncates it to
-      // MAX_NT_EXCITATIONS_STORED and excludes some transitions (e.g. Fe V, and ions below MIN_ION_OVER_NNTOT).
-      // Map zrand from [frac_ionisation, frac_ionisation + frac_excitation_reachable) to
-      // [0, frac_excitation_of_stored_list), so that the stored transitions get the whole excitation share in
-      // proportion to their frac_deposition.
-      zrand = (zrand - frac_ionisation) / frac_excitation_reachable * frac_excitation_of_stored_list;
-      for (ptrdiff_t excitationindex = 0; excitationindex < std::ssize(ntexcitations); excitationindex++) {
-        const auto& ntexcitation = ntexcitations[excitationindex];
+    // Each transition of the stored excitation list gets its frac_deposition of the packets, and its upper level
+    // activates a macro-atom. The remainder becomes a k-packet (heating) below. It holds the excitation energy of
+    // the transitions outside the list, so the k-packet probability is the frac_heating that
+    // analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
+    zrand -= frac_ionisation;
+    if (zrand < nt_solution[nonemptymgi].frac_excitation_of_stored_list) {
+      for (const auto& ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
         const double frac_deposition_exc = ntexcitation.frac_deposition;
-        // the last transition also takes a zrand that the rounding of the sum puts above the list
-        if (zrand < frac_deposition_exc || excitationindex == std::ssize(ntexcitations) - 1) {
+        if (zrand < frac_deposition_exc) {
           const auto lineindex = globals::alltrans.lineindex[ntexcitation.alltransindex];
           const auto [element, ion, upper] =
               get_levelfromuniquelevelindex(globals::linelist.uniquelevelindex_upper[lineindex]);
@@ -2505,7 +2488,6 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
         zrand -= frac_deposition_exc;
       }
     }
-    // With frac_excitation > 0 but an empty stored list, the excitation share also becomes a k-packet.
   }
 
   pkt.type = TYPE_KPKT;

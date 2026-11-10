@@ -357,8 +357,9 @@ constexpr int NTEXCITATION_MAXNLEVELS_LOWER;
 constexpr int NTEXCITATION_MAXNLEVELS_UPPER;
 
 // The number of stored non-thermal excitation rates. The solver keeps the transitions with the largest
-// deposition fractions. A transition outside the list gets no excitation rate, and an NTLEPTON packet that
-// selects one becomes a k-packet. This value has an effect only with NT_SPENCERFANO.
+// deposition fractions. A transition outside the list gets no excitation rate. Its part of the deposition
+// energy becomes k-packets, and the T_e solver counts that part as heating. This value has an effect only with
+// NT_SPENCERFANO.
 constexpr int MAX_NT_EXCITATIONS_STORED;
 
 // Divide by the valence shell potential of the ion, instead of the potential of each shell, in the effective

@@ -247,6 +247,9 @@ above zero in the cell:
 | `heating:` | The free-free, the bound-free, and the collisional heating rate, and the heating rate of the deposition [erg/s/cm^3]. `heating_dep/total_dep` is the fraction of the deposition that heats the gas. |
 | `cooling:` | The free-free, the free-bound, the collisional, and the adiabatic cooling rate [erg/s/cm^3]. |
 
+The first timestep of a resumed job has no thermal balance in the grid update, so its blocks have no `heating:` line
+and no `cooling:` line. The job folder of the earlier job holds these rates for that timestep.
+
 ### The nlte files
 
 A run with no {term}`NLTE` levels writes no nlte file. An nlte file has a header row and then one row for each level of the
