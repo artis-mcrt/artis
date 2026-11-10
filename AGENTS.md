@@ -49,9 +49,9 @@ These rules do not apply to:
 - Identifiers in the code, e.g. the names of variables, functions, and
   namespaces. Keep the conventions of the file that you change.
 - The format and the content of the output files (see "Code conventions").
-- A log string that a script reads. `sn3d` writes `RESTART_NEEDED`, and the job
-  scripts in `scripts/` search the log for that text. Do not change such a
-  string.
+- A log string that a script reads. `sn3d` writes `RESTART_NEEDED` or
+  `No need for restart`, and the job scripts in `scripts/` search the log for
+  these texts. Do not change such a string.
 - Quoted text from an external source, e.g. a compiler message or a title of a
   publication.
 

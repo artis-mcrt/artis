@@ -51,6 +51,7 @@ fi
 
 if grep -qs "RESTART_NEEDED" output_0-0.txt; then
     sbatch -J "${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/artis-cosma8.sh
-elif ls packets/packets00_0000.out* > /dev/null 2>&1; then
+elif grep -qs "No need for restart" output_0-0.txt; then
+    # sn3d writes this text after the last timestep of the model. The post-processing job has no effect before that.
     sbatch -J "exspec_${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/exspec-zip-cosma8.sh
 fi
