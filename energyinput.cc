@@ -159,11 +159,11 @@ auto get_fraction_released_by_pellets() -> double {
 }
 
 void setup_thermal_input_pellet(const double e_cmf_per_packet, Packet& pkt) {
-  // the inverse of F at a uniform sample of [F(first release time), F(tmax))
+  // the inverse of F at a uniform sample of (F(first release time), F(tmax))
   const double first_release_time = INITIAL_PACKETS_ON ? 0. : globals::tmin;
   const double fraction_sample =
       std::lerp(get_cumulative_fraction_released(first_release_time), get_cumulative_fraction_released(globals::tmax),
-                rng_uniform(get_rngstate(pkt)));
+                rng_uniform_pos(get_rngstate(pkt)));
 
   // the first row with a fraction at or above the sample. A rounded sample can be the last fraction, 1.
   const auto row = index_lowerbound(cumulative_fractions_released, fraction_sample);
@@ -177,8 +177,8 @@ void setup_thermal_input_pellet(const double e_cmf_per_packet, Packet& pkt) {
         (cumulative_fractions_released[row] - cumulative_fractions_released[row - 1]);
     pkt.tdecay = std::lerp(release_times[row - 1], release_times[row], fraction_of_row_interval);
   }
-  // A sample on a plateau of F can give a time before the first release time. A release at the first release time
-  // itself would take the path of a release before tmin, so the release time stays after it.
+  // A rounding error can give a time at or before the first release time. A release at the first release time would
+  // take the path of a release before tmin, so the release time stays after it.
   pkt.tdecay = std::max(pkt.tdecay, std::nextafter(first_release_time, globals::tmax));
 
   pkt.type = TYPE_RADIOACTIVE_PELLET;
