@@ -1757,6 +1757,15 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     for (const auto& ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
       frac_excitation_of_stored_list += ntexcitation.frac_deposition;
     }
+    // A bad solution can give more than the deposition energy to ionisation and excitation. The packets then
+    // reach only the fraction 1 - frac_ionisation, so each stored transition gets its part of that fraction.
+    const double frac_not_ionisation = std::max(0., 1. - frac_ionisation_total);
+    if (frac_excitation_of_stored_list > frac_not_ionisation) {
+      for (auto& ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
+        ntexcitation.frac_deposition *= frac_not_ionisation / frac_excitation_of_stored_list;
+      }
+      frac_excitation_of_stored_list = frac_not_ionisation;
+    }
 
   }  // nt_excitations_stored > 0
 
@@ -1800,8 +1809,11 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
   if (!ftol<0.002>(frac_sum, 1.0)) {
     printlnlog("[warning] frac_sum is {:g}, but should be 1.0", frac_sum);
-    printlnlog("  (replacing calculated frac_heating_tot {:g} with {:g} to make frac_sum = 1.0)",
-               frac_heating_calculated, std::clamp(1. - frac_excitation_total - frac_ionisation_total, 0., 1.));
+    printlnlog(
+        "  (replacing calculated frac_heating_tot {:g} with {:g}, which includes the excitation fraction {:g} "
+        "outside the stored list)",
+        frac_heating_calculated, nt_solution[nonemptymgi].frac_heating,
+        frac_excitation_total - frac_excitation_of_stored_list);
   }
 }
 
