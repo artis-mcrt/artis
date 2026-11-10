@@ -640,7 +640,7 @@ Include non-thermal excitation only from the lowest NTEXCITATION_MAXNLEVELS_LOWE
 
 `int MAX_NT_EXCITATIONS_STORED`
 
-The number of stored non-thermal excitation rates. The solver keeps the transitions with the largest deposition fractions. A transition outside the list gets no excitation rate, and an NTLEPTON packet that selects one becomes a k-packet. This value has an effect only with NT_SPENCERFANO.
+The number of stored non-thermal excitation rates. The solver keeps the transitions with the largest deposition fractions. A transition outside the list gets no excitation rate. Its part of the deposition energy becomes k-packets, and the T_e solver counts that part as heating. This value has an effect only with NT_SPENCERFANO.
 
 **Every preset:** `25000`
 

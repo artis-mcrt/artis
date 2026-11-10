@@ -234,7 +234,9 @@ $$
 H_\mathrm{dep} = f_\mathrm{heat} \, D_\mathrm{lepton} + D_\mathrm{alpha} + D_\mathrm{fission}
 $$
 
-$D$ is a deposition rate density, and $f_\mathrm{heat}$ is the heating fraction of the non-thermal solution. With
+$D$ is a deposition rate density, and $f_\mathrm{heat}$ is the heating fraction of the non-thermal solution. It
+includes the excitation energy of the transitions outside the stored list
+([MAX_NT_EXCITATIONS_STORED](options.md#max_nt_excitations_stored)), which the packets convert to k-packets. With
 [USE_ION_BFHEATING_ESTIMATORS](options.md#use_ion_bfheating_estimators), a Monte Carlo {term}`estimator` corrects the
 bound-free heating (see [the radiation field model](#the-radiation-field-model)). Without
 [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), the collisional heating comes
