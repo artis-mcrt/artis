@@ -111,4 +111,4 @@ describes the method. The preset has these methods:
 ## nltephotospheric
 
 The photospheric phase of a supernova with the NLTE populations, the Spencer-Fano solver, and the multibin radiation
-field model. The preset keeps 100 excited levels for each ion below calcium and 200 for the heavier ions.
+field model. The preset keeps 100 excited levels for each ion of an element below calcium, and 200 for calcium and the heavier elements.

@@ -6,7 +6,7 @@ A simulation reads three sets of data:
 2. an atomic database;
 3. a model of the ejecta.
 
-[Input files](inputfiles.md) gives the format of each file. All of them go in the {term}`model folder`.
+[Input files](inputfiles.md) gives the format of each file. The atomic database and the model go in the {term}`model folder`.
 
 ## The physics data of the repository
 

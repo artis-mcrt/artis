@@ -70,7 +70,8 @@ The {term}`LTE` timesteps and the grey cells:
 
 - With a value for `MULTIBIN_RADFIELD_FIRST_TIMESTEP`, `num_lte_timesteps` must not be larger than that value.
 - With the Spencer-Fano solver (`NT_SCHEME`), the first solution comes at the timestep `num_lte_timesteps` + 1.
-- `sn3d` calculates the grey optical depth from each cell to the outer boundary of the model. A cell with a depth of
+- `sn3d` estimates the grey optical depth of each cell as its grey opacity, times its density, times the distance from
+  the cell to the outer boundary of the model. A cell with a depth of
   `optical_depth_is_thick` or more gets the {term}`grey opacity` treatment. This applies to each timestep before the timestep
   `num_grey_timesteps`.
 

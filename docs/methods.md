@@ -219,7 +219,8 @@ loses energy to the expansion in proportion to 1/t. A decay at the time `t_decay
 `t_decay / t_mid` of its energy at the midpoint `t_mid` of the first timestep. The `q` energy keeps the fraction
 `t_model / t_mid`, where `t_model` is the snapshot time.
 
-For each other cell, the code solves this equation for the electron temperature:
+For each other cell, the code solves this equation for the electron temperature. One grid update changes T_e by a
+maximum factor of two:
 
 $$
 H_\mathrm{bf} + H_\mathrm{ff} + H_\mathrm{coll} + H_\mathrm{dep} =
