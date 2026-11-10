@@ -12,7 +12,7 @@ The Makefile is the authority for these options and for the way that they intera
 | `GCCTOOLCHAIN=path` | With nvc++, select the gcc toolchain at that path. The Makefile has fallbacks for some known hosts, so this option is not always necessary. |
 | `GPUARCH=N` | With nvc++ and `GPU=ON`, compile for compute capability N, e.g. `GPUARCH=80`, in place of the GPU of the host. A host that has no GPU needs this option to get a defined target. |
 | `OPENMP=ON` | Parallelise with OpenMP threads within each MPI rank. This cannot be combined with `STDPAR`. The Makefile gives the OpenMP flags to gcc, clang, and nvc++ only, so a build with hipcc gets no threads. |
-| `STDPAR=ON` | Give the loops to the parallel algorithms of the standard library, on the CPU cores or, together with `GPU=ON`, on a GPU. The Makefile gives nvc++ the flag `-stdpar=multicore` and links `-ltbb` for gcc, so these two compilers use the CPU cores. With clang or hipcc, the threads depend on the parallel backend of the standard library, which can run the algorithms in one thread. gcc needs the TBB library (see [Installation](installation.md)). |
+| `STDPAR=ON` | Give the loops to the parallel algorithms of the standard library, on the CPU cores or, together with `GPU=ON`, on a GPU. gcc and nvc++ use the CPU cores, and gcc needs the TBB library (see [Installation](installation.md)). With clang or hipcc, the threads depend on the parallel backend of the standard library, which can run the algorithms in one thread. |
 | `OPTIMIZE=OFF` | Compile without optimisation. This is the quickest way to check that everything still compiles. |
 | `ZSTD=OFF` | Build without libzstd. |
 | `PGO=GENERATE`, `PGO=USE` | Profile-guided optimisation with gcc or clang. Build with `GENERATE`, run a representative simulation to collect profile data, then build again with `USE`. |
@@ -21,18 +21,20 @@ The Makefile finds libzstd with pkg-config or with a link of `-lzstd`. A build w
 input file, e.g. `model.txt.zst`, when the plain file is absent, and it writes the output files compressed (see
 [Input files](inputfiles.md)). `ZSTD=ON` stops the build if the library is absent.
 
-Each option of the table above adds a suffix to the name of the build folder, so different option sets coexist in
-`build/`. `GCCTOOLCHAIN` is the exception. It changes `CXXFLAGS` but not the name of the folder, so make keeps the
-objects of the previous toolchain. Run `make clean` after you change its value.
+## The build folders
+
+`make` puts the objects in `build/<configuration>/`. Each option of the table above adds a suffix to the name of the
+build folder, so different option sets coexist in `build/`. `GCCTOOLCHAIN` is the exception, so run `make clean` after
+you change its value.
 
 The name of the build folder ends with `_options` and a checksum of the content of `artisoptions.h`, so the builds of
 different {term}`presets <preset>` coexist too. A change of the preset or of an option value compiles every object in a new build
-folder, and a change back to an earlier content compiles nothing again. The timestamp of `artisoptions.h` has no
-effect. Each edit of an option keeps the build folder of the old value, so run `make clean` when `build/` becomes
-large.
+folder, and a change back to an earlier content compiles nothing again. Each edit of an option keeps the build folder
+of the old value, so run `make clean` when `build/` becomes large.
 
-Do not change `artisoptions.h` during a build. Make then stops with an error and removes the object, because that
-object does not belong in the build folder. Run `make` again.
+`make` also makes a symlink in the repository root to each program that it builds. Each symlink points to the most
+recent build of any configuration. Look at the symlink before you copy a binary, and copy it with `cp -L` from the
+repository root.
 
 ## The targets
 

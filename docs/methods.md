@@ -34,8 +34,12 @@ The code selects a cell in proportion to its energy, and then a decay chain. Wit
 each nuclide of the chain to the snapshot time of `model.txt`. It samples again until the result is inside the time
 range of the simulation.
 
-- Options: [NUM_PACKETS](options.md#num_packets), [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies),
-  and [INITIAL_PACKETS_ON](options.md#initial_packets_on).
+- Options:
+    - [NUM_PACKETS](options.md#num_packets) sets the number of packets of all ranks together.
+    - [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies) gives each pellet the same energy. With the value
+      false, the decay times are uniform instead, and the energy of each pellet follows the decay power at its time.
+    - [INITIAL_PACKETS_ON](options.md#initial_packets_on) adds the initial energy of the cells to the energy that the
+      packets share. The number of packets stays the same.
 - References: Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 describes the packets. Sim (2007),
   MNRAS, 375, 154-162, doi:10.1111/j.1365-2966.2006.11271.x and Kromer & Sim (2009), MNRAS, 398, 1809-1826,
   doi:10.1111/j.1365-2966.2009.15256.x describe an early version of the code.
@@ -160,7 +164,7 @@ $$
 
 $n_\mathrm{ion}$ is the sum of the populations of the ion, and $n_\mathrm{ion}^\mathrm{old}$ is its value at the
 grid update before. $\Delta t$ is the time between the two grid updates. The sum over the levels of an ion removes the transitions inside the ion, so the sum is the
-backward Euler step of the ion population. These solutions always use the lower-upper (LU) decomposition. The
+backward Euler step of the ion population. The
 time term needs a complete NLTE solution of the cell from the timestep before. A cell without one keeps the
 equations with no time term for that timestep, e.g. after an LTE timestep, after the {term}`grey opacity`, or after a
 fallback to LTE.
@@ -326,9 +330,9 @@ by a factor for the stimulated recombination. The volume, the width, and $\varep
 for the mean intensity.
 
 If the {term}`model folder` holds `recombrates.txt`, the code calibrates the total recombination rate of an ion to that file
-at the temperature [RECOMBCALIBRATION_T_ELEC](options.md#recombcalibration_t_elec). An ion gets no calibration when
-the file has no block for it, when the file gives a negative rate, or when the atomic data gives no recombination
-for it. The log gives the result for each ion (see [Input files](inputfiles.md)).
+at the temperature [RECOMBCALIBRATION_T_ELEC](options.md#recombcalibration_t_elec).
+[Input files](inputfiles.md#recombratestxt) gives the rules of the calibration, and the log gives the result for each
+ion.
 
 - Reference: Shingles et al. (2020), MNRAS, 492, 2029-2043, section 2.2, doi:10.1093/mnras/stz3412.
 
@@ -395,9 +399,8 @@ Code: `decay.cc` and `update_packets.cc` (see [Code map](codemap.md)).
 The decay network holds the alpha decays, the beta-minus decays, the beta-plus decays, the electron captures, and
 the spontaneous fission decays. The code gets the abundance of each nuclide at
 each time from the solutions of the Bateman equation. The `data` folder of the repository holds the decay data and
-the gamma-ray line tables of some nuclides (see [Atomic and model data](data.md)). A nuclide with gamma-ray energy in
-the decay data and no table gets one line at its mean gamma-ray energy for each decay. Fe52 and Mn52 have neither, so
-they get one line at 0.86 MeV and at 3.415 MeV. The decay particles deposit their energy in one of three ways:
+the gamma-ray line tables of some nuclides. [Input files](inputfiles.md#the-gamma-ray-line-files) says which lines a
+nuclide without a table gets. The decay particles deposit their energy in one of three ways:
 
 - They deposit all of their energy at once.
 - The code transports them, and they lose their energy over time.

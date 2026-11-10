@@ -44,35 +44,18 @@ and the spectrum of each observer direction (see [Output files](outputfiles.md))
 
 ### Parallel runs
 
-- **MPI.** A run can use many hundreds of ranks over many nodes. The ranks of one node share the large read-mostly
-  arrays through MPI shared-memory windows, so each node holds one copy of the atomic data.
-- **Threads and GPUs.** `OPENMP=ON` adds OpenMP threads inside each rank with gcc, clang, or nvc++, and `STDPAR=ON`
-  gives the loops to the parallel algorithms of the standard library. `STDPAR=ON GPU=ON` builds for a GPU with nvc++
-  or with hipcc (see [Make options](makeoptions.md)).
-- **The order of the packets.** Before each timestep, the code sorts the packets by cell. The packets of one cell then
-  run together and read the same cache entries.
-- **Modern C++.** gcc, clang, and nvc++ compile the code as C++26, and hipcc compiles it as C++23.
+- **MPI.** A run can use many hundreds of ranks over many nodes, and each node holds one copy of the atomic data.
+- **Threads and GPUs.** `OPENMP=ON` adds OpenMP threads inside each rank with gcc, clang, or nvc++, and `STDPAR=ON GPU=ON` builds for a GPU
+  with nvc++ or with hipcc (see [Make options](makeoptions.md)).
 
-### Development
+## The programs
 
-- **Continuous integration.** Each push starts the
-  [GitHub Actions CI](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml), except on a branch whose name
-  starts with `classic`. CI compiles the code with each supported compiler and compares the checksums of the
-  end-to-end tests, so a regression does not reach the main branch. A pull request from a fork gets no automatic run.
-- **Static analysis.** clang-tidy, clang-format, and cppcheck run on each push, and almost every diagnostic is an
-  error.
-- **Sanitizers.** `TESTMODE=ON` adds the address sanitizer, the undefined behaviour sanitizer, and the extra
-  assertions.
-
-## The three programs
-
-The Makefile builds three programs from the same sources. `make` builds the first two:
+`make` builds two programs:
 
 - `sn3d` does the radiative transfer over a sequence of timesteps. It writes the spectra, the light curves, and the
   packet files.
 - `exspec` combines the packet files into spectra and light curves again.
   [Post-processing with exspec](exspec.md) describes when you need it.
-- `unittests` runs the unit tests. `make unittests` builds it (see [Testing](testing.md)).
 
 [artistools](https://github.com/artis-mcrt/artistools) is a companion Python package that plots and analyses the
 output files.

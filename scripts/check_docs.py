@@ -8,7 +8,7 @@ The script makes three checks:
 
 - the help text of the Makefile and the table of docs/makeoptions.md have the same options;
 - each log message that docs/troubleshooting.md quotes is in the source;
-- the table of docs/inputfiles.md has the lines of inputlinecomments in input.cc, with the same unused lines.
+- the table of docs/inputfiles.md has the lines of inputlinecomments in input.cc that are not unused.
 
 The script gives the status 0 when each check passes, and 1 otherwise.
 """
@@ -51,7 +51,7 @@ def read_source_with_joined_literals() -> str:
 def find_quoted_messages_not_in_source(source: str) -> list[str]:
     """Give a message for each part of a log message of docs/troubleshooting.md that the source does not hold."""
     page = (DOCS_PATH / "troubleshooting.md").read_text(encoding="utf-8")
-    quoted_section = re.sub(r"\{term\}`[^`]*`", "", page[page.index("### Warnings that the tests also give") :])
+    quoted_section = re.sub(r"\{term\}`[^`]*`", "", page[page.index("### Warnings that most runs give") :])
     code_spans = (" ".join(code_span.split()) for code_span in re.findall(r"`([^`]*)`", quoted_section))
     errors: list[str] = []
     # a quoted log message has more than one word. A command also has more than one word, and it starts with artistools.
@@ -64,29 +64,29 @@ def find_quoted_messages_not_in_source(source: str) -> list[str]:
 
 
 def find_input_line_differences(source: str) -> list[str]:
-    """Give a message for each difference between inputlinecomments in input.cc and the table of docs/inputfiles.md."""
+    """Give a message for each difference between the used lines of input.cc and the table of docs/inputfiles.md."""
     array_match = re.search(r"inputlinecomments = std::array\{(.*?)\n\};", source, re.DOTALL)
     if array_match is None:
         return ["input.cc: the array inputlinecomments is absent"]
     source_comments = re.findall(r'"\s*(\d+): (.*?)",?\n', array_match.group(1) + "\n")
     page = (DOCS_PATH / "inputfiles.md").read_text(encoding="utf-8")
     input_section = page[page.index("## input.txt") : page.index("## model.txt")]
-    table_rows = re.findall(r"^\| (\d+) \| (.*?) ?\| .* \|$", input_section, re.MULTILINE)
-    if len(source_comments) != len(table_rows):
-        return [f"input.cc has {len(source_comments)} input lines, and docs/inputfiles.md has {len(table_rows)}"]
-    errors: list[str] = []
-    for (source_line, comment), (page_line, value_names) in zip(source_comments, table_rows, strict=True):
-        if source_line != page_line:
-            errors.append(f"input line {source_line} of input.cc has the number {page_line} in docs/inputfiles.md")
-        if comment.startswith("UNUSED") != (not value_names.strip()):
-            errors.append(f"input line {source_line}: input.cc and docs/inputfiles.md differ on whether it is unused")
-        if not comment.startswith("UNUSED"):
-            names_in_source = set(comment.partition(":")[0].split())
-            names_on_page = set(value_names.strip("` ").split())
-            errors.extend(
-                f"input line {source_line}: docs/inputfiles.md and input.cc differ on {name}"
-                for name in sorted(names_in_source ^ names_on_page)
-            )
+    table_row_matches = re.findall(r"^\| (\d+) \| (.*?) ?\| .* \|$", input_section, re.MULTILINE)
+    table_rows = dict(table_row_matches)
+    if len(table_rows) != len(table_row_matches):
+        return ["docs/inputfiles.md has two rows for one input line"]
+    used_source_comments = {line: comment for line, comment in source_comments if not comment.startswith("UNUSED")}
+    errors = [
+        f"input line {line}: input.cc and docs/inputfiles.md differ on whether it is unused"
+        for line in sorted(used_source_comments.keys() ^ table_rows.keys(), key=int)
+    ]
+    for line in used_source_comments.keys() & table_rows.keys():
+        names_in_source = set(used_source_comments[line].partition(":")[0].split())
+        names_on_page = set(table_rows[line].strip("` ").split())
+        errors.extend(
+            f"input line {line}: docs/inputfiles.md and input.cc differ on {name}"
+            for name in sorted(names_in_source ^ names_on_page)
+        )
     return errors
 
 

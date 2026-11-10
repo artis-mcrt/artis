@@ -64,15 +64,8 @@ uv run --python 3.14 --with-requirements docs/requirements.txt sphinx-build -W -
 
 `-W` makes a warning an error, as CI and Read the Docs do. Open `docs/_build/html/index.html` to read the result.
 
-Read the Docs builds one version of the site for each branch and for each tag that you activate. `latest` comes from
-the `main` branch, and a version of a release comes from its branch or from its tag. The version selector under the
-name of the project goes from one version to the other. `docs/_static/version-selector.js` fills that list with the
-data of Read the Docs, so a local build shows no selector. A new version needs two steps. The branch or the tag must
-hold the `docs/` folder and `.readthedocs.yaml`, and a maintainer must then activate the version on the dashboard.
-
-The build also writes a preview card for each page, which a chat application or a social network shows for a link to
-that page. The card holds the title of the page, the first lines of the text, and the logo.
-[sphinxext-opengraph](https://sphinxext-opengraph.readthedocs.io/) makes it, and matplotlib draws it.
+Read the Docs builds one version of the site for each branch and for each tag that a maintainer activates on the
+dashboard. `latest` comes from the `main` branch. A local build shows no version selector.
 
 `scripts/make_options_docs.py` writes `docs/options.md` from `artisoptions_doc.md` and the `artisoptions_*.h`
 presets, and a pre-commit hook runs the script. Change the comment of the option in `artisoptions_doc.md`, not the

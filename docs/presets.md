@@ -85,8 +85,6 @@ radiation temperature (`LTEPOP_EXCITATION_USE_TJ`), one level for the top ion, a
 is on, and the packets get a dipole scattering distribution. The 3D grid of a 1D or a 2D model has 100 cells per
 coordinate.
 
-The tests `classicmode_1d_3dgrid` and `classicmode_3d` use this preset.
-
 ## kilonova_lte
 
 Kilonovae in LTE, as
@@ -94,10 +92,6 @@ Kilonovae in LTE, as
 describes the decay and the {term}`thermalisation`. The preset has the time-dependent thermalisation of the decay particles,
 a {term}`grey opacity` from a fit to the electron fraction, the relativistic Doppler shift, and a low `MINTEMP` for the
 late ejecta. The frequency range of the {term}`r-packets <r-packet>` reaches further into the ultraviolet than the supernova presets.
-
-The tests `kilonova_1d`, `kilonova_2d`, `kilonova_2d_expansionopac`, `kilonova_2d_barnesthermalisation`, and
-`kilonova_2d_xcomgammaphotoion` use this preset. `kilonova_1d` is the quickest test of the repository, so the
-[Quickstart](quickstart.md) uses it.
 
 ## nltenebular
 
@@ -114,12 +108,7 @@ describes the method. The preset has these methods:
 
 [Atomic and model data](data.md) names the dataset for a production run with this preset.
 
-The tests `nebular_1d_3dgrid` and `nebular_1d_3dgrid_limitbfest` use this preset. `nebular_1d_3dgrid` covers the
-physics that most changes touch, so it is the default test for a change of the code.
-
 ## nltephotospheric
 
 The photospheric phase of a supernova with the NLTE populations, the Spencer-Fano solver, and the multibin radiation
 field model. The preset keeps 100 excited levels for each ion below calcium and 200 for the heavier ions.
-
-The test `nltephotospheric_dynamic_ion_range_1d_1dgrid` uses this preset.
