@@ -28,10 +28,9 @@ if grep -qs "No need for restart" output_0-0.txt && grep -qs "sn3d finished" out
   echo "$(date): zstd compresses the packet files"
   find packets/ -name 'packets*.out' -size +200k -print0 | sort -z | xargs -r0 -n1 -P"$ncpus" zstd -T1 -13 -v --rm -f
 
-  # the artis folder holds the code and the data files of the code, so do not change them. tar_rm_logs.sh
-  # compresses the log files of the job folders (output_*.txt) in one archive, so this step leaves them plain.
+  # the artis folder holds the code and the data files of the code, so do not change them
   echo "$(date): zstd compresses the .txt files of the subfolders"
-  find . -path ./artis -prune -o -name '*.txt' ! -name "output_*.txt" -size +200k -print0 | sort -z | xargs -r0 -n1 -P"$ncpus" zstd -T1 -13 -v --rm -f
+  find . -path ./artis -prune -o -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 -n1 -P"$ncpus" zstd -T1 -13 -v --rm -f
   echo "$(date): zstd compresses the .out files of the subfolders"
   find . -path ./artis -prune -o -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 -n1 -P"$ncpus" zstd -T1 -13 -v --rm -f
 

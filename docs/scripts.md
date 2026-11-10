@@ -25,8 +25,8 @@ The `scripts` folder holds the job scripts of the clusters that we use and some 
 - `mergeangleres.py`: merge the files of the direction bins into `light_curve_res.out`, `spec_res.out`, and
   `specpol_res.out`.
 - `combine_allrank_out_files.py`: make the combined files of all {term}`ranks <rank>` (see [Output files](outputfiles.md)).
-- `tar_rm_logs.sh`: the script archives the log files of the ranks into `logfiles.tar.zst`. It then removes them,
-  except `output_0-0.txt`.
+- `tar_rm_logs.sh`: the script archives the log files of the ranks into `logfiles.tar`. It then removes them, except
+  `output_0-0.txt`. The archive has no compression, because `exspec-after.sh` compresses each large log file first.
 - `rsyncnooutput.sh`: copy a {term}`model folder` with rsync, without the output files.
 - `new-model-folder.sh`: make a model folder with the ARTIS source in its subfolder `artis` and an `input.txt` from
   `input-template.txt`. The script clones the branch `release`, or with `--symlink` it makes a symlink to the source that
