@@ -969,26 +969,14 @@ void print_options_help(std::FILE* stream, const char* progname) {
   std::println(stream, "  -h                     print this help and exit");
 }
 
-}  // anonymous namespace
-
-auto main(int argc, char* argv[]) -> int {
-  real_time_start = std::chrono::steady_clock::now();
-
-  if constexpr (VPKT_ON) {
-    vpkt::nvpkt_created = 0;
-    vpkt::nvpkt_esc_from_rpkt = 0;
-    vpkt::nvpkt_esc_from_kpkt = 0;
-    vpkt::nvpkt_esc_from_macroatom = 0;
-  }
-
-  MPI_Init(&argc, &argv);
-
-  globals::setup_mpi_vars();
-
-  int walltime_limit_seconds = -1;
-  bool check_inputs_only = false;
-
+struct CommandLineOptions {
+  bool check_inputs_only{false};
+  int walltime_limit_seconds{-1};
   std::string walltime_limit_hours_str;
+};
+
+auto parse_command_line(const int argc, char* const* argv) -> CommandLineOptions {
+  CommandLineOptions options;
   int opt = 0;
   while ((opt = getopt(argc, argv, "chw:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
     if (opt == 'h') {
@@ -999,7 +987,7 @@ auto main(int argc, char* argv[]) -> int {
       std::exit(EXIT_SUCCESS);  // NOLINT(concurrency-mt-unsafe)
     }
     if (opt == 'c') {
-      check_inputs_only = true;
+      options.check_inputs_only = true;
     } else if (opt == 'w') {
       char* parse_end = nullptr;
       const float walltime_limit_hours = strtof(optarg, &parse_end);  // NOLINT(misc-include-cleaner)
@@ -1014,28 +1002,17 @@ auto main(int argc, char* argv[]) -> int {
         fatal_crash("wall time limit of {} hours is outside the range of 1 second to {} seconds", optarg,
                     std::numeric_limits<int>::max());
       }
-      walltime_limit_seconds = static_cast<int>(walltime_limit_seconds_exact);
-      walltime_limit_hours_str = optarg;
+      options.walltime_limit_seconds = static_cast<int>(walltime_limit_seconds_exact);
+      options.walltime_limit_hours_str = optarg;
     } else {
       print_options_help(stderr, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
       fatal_crash("unknown command line option");
     }
   }
+  return options;
+}
 
-  if (check_inputs_only) {
-    enter_inputcheck_folder();
-  }
-
-  check_already_running();
-
-  setup_jobfolder();
-
-  if (globals::my_rank == 0) {
-    // the standard output goes to the log of the Slurm job, which then names the job folder
-    std::println("job folder: {}", globals::jobfolder);
-    std::fflush(stdout);
-  }
-
+void open_log_files_and_log_job_configuration(const CommandLineOptions& options) {
 #if defined(_OPENMP) && !defined(GPU_ON)
   // Explicitly turn off dynamic threads. The per-thread log file handles in mpi_logging.cc are threadprivate,
   // and OpenMP only guarantees that threadprivate data persists between parallel regions while the team size
@@ -1077,9 +1054,9 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("Boost Gauss-Kronrod quadrature");
 #endif
 
-  if (!walltime_limit_hours_str.empty()) {
+  if (!options.walltime_limit_hours_str.empty()) {
     printlnlog("command line argument specifies wall time hours '{}', so setting walltime_limit_seconds = {}",
-               walltime_limit_hours_str, walltime_limit_seconds);
+               options.walltime_limit_hours_str, options.walltime_limit_seconds);
   }
 
   printlnlog("The per-rank output files go into the job folder '{}'", globals::jobfolder);
@@ -1114,25 +1091,9 @@ auto main(int argc, char* argv[]) -> int {
       "present",
       MAX_NODE_SIZE);
 #endif
+}
 
-  if (NUM_PACKETS < globals::nprocs) {
-    fatal_crash("NUM_PACKETS = {} is less than the {} ranks, but every rank needs a packet", NUM_PACKETS,
-                globals::nprocs);
-  }
-  // the ranks share NUM_PACKETS equally, and the first ranks get one packet each of the remainder
-  const auto [firstpktindex_thisrank, npkts_thisrank] = get_range_chunk(NUM_PACKETS, globals::nprocs, globals::my_rank);
-  // packet_init() and Packet::number hold the packet index of a rank in an int
-  assert_always(npkts_thisrank <= std::numeric_limits<int>::max());
-
-  printlnlog("Simulation propagates {} packets on this rank (total {:g} with nprocs {})", npkts_thisrank,
-             static_cast<double>(NUM_PACKETS), globals::nprocs);
-
-  printlnlog("[info] mem_usage: packets occupy {:.3f} MB", npkts_thisrank * sizeof(Packet) / 1024. / 1024.);
-
-  std::vector<Packet> packets;
-  // an input check of a new simulation places one pellet, so that a low rank count needs little memory
-  reserve_resize(packets, check_inputs_only ? 1 : npkts_thisrank);
-
+void read_input_and_initialise_simulation(std::vector<Packet>& packets) {
   // Read in parameters from input.txt
   read_parameterfile(packets);
 
@@ -1182,8 +1143,6 @@ auto main(int argc, char* argv[]) -> int {
     syn_file.close();
   }
 
-  bool terminate_early = false;
-
   setup_timesteps();
 
   if (globals::my_rank == 0) {
@@ -1224,44 +1183,9 @@ auto main(int argc, char* argv[]) -> int {
   vpkt::init(globals::timestep, globals::simulation_continued_from_saved);
 
   setup_cellcache();
+}
 
-  if (check_inputs_only) {
-    if (globals::simulation_continued_from_saved) {
-      reserve_resize(packets, npkts_thisrank);
-      read_packet_restart_file(globals::timestep, packets);
-    } else {
-      printlnlog("The input check placed only one pellet for each rank.");
-    }
-    MPI_Barrier_allranks();
-    printlnlog("The input check is complete. sn3d stops before timestep {}.", globals::timestep);
-    if (globals::my_rank == 0) {
-      std::println("input check: complete");
-    }
-    MPI_Finalize();
-    std::filesystem::remove("artis.pid");
-    return 0;
-  }
-
-  while (globals::timestep < globals::timestep_finish && !terminate_early) {
-    MPI_Barrier_allranks();
-
-    const auto timestep_start_time = std::chrono::steady_clock::now();
-    terminate_early = do_timestep(globals::timestep, packets, walltime_limit_seconds);
-
-    if (!terminate_early) {
-      const int requested_timesteps_remaining = globals::timestep_finish - globals::timestep - 1;
-      const double timestep_hours =
-          std::chrono::duration<double>(std::chrono::steady_clock::now() - timestep_start_time).count() / HOUR;
-      printlnlog(
-          "timestep {} is complete ({} of {} timesteps of the model) after {:.2f} hours. If each timestep takes this "
-          "time, the remaining {} requested timesteps take {:.2f} hours.",
-          globals::timestep, globals::timestep + 1, globals::ntimesteps, timestep_hours, requested_timesteps_remaining,
-          timestep_hours * requested_timesteps_remaining);
-    }
-
-    globals::timestep++;
-  }
-
+void log_job_end(const bool terminate_early) {
   // The main calculation is now over. The packets now have all stored the time, place and direction
   // at which they left the grid. Also their rest frame energies and frequencies.
   // sn3d has written the spectra and light curves. exspec can make them again from the packet files.
@@ -1290,6 +1214,101 @@ auto main(int argc, char* argv[]) -> int {
       "threads = {:.3f} core hours)",
       globals::timestep_initial, globals::timestep - 1, wallclock_hours, globals::nprocs, get_max_threads(),
       wallclock_hours * globals::nprocs * get_max_threads());
+}
+
+}  // anonymous namespace
+
+auto main(int argc, char* argv[]) -> int {
+  real_time_start = std::chrono::steady_clock::now();
+
+  if constexpr (VPKT_ON) {
+    vpkt::nvpkt_created = 0;
+    vpkt::nvpkt_esc_from_rpkt = 0;
+    vpkt::nvpkt_esc_from_kpkt = 0;
+    vpkt::nvpkt_esc_from_macroatom = 0;
+  }
+
+  MPI_Init(&argc, &argv);
+
+  globals::setup_mpi_vars();
+
+  const auto options = parse_command_line(argc, argv);
+
+  if (options.check_inputs_only) {
+    enter_inputcheck_folder();
+  }
+
+  check_already_running();
+
+  setup_jobfolder();
+
+  if (globals::my_rank == 0) {
+    // the standard output goes to the log of the Slurm job, which then names the job folder
+    std::println("job folder: {}", globals::jobfolder);
+    std::fflush(stdout);
+  }
+
+  open_log_files_and_log_job_configuration(options);
+
+  if (NUM_PACKETS < globals::nprocs) {
+    fatal_crash("NUM_PACKETS = {} is less than the {} ranks, but every rank needs a packet", NUM_PACKETS,
+                globals::nprocs);
+  }
+  // the ranks share NUM_PACKETS equally, and the first ranks get one packet each of the remainder
+  const auto [firstpktindex_thisrank, npkts_thisrank] = get_range_chunk(NUM_PACKETS, globals::nprocs, globals::my_rank);
+  // packet_init() and Packet::number hold the packet index of a rank in an int
+  assert_always(npkts_thisrank <= std::numeric_limits<int>::max());
+
+  printlnlog("Simulation propagates {} packets on this rank (total {:g} with nprocs {})", npkts_thisrank,
+             static_cast<double>(NUM_PACKETS), globals::nprocs);
+
+  printlnlog("[info] mem_usage: packets occupy {:.3f} MB", npkts_thisrank * sizeof(Packet) / 1024. / 1024.);
+
+  std::vector<Packet> packets;
+  // an input check of a new simulation places one pellet, so that a low rank count needs little memory
+  reserve_resize(packets, options.check_inputs_only ? 1 : npkts_thisrank);
+
+  read_input_and_initialise_simulation(packets);
+
+  if (options.check_inputs_only) {
+    if (globals::simulation_continued_from_saved) {
+      reserve_resize(packets, npkts_thisrank);
+      read_packet_restart_file(globals::timestep, packets);
+    } else {
+      printlnlog("The input check placed only one pellet for each rank.");
+    }
+    MPI_Barrier_allranks();
+    printlnlog("The input check is complete. sn3d stops before timestep {}.", globals::timestep);
+    if (globals::my_rank == 0) {
+      std::println("input check: complete");
+    }
+    MPI_Finalize();
+    std::filesystem::remove("artis.pid");
+    return 0;
+  }
+
+  bool terminate_early = false;
+  while (globals::timestep < globals::timestep_finish && !terminate_early) {
+    MPI_Barrier_allranks();
+
+    const auto timestep_start_time = std::chrono::steady_clock::now();
+    terminate_early = do_timestep(globals::timestep, packets, options.walltime_limit_seconds);
+
+    if (!terminate_early) {
+      const int requested_timesteps_remaining = globals::timestep_finish - globals::timestep - 1;
+      const double timestep_hours =
+          std::chrono::duration<double>(std::chrono::steady_clock::now() - timestep_start_time).count() / HOUR;
+      printlnlog(
+          "timestep {} is complete ({} of {} timesteps of the model) after {:.2f} hours. If each timestep takes this "
+          "time, the remaining {} requested timesteps take {:.2f} hours.",
+          globals::timestep, globals::timestep + 1, globals::ntimesteps, timestep_hours, requested_timesteps_remaining,
+          timestep_hours * requested_timesteps_remaining);
+    }
+
+    globals::timestep++;
+  }
+
+  log_job_end(terminate_early);
 
   MPI_Finalize();
 
