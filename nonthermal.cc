@@ -215,6 +215,7 @@ struct NonThermalCellSolution {
   float frac_ionisation = 0.;  // fraction of deposition energy going to ionisation
 
   int excitations_list_count = 0;
+  double frac_excitation_of_stored_list = 0.;  // the sum of frac_deposition over the stored excitation list
 
   int timestep_last_solved = -1;  // the quantities above were calculated for this timestep
   float nneperion_when_solved{NAN};  // nne divided by the total ion density at the last solution
@@ -698,6 +699,7 @@ void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
   nt_solution[nonemptymgi].timestep_last_solved = -1;
 
   nt_solution[nonemptymgi].excitations_list_count = 0;
+  nt_solution[nonemptymgi].frac_excitation_of_stored_list = 0.;
 
   for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
     auto& celliondata = get_cell_allions_data(nonemptymgi)[uniqueionindex];
@@ -1783,6 +1785,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   }
 
   nt_solution[nonemptymgi].frac_ionisation = static_cast<float>(frac_ionisation_total);
+  nt_solution[nonemptymgi].frac_excitation_of_stored_list = frac_excitation_of_stored_list;
   const auto frac_heating_calculated = calculate_frac_heating(nonemptymgi, yfunc);
   const double frac_sum = frac_heating_calculated + frac_excitation_total + frac_ionisation_total;
 
@@ -1795,6 +1798,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
     printlnlog("  frac_heating_tot:    {:g}", frac_heating_calculated);
     printlnlog("  frac_excitation_tot: {:g}", frac_excitation_total);
+    printlnlog("  frac_excitation of the stored list: {:g}", frac_excitation_of_stored_list);
     printlnlog("  frac_ionisation_tot: {:g}", frac_ionisation_total);
     printlnlog("  frac_sum:            {:g} (should be close to 1.0)", frac_sum);
   }
@@ -2463,25 +2467,27 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // the transitions outside the list, so the k-packet probability is the frac_heating that
     // analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
     zrand -= frac_ionisation;
-    for (const auto& ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
-      const double frac_deposition_exc = ntexcitation.frac_deposition;
-      if (zrand < frac_deposition_exc) {
-        const auto lineindex = globals::alltrans.lineindex[ntexcitation.alltransindex];
-        const auto [element, ion, upper] =
-            get_levelfromuniquelevelindex(globals::linelist.uniquelevelindex_upper[lineindex]);
+    if (zrand < nt_solution[nonemptymgi].frac_excitation_of_stored_list) {
+      for (const auto& ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
+        const double frac_deposition_exc = ntexcitation.frac_deposition;
+        if (zrand < frac_deposition_exc) {
+          const auto lineindex = globals::alltrans.lineindex[ntexcitation.alltransindex];
+          const auto [element, ion, upper] =
+              get_levelfromuniquelevelindex(globals::linelist.uniquelevelindex_upper[lineindex]);
 
-        stats::increment(stats::Counter::MA_STAT_ACTIVATION_NTCOLLEXC);
-        stats::increment(stats::Counter::INTERACTIONS);
-        pkt.trueemissiontype = EMTYPE_NOTSET;
-        pkt.trueem_pos = {NAN, NAN, NAN};
-        pkt.trueem_time = -1.;
+          stats::increment(stats::Counter::MA_STAT_ACTIVATION_NTCOLLEXC);
+          stats::increment(stats::Counter::INTERACTIONS);
+          pkt.trueemissiontype = EMTYPE_NOTSET;
+          pkt.trueem_pos = {NAN, NAN, NAN};
+          pkt.trueem_time = -1.;
 
-        stats::increment(stats::Counter::NT_STAT_TO_EXCITATION);
+          stats::increment(stats::Counter::NT_STAT_TO_EXCITATION);
 
-        do_macroatom(pkt, {.element = element, .ion = ion, .level = upper, .activatingline = -99});
-        return;
+          do_macroatom(pkt, {.element = element, .ion = ion, .level = upper, .activatingline = -99});
+          return;
+        }
+        zrand -= frac_deposition_exc;
       }
-      zrand -= frac_deposition_exc;
     }
   }
 
