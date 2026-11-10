@@ -232,8 +232,8 @@ the second argument.
   options compiles nothing again. A second run of the same test also compiles
   nothing again. The `sn3d` and `exspec` symlinks of the repository root then
   point to the build of the test.
-- `inputcheck` copies `input-newrun.txt` to `input.txt` and runs `sn3d -c`,
-  which reads the input and runs no timestep. The step fails if the check
+- `inputcheck` removes `input.txt` and runs `sn3d -c`, which reads the input
+  from `input-newrun.txt` and runs no timestep. The step fails if the check
   changes a file of the model folder outside the folder `inputcheck`.
 - `job0` removes `input.txt` and starts a new simulation. `sn3d` then restores
   `input.txt` from `input-newrun.txt`. After a run, `input.txt` holds the

@@ -268,11 +268,8 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
     stats::increment(stats::Counter::K_STAT_FROM_EARLIERDECAY);
 
     pkt.prop_time = globals::tmin;
-  } else if constexpr (TESTMODE) {
-    printlnlog("[error] Something wrong with decaying pellets. tdecay {:g} ts {:g} (ts + tw) {:g}", tdecay, ts, t2);
-    assert_testmodeonly(false);
   } else {
-    __builtin_unreachable();
+    fatal_crash("a pellet has the decay time {:g} outside the timestep from {:g} to {:g}", tdecay, ts, t2);
   }
 }
 
@@ -329,12 +326,7 @@ void do_packet(Packet& pkt, const double t2, const int nts, ContinuumOpacity& ch
     }
 
     default: {
-      if constexpr (TESTMODE) {
-        printlnlog("[error] Unknown packet type {}", static_cast<int>(pkt.type));
-        assert_testmodeonly(false);
-      } else {
-        __builtin_unreachable();
-      }
+      fatal_crash("Unknown packet type {}", static_cast<int>(pkt.type));
     }
   }
 }

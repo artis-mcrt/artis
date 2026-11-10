@@ -714,8 +714,6 @@ void macroatom_write_timestep_text() { macroatom_file.write_timestep_text(); }
     if (!globals::alltrans.forbidden[alltransindex]) {
       // permitted E1 electric dipole transitions
       // collisional deexcitation: formula valid only for atoms!
-      // (an alternative expression is Rutten script eq. 3.33, p.50:
-      //  C = n_u * 2.16 * pow(eoverkt, -1.68) * pow(T_e, -1.5) * (g_lower / g_upper) * nne * f)
       const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
 
       const double eoverkt = epsilon_trans / (KB * T_e);
@@ -734,10 +732,10 @@ void macroatom_write_timestep_text() { macroatom_file.write_timestep_text(); }
              eoverkt * g_ratio * gauntfac;
     }
 
-    // forbidden transitions: magnetic dipole, electric quadrupole... Axelrod's approximation (thesis 1980),
-    // i.e. the effective-collision-strength form below with an assumed Omega = 0.01 * lowerstatweight *
-    // upperstatweight, so that Omega / g_upper leaves the 0.01 * lowerstatweight below.
-    // This is the detailed-balance reverse of the branch in col_excitation_ratecoeff().
+    // forbidden transitions: magnetic dipole, electric quadrupole... The approximation of Axelrod (1980), PhD
+    // thesis, University of California, Santa Cruz, i.e. the effective-collision-strength form below with an assumed
+    // Omega = 0.01 * lowerstatweight * upperstatweight, so that Omega / g_upper leaves the 0.01 * lowerstatweight
+    // below. This is the detailed-balance reverse of the branch in col_excitation_ratecoeff().
     return clumpednne * 8.629e-6 * 0.01 * lowerstatweight / std::sqrt(T_e);
   }
 
@@ -761,8 +759,6 @@ void macroatom_write_timestep_text() { macroatom_file.write_timestep_text(); }
       const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
       // permitted E1 electric dipole transitions
       // collisional excitation: formula valid only for atoms!
-      // (an alternative expression is Rutten script eq. 3.32, p.50:
-      //  C = n_l * 2.16 * pow(eoverkt, -1.68) * pow(T_e, -1.5) * exp(-eoverkt) * nne * f)
 
       // Van-Regemorter formula, Mihalas (1978), Stellar Atmospheres, 2nd ed., W. H. Freeman, eq. 5-75, p. 133
       constexpr double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl ->
@@ -777,7 +773,7 @@ void macroatom_write_timestep_text() { macroatom_file.write_timestep_text(); }
              eoverkt / exp_eoverkt * gauntfac;
     }
 
-    // forbidden transitions: magnetic dipole, electric quadrupole... Axelrod's approximation (thesis 1980),
+    // forbidden transitions: magnetic dipole, electric quadrupole... The approximation of Axelrod (1980),
     // i.e. the effective-collision-strength form below with an assumed Omega = 0.01 * lowerstatweight *
     // upperstatweight, so that Omega / g_lower leaves the 0.01 * upperstatweight below. The same Omega is
     // assumed by the matching branch of col_deexcitation_ratecoeff(), which is what makes the pair satisfy

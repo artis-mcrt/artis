@@ -527,10 +527,9 @@ void init() {
 
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
-  reserve_resize(J_normfactor, nonempty_npts_model + 1);
-  reserve_resize(J, nonempty_npts_model + 1);
-
-  reserve_resize(nuJ, nonempty_npts_model + 1);
+  reserve_resize(J_normfactor, nonempty_npts_model);
+  reserve_resize(J, nonempty_npts_model);
+  reserve_resize(nuJ, nonempty_npts_model);
 
   reserve_resize(prev_Jb_lu_normed, nonempty_npts_model);
   reserve_resize(Jb_lu_raw, nonempty_npts_model);
@@ -849,13 +848,13 @@ void invalidate_bin_fits(const int nonemptymgi) {
                                                              RADFIELDBINCOUNT),
                       -1.);
   }
-  // the grey transport collects no line estimators, so a zero here is no measurement
+  // the grey transport collects no line estimators, and an LTE timestep does not use them
   for (int i = 0; i < detailed_linecount; i++) {
     prev_Jb_lu_normed[nonemptymgi][i] = {.value = 0., .contribcount = -1};
   }
-  if (detailed_linecount > 0) {
+  if (detailed_linecount > 0 && !globals::lte_iteration) {
     printlnlog(
-        "[info] cell {} has no line estimators of timestep {}, so the macro-atom uses the radiation field model for "
+        "[info] cell {} has no line estimators at timestep {}, so the macro-atom uses the radiation field model for "
         "its {} detailed lines until the cell has new estimators",
         grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, detailed_linecount);
   }
@@ -996,8 +995,6 @@ void reduce_estimators() {
 // puts a barrier after this call, so that the other ranks on a node read the shared arrays after the broadcast.
 void do_MPI_Bcast(const ptrdiff_t nstart_nonempty, const ptrdiff_t ndo_nonempty, const int root,
                   const int root_node_id) {
-  MPI_Bcast_safe(std::span{J_normfactor}.subspan(nstart_nonempty, ndo_nonempty), root, MPI_COMM_WORLD);
-
   if constexpr (MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value()) {
     if (globals::rank_in_node == 0) {
       MPI_Bcast_safe(

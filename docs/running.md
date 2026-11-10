@@ -39,7 +39,8 @@ removes the folder of the check before it, so run only one check at a time in a 
 
 A check differs from a run in these points:
 
-- The check needs `input.txt`. A run restores an absent `input.txt` from `input-newrun.txt`, but the check does not.
+- A run restores an absent `input.txt` from `input-newrun.txt`. The check restores no file, and it reads
+  `input-newrun.txt` directly.
 - The check of a new simulation needs little memory for the packets, so a low rank count is sufficient, e.g. on a
   login node.
 - The check of a resumed simulation needs the rank count and the memory of the simulation, because each rank reads

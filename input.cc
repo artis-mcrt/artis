@@ -1512,7 +1512,7 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
           energyoffset_ev += ionpot_ev;
         }
         for (int i = 0; i < nlevels_in_file; i++) {
-          std::getline(adata, line);
+          get_noncommentline(adata, line);
         }
 
         if (!get_noncommentline(adata, line)) {
@@ -1979,6 +1979,15 @@ void setup_nlte_levels() {
   printlnlog("[info] Total NLTE levels: {}, of which {} are superlevels", globals::total_nlte_levels, n_super_levels);
 }
 
+// The name of the file with the input parameters. This is input-newrun.txt if the model folder has that file and no
+// input.txt, e.g. after a cleanup of the model folder.
+auto get_parameterfile_name() -> std::string_view {
+  const auto in_modelfolder = [](const std::string_view filename) {
+    return std::filesystem::exists(std::format("{}{}", globals::path_to_modelfolder, filename));
+  };
+  return (!in_modelfolder("input.txt") && in_modelfolder("input-newrun.txt")) ? "input-newrun.txt" : "input.txt";
+}
+
 }  // anonymous namespace
 
 // Get the start timestep of this job and the continue flag before the log files open, because the start timestep
@@ -1989,9 +1998,7 @@ auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
   if (globals::my_rank == 0) {
     int ntimesteps = 0;
     int timestep_finish = 0;
-    // read_parameterfile() restores input.txt from input-newrun.txt under the same condition
-    const bool use_newrun_copy = !std::filesystem::exists("input.txt") && std::filesystem::exists("input-newrun.txt");
-    const std::string_view filename = use_newrun_copy ? "input-newrun.txt" : "input.txt";
+    const auto filename = get_parameterfile_name();
     auto file = istream_required(filename);
     for (int noncomment_linenum = 0; noncomment_linenum <= inputline_continue_from_saved; noncomment_linenum++) {
       if (noncomment_linenum == inputline_ntimesteps) {
@@ -2019,7 +2026,8 @@ auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
 void read_parameterfile(std::span<Packet> packets) {
   // A new run writes a commented copy of input.txt to input-newrun.txt. If input.txt is missing, for example after
   // a cleanup of the model folder, restore it from that copy so that the run can start again without manual steps.
-  if (globals::my_rank == 0 && !std::filesystem::exists("input.txt") && std::filesystem::exists("input-newrun.txt")) {
+  // An input check changes no file of the model folder, so it reads input-newrun.txt.
+  if (globals::my_rank == 0 && globals::path_to_modelfolder.empty() && get_parameterfile_name() != "input.txt") {
     printlog("input.txt is missing. Restoring input.txt from input-newrun.txt...");
     std::error_code ec;
     std::filesystem::copy_file("input-newrun.txt", "input.txt", ec);
@@ -2031,7 +2039,7 @@ void read_parameterfile(std::span<Packet> packets) {
   // rank 0 creates input.txt before the other ranks open it
   MPI_Barrier_allranks();
 
-  const std::string_view filename = "input.txt";
+  const auto filename = get_parameterfile_name();
   auto file = istream_required(filename);
   int noncomment_linenum = 0;
 
@@ -2201,7 +2209,7 @@ void update_parameterfile(const int nts) {
     printlog("Write input.txt again with comments, and copy it to input-newrun.txt...");
   }
 
-  auto file = istream_required("input.txt");
+  auto file = istream_required(get_parameterfile_name());
 
   auto fileout = open_uncompressed_output_file("input.txt.tmp");
 

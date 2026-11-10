@@ -495,7 +495,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
           }
           // the electron density has the same floor as the ion balance, so the stored float stays positive
           const bool step_accepted = std::isfinite(T_e_next) && std::isfinite(nne_next) && T_e_next >= MINTEMP &&
-                                     T_e_next <= MAXTEMP && nne_next >= MINPOP &&
+                                     T_e_next <= MAXTEMP && nne_next >= MINNNE &&
                                      nne_next <= grid::get_nnetot(nonemptymgi) && ion_pops_usable &&
                                      stepsq <= 4. * residualsq;
           if (step_accepted) {

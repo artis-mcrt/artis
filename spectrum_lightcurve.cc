@@ -106,10 +106,6 @@ auto columnindex_from_emissiontype(const int et) -> int {
   }
   // bf-emission
   const int bfindex = get_bflistindex_from_emtype_continuum(et);
-  if (globals::nbfcontinua == 0) {
-    // no bf continua are in use, so a bf emission type should be impossible; count it in the free-free column
-    return 2 * get_nelements() * get_max_nions();
-  }
   assert_always(bfindex < globals::nbfcontinua);
   const int element = globals::bflist[bfindex].elementindex;
   const int ion = globals::bflist[bfindex].ionindex;
