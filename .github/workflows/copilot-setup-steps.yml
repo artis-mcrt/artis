@@ -25,7 +25,7 @@ jobs:
                   echo "CXX=g++-16" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
 
-            - name: Install g++-16, Open MPI and TBB
+            - name: Install g++-16, Open MPI, TBB, and zstd
               run: |
                   sudo apt-get update
                   sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libtbb-dev libzstd-dev zstd

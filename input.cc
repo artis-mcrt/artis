@@ -1982,10 +1982,10 @@ void setup_nlte_levels() {
 // The name of the file with the input parameters. This is input-newrun.txt if the model folder has that file and no
 // input.txt, e.g. after a cleanup of the model folder.
 auto get_parameterfile_name() -> std::string_view {
-  const auto in_modelfolder = [](const std::string_view filename) {
-    return std::filesystem::exists(std::format("{}{}", globals::path_to_modelfolder, filename));
-  };
-  return (!in_modelfolder("input.txt") && in_modelfolder("input-newrun.txt")) ? "input-newrun.txt" : "input.txt";
+  const std::filesystem::path modelfolder{globals::path_to_modelfolder};
+  const bool use_newrun_copy =
+      !std::filesystem::exists(modelfolder / "input.txt") && std::filesystem::exists(modelfolder / "input-newrun.txt");
+  return use_newrun_copy ? "input-newrun.txt" : "input.txt";
 }
 
 }  // anonymous namespace

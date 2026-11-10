@@ -269,7 +269,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
 
     pkt.prop_time = globals::tmin;
   } else {
-    fatal_crash("a pellet has the decay time {:g} outside the timestep from {:g} to {:g}", tdecay, ts, t2);
+    fatal_crash("a pellet at the time {:g} has the earlier decay time {:g}", ts, tdecay);
   }
 }
 
