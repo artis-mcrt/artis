@@ -75,7 +75,8 @@ The time range also sets how the packets divide over the time:
   [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies)). A longer time range thus gives each interval of
   time a smaller share of the packets.
 - [INITIAL_PACKETS_ON](options.md#initial_packets_on) gives a share of the packets to the energy that the ejecta
-  hold at `tmin_days`.
+  hold at `tmin_days`. With this option, the decay times of the pellets start at the snapshot time of `model.txt`,
+  and not at `tmin_days`. A pellet that decays before `tmin_days` becomes a packet of that initial energy.
 
 artistools plots only the observer times that have light from the whole model, and that range is shorter than the
 time range of the run (see [Troubleshooting](troubleshooting.md#the-results)). For the model of

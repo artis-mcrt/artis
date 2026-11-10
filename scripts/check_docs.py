@@ -71,7 +71,10 @@ def find_input_line_differences(source: str) -> list[str]:
     source_comments = re.findall(r'"\s*(\d+): (.*?)",?\n', array_match.group(1) + "\n")
     page = (DOCS_PATH / "inputfiles.md").read_text(encoding="utf-8")
     input_section = page[page.index("## input.txt") : page.index("## model.txt")]
-    table_rows = dict(re.findall(r"^\| (\d+) \| (.*?) ?\| .* \|$", input_section, re.MULTILINE))
+    table_row_matches = re.findall(r"^\| (\d+) \| (.*?) ?\| .* \|$", input_section, re.MULTILINE)
+    table_rows = dict(table_row_matches)
+    if len(table_rows) != len(table_row_matches):
+        return ["docs/inputfiles.md has two rows for one input line"]
     used_source_comments = {line: comment for line, comment in source_comments if not comment.startswith("UNUSED")}
     errors = [
         f"input line {line}: input.cc and docs/inputfiles.md differ on whether it is unused"

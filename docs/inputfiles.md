@@ -33,8 +33,8 @@ lines, `sn3d` ignores each blank line and each line whose first character that i
 lines must stay. The file can have comment lines. `sn3d` ignores the text after the values of a line, so each line
 can end with a comment.
 
-The file has 24 lines. The line numbers of this table count only the lines that are not comment lines, and they start
-at 0:
+The file has 24 lines that are not comment lines. The line numbers of this table count only these lines, and they
+start at 0:
 
 | Line | Values | Meaning |
 | --- | --- | --- |

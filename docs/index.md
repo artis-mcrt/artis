@@ -45,7 +45,7 @@ and the spectrum of each observer direction (see [Output files](outputfiles.md))
 ### Parallel runs
 
 - **MPI.** A run can use many hundreds of ranks over many nodes, and each node holds one copy of the atomic data.
-- **Threads and GPUs.** `OPENMP=ON` adds OpenMP threads inside each rank, and `STDPAR=ON GPU=ON` builds for a GPU
+- **Threads and GPUs.** `OPENMP=ON` adds OpenMP threads inside each rank with gcc, clang, or nvc++, and `STDPAR=ON GPU=ON` builds for a GPU
   with nvc++ or with hipcc (see [Make options](makeoptions.md)).
 
 ## The programs

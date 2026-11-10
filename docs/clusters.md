@@ -34,7 +34,7 @@ ln -s artisoptions_classic.h artisoptions.h
 
 [Option presets](presets.md) says what each {term}`preset` is for, and [Compile-time options](options.md) describes every
 option. Set the number of packets of all {term}`ranks <rank>` together (`NUM_PACKETS`) for your rank count, e.g. with
-`vim artisoptions.h`. The Option presets page gives the rank count that the value of each preset is for.
+`vim artisoptions.h`. The value of a preset is not always correct for a production run (see [Option presets](presets.md#which-preset)).
 
 Next, compile and go up a level to the model folder:
 
