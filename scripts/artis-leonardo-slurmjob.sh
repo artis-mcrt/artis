@@ -73,6 +73,7 @@ fi
 if grep -qs "RESTART_NEEDED" output_0-0.txt; then
     # the submit script sets the job name and the address of the next job
     source ./artis/scripts/artis-leonardo-submit.sh
-elif ls packets/packets00_0000.out* > /dev/null 2>&1; then
+elif grep -qs "No need for restart" output_0-0.txt; then
+    # sn3d writes this text after the last timestep of the model. The post-processing job has no effect before that.
     source ./artis/scripts/exspec-zip-leonardo-submit.sh
 fi
