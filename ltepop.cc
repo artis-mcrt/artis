@@ -10,7 +10,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <limits>
 #include <tuple>
 #include <vector>
 
@@ -30,9 +29,6 @@
 #include "sn3d.h"
 
 namespace {
-
-// Floor of nne. The stored nne is a float, and a fast-math build flushes a denormal float to zero.
-constexpr double MINNNE = std::max(MINPOP, static_cast<double>(std::numeric_limits<float>::min()));
 
 // The conditions behind the warnings below can persist across the many evaluations that the nne and
 // T_e root solvers make for a single cell, so each one is reported only on its first occurrence for

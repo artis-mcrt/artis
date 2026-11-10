@@ -32,7 +32,7 @@ eval `spack load --first --sh openmpi%gcc`
 #eval `spack load --first --sh gsl%gcc`
 #export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
 
-export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
+export MAKEFLAGS="--jobs=$(nproc)"
 export OMPI_CXX="$PIXI_HOME/envs/gxx/bin/g++"
 
 # The conda linker of pixi ignores the DT_RPATH of libmpi.so. The option -rpath

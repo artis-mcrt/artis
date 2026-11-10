@@ -185,8 +185,6 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
   auto e_cmf = pkt.e_cmf;
   auto prop_time = pkt.prop_time;
 
-  // with thermalisation or pure scattering, we don't keep track of line interactions
-
   assert_always(get_cellcache(nonemptymgi).nonemptymgi == nonemptymgi);
   double dist = 0.;
   double tau = 0.;

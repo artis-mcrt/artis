@@ -936,18 +936,13 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
 
 // ionisation rate coefficient. Multiply by the lower ion population to get a rate. Only the estimators file uses it.
 auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, const int lowerion,
-                                   const bool collisional_not_radiative, const bool force_bfintegral) -> double {
+                                   const bool force_bfintegral) -> double {
   assert_always(lowerion < get_nions(element) - 1);
-  // this option only makes sense for radiative ionisation
-  assert_always(!collisional_not_radiative || (!force_bfintegral));
 
   const auto nnlowerion = get_nnion(nonemptymgi, element, lowerion);
   if (nnlowerion <= 0.) {
     return 0.;
   }
-
-  const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
-  const auto T_e = grid::Te_allcells[nonemptymgi];
 
   double ionisation_rate = 0.;  // rate per second
   const auto nlevels_ionising = get_nlevels_ionising(element, lowerion);
@@ -955,12 +950,7 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, con
     const auto nnlowerlevel = calculate_levelpop(nonemptymgi, element, lowerion, lower);
     const auto nphixstargets = get_nphixstargets(element, lowerion, lower);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-      if (collisional_not_radiative) {
-        const int upper = get_phixsupperlevel(element, lowerion, lower, phixstargetindex);
-        const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-        ionisation_rate += nnlowerlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, lowerion, lower,
-                                                                   phixstargetindex, epsilon_trans);
-      } else if (force_bfintegral) {
+      if (force_bfintegral) {
         // don't use any detailed bound-free estimators, even if they are on and available
         ionisation_rate += nnlowerlevel * calculate_corrphotoioncoeff_integral(element, lowerion, lower,
                                                                                phixstargetindex, nonemptymgi, false);

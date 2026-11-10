@@ -108,7 +108,8 @@ lengths in cm, the energies in erg, and the frequencies in Hz, unless a differen
 
 ### The light curves
 
-`light_curve.out` has one row for each timestep that is complete, and no header:
+`light_curve.out` has no header. From `sn3d`, it has one row for each timestep that is complete. From `exspec`, it has
+one row for each timestep of the model:
 
 | Column | Meaning |
 | --- | --- |

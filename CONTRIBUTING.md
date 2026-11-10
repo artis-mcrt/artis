@@ -37,7 +37,7 @@ a pre-commit hook stops a commit that leaves the page out of date.
   space, which is `cellindex`, `modelgridindex`, or `nonemptymgi`.
 - Write a log line with `printlnlog()`, and a fatal error with `assert_always()` or with `fatal_crash()`.
 - Give the full reference of each paper that you name: the authors, the year, the journal, the volume, the page
-  range, and the DOI.
+  range, and the DOI or the arXiv identifier.
 - Write the documentation, the comments, and the commit messages in Simplified Technical English (ASD-STE100).
 
 [AGENTS.md](AGENTS.md) holds these conventions in full, together with the rules for the shared state, the

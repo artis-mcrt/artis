@@ -61,7 +61,7 @@ $$
 
 $B_{lu}$ and $B_{ul}$ are the Einstein coefficients, $n_l$ and $n_u$ are the level populations, and $t$ is the time at
 which the packet reaches the line. A packet samples an optical depth $\tau_\mathrm{rnd} = -\ln \xi$ with $\xi$ a
-uniform random number in $(0, 1]$. The event occurs where the sum of the line optical depths and of the continuum
+uniform random number in $(0, 1)$. The event occurs where the sum of the line optical depths and of the continuum
 optical depth $\chi_\mathrm{cont} \, d$ reaches $\tau_\mathrm{rnd}$. The distance $d$ is the path of the packet.
 
 - Options:
@@ -139,17 +139,19 @@ $$
 \sum_{j \neq i} n_j R_{ji} - n_i \sum_{j \neq i} R_{ij} = 0
 $$
 
-$R_{ij}$ is the total rate for one particle from level $i$ to level $j$. The first equation of the set is replaced by
-the condition that the populations sum to the population of the element, $\sum_i n_i = n_\mathrm{element}$.
+$R_{ij}$ is the total rate for one particle from level $i$ to level $j$. With the LU decomposition, the condition
+$\sum_i n_i = n_\mathrm{element}$ replaces the first equation of the set. The GTH state elimination
+([NLTE_USE_GTH_SOLVER](options.md#nlte_use_gth_solver)) solves the full set and then scales the populations to this sum.
 
 Each ion has a ground level and a number of excited levels in full NLTE. An ion with more levels above
 them also has one {term}`superlevel` for those levels. An autoionising level is not in the superlevel, and it keeps its own
 row in the matrix. The cell repeats the solutions of the populations, of T_e, and of the
 non-thermal electrons until T_e and the electron density change by less than a tolerance. With
-[NLTE_TE_NNE_USE_ANDERSON_ACCEL](options.md#nlte_te_nne_use_anderson_accel), the iteration also needs an estimate of
-the remaining error below the tolerance, and it tests the change of the populations of the significant ions. The
-iteration also stops
-after [NLTE_TE_NNE_MAXITER](options.md#nlte_te_nne_maxiter) passes. The cell then keeps the last solution, and the
+[NLTE_TE_NNE_USE_ANDERSON_ACCEL](options.md#nlte_te_nne_use_anderson_accel) or
+[ENABLE_CHARGE_TRANSFER_REACTIONS](options.md#enable_charge_transfer_reactions), the iteration also tests the change of
+the populations of the significant ions. With the acceleration, it also needs an estimate of the remaining error below
+the tolerance. The iteration also stops
+after [NLTE_TE_NNE_MAXITER](options.md#nlte_te_nne_maxiter) + 1 passes. The cell then keeps the last solution, and the
 log of the rank has a message with the text `failed to converge`.
 
 From the timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep), the
@@ -217,7 +219,8 @@ loses energy to the expansion in proportion to 1/t. A decay at the time `t_decay
 `t_decay / t_mid` of its energy at the midpoint `t_mid` of the first timestep. The `q` energy keeps the fraction
 `t_model / t_mid`, where `t_model` is the snapshot time.
 
-For each other cell, the code solves this equation for the electron temperature:
+For each other cell, the code solves this equation for the electron temperature. One grid update changes T_e by a
+maximum factor of two:
 
 $$
 H_\mathrm{bf} + H_\mathrm{ff} + H_\mathrm{coll} + H_\mathrm{dep} =

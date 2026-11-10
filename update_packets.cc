@@ -12,9 +12,7 @@
 #include <cstdlib>
 #include <limits>
 #include <optional>
-#ifdef GPU_ON
 #include <ranges>
-#endif
 #include <span>
 #include <tuple>
 #include <vector>
@@ -270,11 +268,8 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
     stats::increment(stats::Counter::K_STAT_FROM_EARLIERDECAY);
 
     pkt.prop_time = globals::tmin;
-  } else if constexpr (TESTMODE) {
-    printlnlog("[error] Something wrong with decaying pellets. tdecay {:g} ts {:g} (ts + tw) {:g}", tdecay, ts, t2);
-    assert_testmodeonly(false);
   } else {
-    __builtin_unreachable();
+    fatal_crash("a pellet at the time {:g} has the earlier decay time {:g}", ts, tdecay);
   }
 }
 
@@ -331,12 +326,7 @@ void do_packet(Packet& pkt, const double t2, const int nts, ContinuumOpacity& ch
     }
 
     default: {
-      if constexpr (TESTMODE) {
-        printlnlog("[error] Unknown packet type {}", static_cast<int>(pkt.type));
-        assert_testmodeonly(false);
-      } else {
-        __builtin_unreachable();
-      }
+      fatal_crash("Unknown packet type {}", static_cast<int>(pkt.type));
     }
   }
 }
@@ -368,11 +358,10 @@ auto get_packet_cellcachegroupid(const Packet& pkt) -> std::optional<int> {
   if (std::ranges::find(nocache_packettypes, pkt.type) != nocache_packettypes.end()) {
     return std::nullopt;  // these types do not use the cell cache
   }
-  const auto mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
-  if (mgi < 0) {
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
+  if (nonemptymgi < 0) {
     return std::nullopt;  // for empty cell, no cell cache required
   }
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   if (grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {
     return std::nullopt;  // for thick cell, no cell cache required
   }

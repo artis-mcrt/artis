@@ -5,7 +5,7 @@ shopt -s extglob
 
 paths="input.txt.tmp input-newrun.txt.tmp gridsave*.tmp packets*.tmp vspecpol*.tmp vpackets*.tmp vpkt_grid*.tmp *.out *.out.* out.txt?(.zst) output_+([0-9])-+([0-9]).txt?(.zst|.gz|.xz) exspec*.txt* machine.file.* core.* *.slurm job_from_ts+([0-9]) inputcheck packets vspecpol vpackets vpkt_grid speclc_angle_res bflist.dat ratecoeff.dat line_list.txt logfiles.tar*"
 
-if [ 0 -lt $(ls $paths 2>/dev/null | wc -w) ]; then
+if [ 0 -lt $(ls -d -- $paths 2>/dev/null | wc -w) ]; then
   echo "The following ARTIS run files will be deleted:"
   ls -d -- $paths 2>/dev/null
 
@@ -32,7 +32,7 @@ else
     else
       cp -i -v input-newrun.txt input.txt
     fi
-  else
+  elif [[ -f "input-newrun.txt" ]]; then
     echo "input-newrun.txt is the same as input.txt"
   fi
 fi

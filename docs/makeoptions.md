@@ -25,7 +25,8 @@ input file, e.g. `model.txt.zst`, when the plain file is absent, and it writes t
 
 `make` puts the objects in `build/<configuration>/`. Each option of the table above adds a suffix to the name of the
 build folder, so different option sets coexist in `build/`. `GCCTOOLCHAIN` is the exception, so run `make clean` after
-you change its value.
+you change its value. `PGO=GENERATE` and `PGO=USE` share one build folder, and a change between them removes the objects
+of that folder.
 
 The name of the build folder ends with `_options` and a checksum of the content of `artisoptions.h`, so the builds of
 different {term}`presets <preset>` coexist too. A change of the preset or of an option value compiles every object in a new build

@@ -49,8 +49,9 @@ Open MPI stops when the rank count is higher than the core count of the machine.
 
 ### The log ends with RESTART_NEEDED
 
-This is the clean end of a job, and not an error. `sn3d` writes that text when too little wall time remains for
-another {term}`timestep`. It then writes the {term}`restart files <restart file>` and updates `input.txt`, so that the next job continues the
+This is the clean end of a job, and not an error. `sn3d` writes that text when the job stops because too little wall time remains
+for another {term}`timestep`. The {term}`restart files <restart file>` and `input.txt` are then already current,
+because `sn3d` writes them after the grid update of each timestep, except in the first timestep of a job. The next job continues the
 simulation. The job scripts of `scripts/` search the log for the text and submit the next job. See
 [Running sn3d](running.md).
 

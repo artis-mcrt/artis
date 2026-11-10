@@ -782,7 +782,7 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
       // parse_next_token() gives false at the end of the row and also for a token that is not a
       // number, e.g. "nan". The loop above stops on both, so a bad token would silently zero every
       // later element. Only whitespace may remain here.
-      remainder.remove_prefix(std::min(remainder.find_first_not_of(" \t\r"), remainder.size()));
+      remainder.remove_prefix(std::min(remainder.find_first_not_of(token_whitespace), remainder.size()));
       if (!remainder.empty()) {
         fatal_crash("read_elem_abundances: cell {} has an unreadable token at '{}'", mgi, remainder);
       }
@@ -885,11 +885,7 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
 
   int columnindex = -1;
 
-  while (std::getline(iss, token, ' ')) {
-    if (std::ranges::all_of(token, isspace)) {  // skip whitespace tokens
-      continue;
-    }
-
+  while (iss >> token) {
     columnindex++;
 
     // -1 for a column that this model type cannot have
@@ -933,10 +929,8 @@ auto get_token_count(std::string const& line) -> int {
   std::string token;
   int abundcolcount = 0;
   auto ssline = std::istringstream{line};
-  while (std::getline(ssline, token, ' ')) {
-    if (!std::ranges::all_of(token, isspace)) {  // skip whitespace tokens
-      abundcolcount++;
-    }
+  while (ssline >> token) {
+    abundcolcount++;
   }
   return abundcolcount;
 }
@@ -1082,7 +1076,7 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
 
   const ptrdiff_t num_nuclides = decay::get_num_nuclides();
 
-  initnucmassfrac_allcells = MPI_shared_array<float>((npts_model + 1) * num_nuclides, 0.);
+  initnucmassfrac_allcells = MPI_shared_array<float>(npts_model * num_nuclides, 0.);
   printlnlog(
       "[info] mem_usage: input abundance data for {} nuclides for {} cells occupies {:.3f} MB (node shared memory)",
       num_nuclides, npts_model, (initnucmassfrac_allcells.size() * sizeof(float)) / 1024. / 1024.);
@@ -1899,7 +1893,7 @@ DEVICE_FUNC auto get_modelgridtype() -> GridType {
 
 // number of propagation cells associated with each modelgrid cell
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_numpropcells(const int modelgridindex) -> int {
-  assert_testmodeonly(modelgridindex <= get_npts_model());
+  assert_testmodeonly(modelgridindex < get_npts_model());
   return modelgrid_numpropcells[modelgridindex];
 }
 
@@ -2134,9 +2128,9 @@ void read_ejecta_model() {
   model_type = detected_model_type;
 
   assert_always(modelgrid_input.empty());
-  modelgrid_input = MPI_shared_array<ModelGridCellInput>(npts_model + 1, ModelGridCellInput{});
-  modelgrid_numpropcells.resize(npts_model + 1, 0);
-  nonemptymgi_of_mgi.resize(npts_model + 1, -1);
+  modelgrid_input = MPI_shared_array<ModelGridCellInput>(npts_model, ModelGridCellInput{});
+  modelgrid_numpropcells.resize(npts_model, 0);
+  nonemptymgi_of_mgi.resize(npts_model, -1);
 
   // geometry-specific setup of the model coordinate counts
   if (get_modelgridtype() == GridType::SPHERICAL1D) {

@@ -106,8 +106,8 @@ case $step in
 
     inputcheck)
         cd "$modelpath"
-        # the check reads input.txt, and it does not restore an absent input.txt from input-newrun.txt
-        cp input-newrun.txt input.txt
+        # without input.txt, the check reads input-newrun.txt
+        rm -f input.txt
         run_inputcheck 2
         ;;
 

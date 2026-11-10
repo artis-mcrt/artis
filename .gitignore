@@ -8,9 +8,9 @@ sn3d
 exspec
 unittests
 # duplicates of the build symlinks that a cloud sync makes
-sn3d ?
-exspec ?
-unittests ?
+sn3d ?*
+exspec ?*
+unittests ?*
 tags
 browse.VC.db
 *.optrpt
@@ -25,7 +25,6 @@ compile_commands.json
 *.dSYM/
 .cache
 *.log
-boost*.tar.gz
 pixi.lock
 __pycache__/
 docs/_build/

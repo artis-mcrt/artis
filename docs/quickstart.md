@@ -151,7 +151,7 @@ constexpr std::int64_t NUM_PACKETS = 1e6;
 ```
 
 Also set the range of the {term}`timesteps <timestep>` in `input.txt`. The line with the comment `#  2: timestep_start
-timestep_finish` holds the first and the last timestep of the job. The stop value is not inclusive, so the test runs
+timestep_finish` holds the first timestep of the job and the stop timestep. The job does not run the stop timestep, so the test runs
 the first nine of twenty timesteps. Change that line to run the whole model:
 
 ```text

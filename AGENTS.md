@@ -26,8 +26,8 @@ Obey these rules:
   `MPI_shared_array`, "packet", "opacity", and "to sample".
 - Use one term for one thing. Do not change between synonyms, e.g. between
   "cell" and "grid cell", or between "time step" and "timestep".
-- Use the active voice. Write "the Makefile writes `version.h`" and not
-  "`version.h` is written by the Makefile".
+- Use the active voice. Write "the Makefile writes `version.cc`" and not
+  "`version.cc` is written by the Makefile".
 - Use the simple tenses (present, past, and future). Do not use the -ing form
   as a noun or as an adjective if a simple form is possible.
 - Write short sentences. Use a maximum of 20 words in an instruction and a
@@ -143,7 +143,7 @@ correct when the preset changes, e.g. after a change of branch.
 
 `docs/makeoptions.md` lists the make options, and the Makefile is the
 authority. `make OPTIMIZE=OFF` is the quickest test that everything compiles. The other targets
-are `unittests`, `check` (clang-tidy), `sn3dwhole`, `clean`, and `help`. `make help` prints
+are `sn3d`, `exspec`, `unittests`, `check` (clang-tidy), `compile_commands.json`, `sn3dwhole`, `clean`, and `help`. `make help` prints
 one line for each target and each make option, and it needs no `artisoptions.h` and no compiler.
 
 `make` puts the objects in `build/<configuration>/` and makes a symlink in the
@@ -159,10 +159,11 @@ Each build also writes `compile_commands.json` (see "Linting and formatting").
 Points that surprise a new agent:
 
 - Each option adds a suffix to the name of the build folder, so different
-  option sets coexist. A new option that changes `CXXFLAGS` must also add a
-  suffix to `BUILD_DIR`.
-- The name of the build folder ends with `_options` and a checksum of the
-  content of `artisoptions.h`, so the builds of different presets coexist. A
+  option sets coexist. `GCCTOOLCHAIN` is the exception. A new option that
+  changes `CXXFLAGS` must also add a suffix to `BUILD_DIR`.
+- The name of the build folder holds `_options` and a checksum of the
+  content of `artisoptions.h`, so the builds of different presets coexist.
+  Only the `_pgo` suffix of `PGO` comes after it. A
   change of the preset or of an option value compiles all objects in a new
   build folder, and a change back to an earlier content compiles nothing. The
   timestamp of `artisoptions.h` has no effect, so a symlink and a copy give the
@@ -231,8 +232,8 @@ the second argument.
   options compiles nothing again. A second run of the same test also compiles
   nothing again. The `sn3d` and `exspec` symlinks of the repository root then
   point to the build of the test.
-- `inputcheck` copies `input-newrun.txt` to `input.txt` and runs `sn3d -c`,
-  which reads the input and runs no timestep. The step fails if the check
+- `inputcheck` removes `input.txt` and runs `sn3d -c`, which reads the input
+  from `input-newrun.txt` and runs no timestep. The step fails if the check
   changes a file of the model folder outside the folder `inputcheck`.
 - `job0` removes `input.txt` and starts a new simulation. `sn3d` then restores
   `input.txt` from `input-newrun.txt`. After a run, `input.txt` holds the
@@ -247,14 +248,15 @@ the second argument.
 - `exspec` removes the `*.tmp` files, runs `exspec`, and then runs
   `scripts/mergeangleres.py`. That script merges the direction bin files into
   `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. The tests with
-  a 2D or a 3D model, e.g. `kilonova_2d`, have these files in
-  `results_md5_final.txt`.
+  a 2D or a 3D model, e.g. `kilonova_2d`, have the first two files in
+  `results_md5_final.txt`. Only `classicmode_3d` also has `specpol_res.out`.
 - `checksums_final` writes `results_md5_final.txt` into the model folder and
   compares it with the reference file.
 
-Change a step of a test in `tests/runtest.sh`, not in `ci.yml`. The workflow
-adds only the marker files for `updatechecksums.yml`, the comparison with a
-simulation in one job, and the steps that show or upload the results.
+Change a step of a test in `tests/runtest.sh`, not in `ci.yml`. The test job
+of the workflow adds only the marker files for `updatechecksums.yml`, the
+comparison with a simulation in one job, and the steps that show or upload the
+results. The `OPENMP=ON` and `STDPAR=ON` jobs have their own steps.
 
 CI builds with libzstd, so the output files are `.zst`. The checksum steps of
 `tests/runtest.sh` pipe each output file through `zstdcat` and `md5sum` and
@@ -383,8 +385,8 @@ test (see "Input and output files").
   `// cppcheck-suppress <id>` comment. That comment works because the command
   has `--inline-suppr`.
 - The pre-commit hooks (`.pre-commit-config.yaml`, run with `prek`) apply
-  clang-format, more than a dozen whitespace and file checks, and a
-  `make OPTIMIZE=OFF` compile. `prek run --all-files` runs all of them. CI runs
+  clang-format, more than a dozen whitespace and file checks, the two
+  documentation scripts, and a `make OPTIMIZE=OFF` compile. `prek run --all-files` runs all of them. CI runs
   the same hooks but skips the compile. One check finds a destroyed symlink,
   which is important here: `CLAUDE.md` is a symlink to `AGENTS.md`.
 - The Python scripts in `scripts/` get the checks of artistools: ruff with all
@@ -469,12 +471,12 @@ comment above `get_propcell_modelgridindex()` in `grid.h` defines them:
 
 Convert between the last two with `grid::get_nonemptymgi_of_mgi()` and
 `grid::get_mgi_of_nonemptymgi()`. Do not call
-`grid::get_nonemptymgi_of_mgi()` for an empty model cell. It has an assertion
-for this, which only a `TESTMODE=ON` build finds.
+`grid::get_nonemptymgi_of_mgi()` for an empty model cell. Its `assert_always()`
+stops the run in every build.
 
 `get_propcell_modelgridindex()` and `get_propcell_nonemptymgi()` give -1 for an
 empty cell. Test for -1 before you use the result as an index. These two
-functions are the only correct test for an empty cell.
+functions are the only correct test for an empty cell of the propagation grid.
 
 Give each variable the name of its index space, e.g. `nonemptymgi` for a
 `nonemptymgi`. The compiler cannot find a mix of two index spaces, so the names
@@ -610,13 +612,14 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   files. Do not add a format version or a fallback for a restart file of a
   different option set or of an older binary.
 - `input.txt` is positional. Each line has its fixed meaning, and some lines
-  are unused placeholders that must stay. `read_parameterfile()` reads a line
-  with `get_noncommentline()` and then takes the numbers with a
-  `std::istringstream`. Follow that pattern for a new line. At the start of a
+  are unused placeholders that must stay. `read_parameterfile()` reads each
+  line with `read_inputtxt_line()`, which stops the run for a missing or an
+  unreadable line. Use that helper for a new line. At the start of a
   new simulation, `sn3d` writes `input.txt` again with the standard comments
   and with its rank count in the `nprocs_exspec` line, and it writes the same
   content to `input-newrun.txt`. If `input.txt` is absent at the start of a
-  run, rank 0 restores it from that copy. `exspec` changes no input file.
+  run, rank 0 restores it from that copy. `exspec` does the same and changes no other
+  input file.
 - The model files use a different helper. `model.txt`, `abundances.txt`, and
   `transitiondata.txt` take each number with `parse_next_token()`, which
   advances a `std::string_view`.
@@ -707,7 +710,7 @@ Do the text edits first. They can make a finished compile out of date.
    name of an option that you renamed or removed, or whose type or form you
    changed. The test files change options with `setoption` from
    `tests/setupfuncs.sh`, and the comment of `setoption` says when it stops the
-   setup script. The pages of `docs/` name about twenty options by hand, and
+   setup script. The pages of `docs/` name most of the options by hand, and
    `scripts/make_options_docs.py` rewrites none of them.
 3. Run `prek run --all-files` and correct every message.
 4. Run `make OPTIMIZE=OFF unittests && ./unittests` if `unittests.cc` calls a
