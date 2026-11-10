@@ -650,13 +650,32 @@ auto write_nuclides_list() {
 // set average energy per decay in the form of gamma rays [erg]
 void set_nucdecayenergygamma(const int nucindex, const double value) { nuclides[nucindex].endecay_gamma = value; }
 
-// convert something like Ni56 to integer 28
+// convert the name of a nuclide to its atomic number, e.g. Ni56 to 28. The case of the name has no effect.
+// The neutron (Z = 0) is not an element, thus only the mass number 1 separates it from nitrogen: n1 and N1 are the
+// neutron, and each other mass number gives nitrogen, e.g. n14 and N14.
 auto get_nucstring_z(const std::string& strnuc) -> int {
-  std::string elcode = strnuc;
-  std::erase_if(elcode, [](const unsigned char c) { return std::isdigit(c) != 0; });
+  const auto to_lowercase = [](const std::string_view text) {
+    std::string lowercase_text;
+    for (const unsigned char c : text) {
+      lowercase_text.push_back(static_cast<char>(std::tolower(c)));
+    }
+    return lowercase_text;
+  };
 
-  for (int z = 0; z <= Z_MAX; z++) {
-    if (elcode == get_elname(z)) {
+  std::string elsymbol_lowercase = to_lowercase(strnuc);
+  std::erase_if(elsymbol_lowercase, [](const unsigned char c) { return std::isdigit(c) != 0; });
+
+  const int a = get_nucstring_a(strnuc);
+  if (elsymbol_lowercase == "n" && a == 1) {
+    return 0;
+  }
+
+  for (int z = 1; z <= Z_MAX; z++) {
+    if (elsymbol_lowercase == to_lowercase(elsymbols.at(z))) {
+      if (a < z) {
+        fatal_crash("the nuclide string '{}' has the mass number {}, which is below its atomic number {}", strnuc, a,
+                    z);
+      }
       return z;
     }
   }
