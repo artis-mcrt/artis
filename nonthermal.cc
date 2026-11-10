@@ -1814,10 +1814,9 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   if (!ftol<0.002>(frac_sum, 1.0)) {
     printlnlog("[warning] frac_sum is {:g}, but should be 1.0", frac_sum);
     printlnlog(
-        "  (replacing calculated frac_heating_tot {:g} with {:g}, which includes the excitation fraction {:g} "
-        "outside the stored list)",
-        frac_heating_calculated, nt_solution[nonemptymgi].frac_heating,
-        frac_excitation_total - frac_excitation_of_stored_list);
+        "  (replacing calculated frac_heating_tot {:g} with {:g}, which is 1 - frac_ionisation - the excitation "
+        "fraction {:g} that the packets give to the stored list)",
+        frac_heating_calculated, nt_solution[nonemptymgi].frac_heating, frac_excitation_of_stored_list);
   }
 }
 
