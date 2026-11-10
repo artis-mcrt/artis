@@ -23,6 +23,7 @@
 #include <numbers>
 #include <optional>
 #include <print>
+#include <ranges>
 #include <set>
 #include <span>
 #include <sstream>
@@ -369,11 +370,8 @@ void set_initenergyq(const int modelgridindex, const float initenergyq) {
   std::array<double, max_atomic_number + 1> massfrac_sum_by_atomic_number{};
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     const int atomic_number = decay::get_nuc_z(nucindex);
-    // a negative atomic number marks a model.txt column that is not an isotope of an element
-    if (atomic_number >= 0) {
-      assert_always(atomic_number <= max_atomic_number);
-      massfrac_sum_by_atomic_number[atomic_number] += get_modelinitnucmassfrac(mgi, nucindex);
-    }
+    assert_always(atomic_number <= max_atomic_number);
+    massfrac_sum_by_atomic_number[atomic_number] += get_modelinitnucmassfrac(mgi, nucindex);
   }
   return massfrac_sum_by_atomic_number;
 }
@@ -1075,7 +1073,16 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
 
   parse_model_headerline(headerline, zlist, alist, colnames);
 
-  decay::init_nuclides(zlist, alist);
+  // a column that is not a nuclide has Z = -1, and the decay network does not hold the neutron (Z = 0)
+  std::vector<int> nuclide_columns_z;
+  std::vector<int> nuclide_columns_a;
+  for (const auto [z, a] : std::views::zip(zlist, alist)) {
+    if (z > 0) {
+      nuclide_columns_z.push_back(z);
+      nuclide_columns_a.push_back(a);
+    }
+  }
+  decay::init_nuclides(nuclide_columns_z, nuclide_columns_a);
 
   std::vector<int> nucindexlist(zlist.size());
   for (auto i = 0Z; i < std::ssize(zlist); i++) {
