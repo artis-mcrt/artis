@@ -1073,11 +1073,11 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
 
   parse_model_headerline(headerline, zlist, alist, colnames);
 
-  // a column that is not a nuclide has Z = -1
+  // a column that is not a nuclide has Z = -1, and the decay network does not hold the neutron (Z = 0)
   std::vector<int> nuclide_columns_z;
   std::vector<int> nuclide_columns_a;
   for (const auto [z, a] : std::views::zip(zlist, alist)) {
-    if (z >= 0) {
+    if (z > 0) {
       nuclide_columns_z.push_back(z);
       nuclide_columns_a.push_back(a);
     }
@@ -1086,7 +1086,7 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
 
   std::vector<int> nucindexlist(zlist.size());
   for (auto i = 0Z; i < std::ssize(zlist); i++) {
-    nucindexlist[i] = (zlist[i] >= 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
+    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
   assert_always(npts_model > 0);
