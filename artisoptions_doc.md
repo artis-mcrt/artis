@@ -320,6 +320,15 @@ constexpr bool DETAILED_BF_ESTIMATORS_LEVEL_SELECTED(int element_z, int ionstage
 // NT_AXELRODAPPROX: the work function approximation of Axelrod (1980, PhD thesis, University of California,
 // Santa Cruz). The ion balance gets the ionisation rates of that approximation, with no excitation rates. The
 // lepton packets deposit all of their energy as heat, and the thermal balance counts all of it as heat.
+// With NT_SPENCERFANO, the first Spencer-Fano solution of a cell comes one timestep after its first NLTE solution.
+// The line num_lte_timesteps of input.txt gives the number of LTE timesteps, and the timestep numbers start at 0:
+// - a timestep before num_lte_timesteps has LTE populations, and the ion balance has no non-thermal ionisation;
+// - the timestep num_lte_timesteps has NLTE populations with the ionisation rates of the work function approximation;
+// - the timestep num_lte_timesteps + 1 and each later timestep have the Spencer-Fano solution.
+// For example, with num_lte_timesteps = 2, timestep 2 has the approximation and timestep 3 has the first solution.
+// Until the first Spencer-Fano solution, a cell has no non-thermal excitation and only single ionisations. Its
+// lepton packets give 97 percent of their energy to heat and 3 percent to ionisation. A cell with no lepton
+// deposition also has these values.
 constexpr NonThermalScheme NT_SCHEME;
 
 // The energy grid of the Spencer-Fano solution is not an option of artisoptions.h. SFPTS (the number of energy
