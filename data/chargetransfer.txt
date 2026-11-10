@@ -26,7 +26,7 @@
 #   Arnaud & Rothenflug (1985), A&AS, 60, 425-457, bibcode 1985A&AS...60..425A, in the file
 #   ct2.dat of D. Verner
 #   https://www.pa.uky.edu/~verner/dima/ct/ct2.dat
-# SS11 (32 reactions): Ge, Se, Br, Kr, Rb, and Xe with hydrogen, from the CDS tables of
+# SS11 (36 reactions): Ge, Se, Br, Kr, Rb, and Xe with hydrogen, from the CDS tables of
 #   Sterling & Stancil (2011), A&A, 535, A117, doi:10.1051/0004-6361/201117584
 #   https://cdsarc.cds.unistra.fr/ftp/J/A+A/535/A117/table4.dat
 #   https://cdsarc.cds.unistra.fr/ftp/J/A+A/535/A117/table5.dat
@@ -38,13 +38,13 @@
 #   1000 and 40000 K that lie above 1.2e-14 cm3/s. The tables floor each total of
 #   a reaction that releases energy at 1e-14 cm3/s. tmin and tmax of a fitted entry span the points that
 #   the fit used. A curve with fewer than 4 usable points gets the flat value of its 20000 K
-#   entry, with tmin = tmax = 20000 K. A reaction that needs energy and has fewer usable points has no
-#   line. ARTIS then takes the rate of its reverse reaction (autoreverse = 1 on that line).
+#   entry, with tmin = tmax = 20000 K. A reaction that needs energy has no floor in its table. If it
+#   has fewer usable points, the fit takes each tabulated total above zero in that temperature range.
 #   The comment of each line gives the largest relative error of the fit or the flat value
 #   over the usable points. eexp of an SS11 entry is a fit coefficient and not a measured energy.
 #   Below tmin, an entry with eexp > 0 keeps falling and an entry with eexp = 0 holds its value at tmin.
 # autoreverse: set from the full list of reactions in this file, not from one source alone.
-153
+157
 #Z_acc ionstage_acc Z_don ionstage_don a b c d eexp tmin tmax autoreverse
 2 2 1 1 1.87e-06 2.06 9.93 -3.89 0 6000 100000 1 # Cloudy; Cloudy deltaE=10.99 eV; Cloudy update; KF96 published a=7.47e-06 b=2.06 c=9.93 d=-3.89
 2 3 1 1 1e-05 0 0 0 0 1000 1e+07 1 # Cloudy; Cloudy deltaE=-40.81 eV; KF96
@@ -167,10 +167,12 @@
 18 3 2 1 0.13 0 0 0 0 1000 30000 1 # AR85; Cloudy: 1.3e-10 = AR85
 18 4 2 1 1e-05 0 0 0 0 1000 30000 1 # AR85; Cloudy: 1e-14 = AR85
 18 5 2 1 1 -0.3 0 0 0 1000 30000 1 # AR85; Cloudy: 1.6e-8*Te^-0.30 = AR85
+32 2 1 1 0.000749781 0.00101538 0 0 64446.9 1000 40000 0 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 0% (the reaction needs energy, so the fit takes each value above zero)
 32 3 1 1 6.11594 0.784162 0 0 1555.97 1000 40000 1 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 9%
 32 4 1 1 3.36e-05 0 0 0 0 20000 20000 1 # SS11; flat value from their 20000 K entry (2 usable points over 1000-40000 K, max error 94%)
 32 5 1 1 6.32516 0.150424 0 0 0 1000 40000 1 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 4%
 32 6 1 1 8.86295 0.186951 0 0 0 1000 40000 1 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 9%
+34 2 1 1 9.97987e-15 10.9513 0 0 68825.3 1000 40000 0 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 437% (the reaction needs energy, so the fit takes each value above zero)
 34 3 1 1 1e-05 0 0 0 0 20000 20000 1 # SS11; flat value from their 20000 K entry (no usable fit points over 1000-40000 K)
 34 4 1 1 0.000612844 -0.0407013 0 0 0 1000 40000 1 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 2%
 34 5 1 1 3.47374 0.725139 0 0 0 1000 40000 1 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 10%
@@ -185,17 +187,19 @@
 36 4 1 1 5.75493 0.314352 0 0 0 1000 40000 1 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 7%
 36 5 1 1 8.24605 0.298597 0 0 0 1000 40000 1 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 8%
 36 6 1 1 1.67865 0.672733 0 0 0 1000 40000 1 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 24%
+37 2 1 1 3.52523e-39 26.171 0 0 314878 4000 40000 0 # SS11; fit to their tabulated k(T) over 4000-40000 K, max fit error 110% (the reaction needs energy, so the fit takes each value above zero)
 37 3 1 1 1e-05 0 0 0 0 20000 20000 1 # SS11; flat value from their 20000 K entry (no usable fit points over 1000-40000 K)
 37 4 1 1 3.52316 0.303832 0 0 0 1000 40000 1 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 10%
 37 5 1 1 4.95415 0.203877 0 0 0 1000 40000 1 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 9%
 37 6 1 1 0.000216119 2.93626 0 0 0 4000 40000 1 # SS11; fit to their tabulated k(T) over 4000-40000 K, max fit error 8%
+54 2 1 1 1.09477e-05 3.95285 0 0 20223.8 1000 40000 0 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 52% (the reaction needs energy, so the fit takes each value above zero)
 54 3 1 1 1e-05 0 0 0 0 20000 20000 1 # SS11; flat value from their 20000 K entry (no usable fit points over 1000-40000 K)
 54 4 1 1 0.0054131 -0.0039125 0 0 0 1000 40000 1 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 1%
 54 5 1 1 2.82887 0.383841 0 0 0 1000 40000 1 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 12%
 54 6 1 1 0.000292949 2.9182 0 0 1545.75 4000 40000 1 # SS11; fit to their tabulated k(T) over 4000-40000 K, max fit error 23%
-1 2 32 1 0.00101 0 0 0 0 1000 40000 1 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 0%
-1 2 34 1 0.00188939 0.531401 0 0 0 1000 40000 1 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 82%
+1 2 32 1 0.00101 0 0 0 0 1000 40000 0 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 0%
+1 2 34 1 0.00188939 0.531401 0 0 0 1000 40000 0 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 82%
 1 2 35 1 0.123583 2.16481 0 0 0 1000 40000 0 # SS11; fit to their tabulated k(T) over 1000-40000 K, max fit error 60%
 1 2 36 1 0.0595382 1.90094 0 0 13936.8 4000 40000 0 # SS11; fit to their tabulated k(T) over 4000-40000 K, max fit error 5%
-1 2 37 1 1e-05 0 0 0 0 20000 20000 1 # SS11; flat value from their 20000 K entry (no usable fit points over 1000-40000 K)
-1 2 54 1 9.2545e-05 3.88054 0 0 0 6000 40000 1 # SS11; fit to their tabulated k(T) over 6000-40000 K, max fit error 17%
+1 2 37 1 1e-05 0 0 0 0 20000 20000 0 # SS11; flat value from their 20000 K entry (no usable fit points over 1000-40000 K)
+1 2 54 1 9.2545e-05 3.88054 0 0 0 6000 40000 0 # SS11; fit to their tabulated k(T) over 6000-40000 K, max fit error 17%
