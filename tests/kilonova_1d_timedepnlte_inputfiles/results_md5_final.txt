@@ -10,7 +10,7 @@ cd56ed5df8bb64979bb155db426af74b  emissiontrue.out
 e1084c13ea5782ff3b317546676d000d  light_curve.out
 997a0e7348a2342d1a4bc2e5aeaff9d1  linelist.out
 bc40edd64676f86b6ac2df0934e2ce9a  modelgridrankassignments.out
-20ccc0feb9d0720c5c9e6f2efcbcfb23  nuclides.out
+eb946e88e74f60299dcff7a39f373e75  nuclides.out
 6c2e9841191d2fb8b4eb61310cb4db25  spec.out
 f6e19eebdc65085543f095a221bb8e0a  timesteps.out
 a880d48d7323113769c8054972f3d424  job_from_ts0008/estimators_allranks.out
