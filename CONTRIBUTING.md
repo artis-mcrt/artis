@@ -58,3 +58,9 @@ reproducible results, and the portability to GPUs.
 
   The workflow needs write access to the repository, and the branch must be in `artis-mcrt/artis`. Ask a maintainer
   when you have neither.
+- If your pull request changes `docs/` or `artisoptions_doc.md`, start its text with this line and put the number of
+  the pull request in both places. Read the Docs builds this preview for each pull request.
+
+  ```text
+  Preview the documentation: https://artis-mcrt--<number>.org.readthedocs.build/en/<number>/
+  ```

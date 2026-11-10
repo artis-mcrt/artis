@@ -8,12 +8,25 @@ On macOS:
 
 ```sh
 brew install llvm open-mpi pkgconf zstd coreutils
-export PATH="$(brew --prefix coreutils)/libexec/gnubin:$PATH"
+export PATH="$(brew --prefix llvm)/bin:$(brew --prefix coreutils)/libexec/gnubin:$PATH"
 ```
 
-On Linux, get a compiler, Open MPI, libzstd, git, and make from your package manager, from a module, or from pixi.
-[Installation](installation.md) gives the versions, the packages, and the other commands that the test of step 3
-calls.
+On Debian, and on Ubuntu 24.04 or a later version:
+
+```sh
+sudo apt-get install g++-14 openmpi-bin libopenmpi-dev libzstd-dev zstd git make curl xz-utils rsync python3 perl
+export OMPI_CXX=g++-14
+```
+
+On Fedora 40 or a later version:
+
+```sh
+sudo dnf install gcc-c++ openmpi-devel libzstd-devel zstd git make curl xz rsync python3 perl
+module load mpi/openmpi-$(uname -m)
+```
+
+On a different Linux system, get the same packages from your package manager or from a module.
+[Installation](installation.md) gives the versions and the commands that the test of step 3 calls.
 
 ## 2. Clone the repository
 
@@ -110,7 +123,7 @@ cp input-newrun.txt input.txt
 The script makes the folder, a symlink `artis` to the clone, and an `input.txt` from `scripts/input-template.txt`.
 The last command replaces that `input.txt` with the file of the test model.
 
-For a production run, clone the repository into the model folder in place of the symlink (see [Runs on a cluster](clusters.md)).
+For a production run, clone the branch `release` into the model folder in place of the symlink (see [Runs on a cluster](clusters.md)).
 
 The atomic data of the test covers only a few elements, with few levels. [Atomic and model data](data.md) says where a larger dataset and other models come from.
 
@@ -123,21 +136,21 @@ make
 cd ..
 ```
 
-[Option presets](presets.md) says what each preset is for.
+[Option presets](presets.md) says what each {term}`preset` is for.
 
 :::{note}
 `artisoptions.h` is a symlink, so an edit changes the preset file of the clone, and each model folder that shares the
 clone gets the same options. Give a model folder its own clone when it needs its own options.
 :::
 
-The preset has a value of `NUM_PACKETS` for about 1000 MPI ranks. A laptop needs a much smaller value. Change it in
+The preset has a value of `NUM_PACKETS` for about 1000 MPI {term}`ranks <rank>`. A laptop needs a much smaller value. Change it in
 `artis/artisoptions.h`:
 
 ```c++
 constexpr std::int64_t NUM_PACKETS = 1e6;
 ```
 
-Also set the range of the timesteps in `input.txt`. The line with the comment `#  2: timestep_start
+Also set the range of the {term}`timesteps <timestep>` in `input.txt`. The line with the comment `#  2: timestep_start
 timestep_finish` holds the first and the last timestep of the job. The stop value is not inclusive, so the test runs
 the first nine of twenty timesteps. Change that line to run the whole model:
 

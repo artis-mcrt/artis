@@ -16,10 +16,12 @@ uv tool install prek
 export PATH="$(uv tool dir --bin):$PATH"
 ```
 
+[Quickstart](quickstart.md#4-look-at-the-results) says why the export is necessary.
+
 The hooks also need python3, version 3.11 or a later version, because `scripts/make_options_docs.py` runs as one of
 them.
 
-Then install the pre-commit hooks, select a preset, and make a compilation database for the clang tools:
+Then install the pre-commit hooks, select a {term}`preset`, and make a compilation database for the clang tools:
 
 ```sh
 prek install
@@ -28,35 +30,26 @@ make TESTMODE=ON compile_commands.json
 ```
 
 Every build writes the database again, so it stays current. It always uses the `TESTMODE=ON` flags, so that the clang
-tools check the assertions of the test mode. For editing, the clangd language server is recommended, e.g. with the
+tools check the assertions of the test mode. Use the clangd language server to edit the code, e.g. with the
 [VS Code plugin](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd).
 
-## The three programs
+## A new source file
 
-The Makefile builds three programs from the same sources. `sn3d.cc`, `exspec.cc`, and `unittests.cc` hold the three
-`main()` functions, and the Makefile compiles every other `.cc` file into all three programs. That list is the variable
-`common_files` in the Makefile. Add a new source file to it, because the Makefile finds no file automatically.
+The Makefile compiles every `.cc` file of the variable `common_files` into the three programs. Add a new source file
+to it, because the Makefile finds no file automatically. [Code map](codemap.md) names the purpose of each file.
 
 ## Linting and formatting
 
-- clang-format uses a Google-based style with a limit of 120 columns (`.clang-format`). It applies to all C++ files
-  except `third_party/`.
-- clang-tidy has a long list of checks (`.clang-tidy`) and makes almost every diagnostic an error. Make the compilation
-  database with the Makefile, then name the files that you changed:
+Run these commands before a commit:
 
-    ```sh
-    make TESTMODE=ON compile_commands.json
-    run-clang-tidy grid.cc
-    ```
+```sh
+prek run --all-files
+make TESTMODE=ON compile_commands.json
+run-clang-tidy grid.cc
+```
 
-    Never make the database with `compiledb`, because it drops `mpicxx` from each command and every diagnostic is then
-    false.
-
-- cppcheck runs in CI and stops the job on an error. Read the command in `.github/workflows/ci-checks.yml`.
-- The pre-commit hooks (`.pre-commit-config.yaml`, run with `prek`) apply clang-format, more than a dozen whitespace
-  and file checks, and a `make OPTIMIZE=OFF` compile. `prek run --all-files` runs all of them.
-- The Python scripts in `scripts/` get ruff, pyrefly, and ty. `scripts/ruff.toml`, `scripts/pyrefly.toml`, and
-  `scripts/ty.toml` hold the settings. The scripts use only the standard library.
+Name the files that you changed in the last command. The section "Linting and formatting" of
+[AGENTS.md](https://github.com/artis-mcrt/artis/blob/main/AGENTS.md) describes each tool and its settings.
 
 ## Documentation
 

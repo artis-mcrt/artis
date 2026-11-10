@@ -6,7 +6,7 @@ A simulation reads three sets of data:
 2. an atomic database;
 3. a model of the ejecta.
 
-[Input files](inputfiles.md) gives the format of each file. All of them go in the model folder.
+[Input files](inputfiles.md) gives the format of each file. All of them go in the {term}`model folder`.
 
 ## The physics data of the repository
 
@@ -56,14 +56,15 @@ The dataset holds 41 ions of the 11 elements of a Type Ia model:
 - Ne I to Ne III, and Mg I to Mg II;
 - Fe I to Fe V, Co II to Co IV, and Ni II to Ni V.
 
-Use it with the `nltenebular` preset of [Option presets](presets.md). The dataset also holds `recombrates.txt`, so the
+Use it with the `nltenebular` {term}`preset` of [Option presets](presets.md). The dataset also holds `recombrates.txt`, so the
 code calibrates the recombination rate of each ion at `RECOMBCALIBRATION_T_ELEC`.
 
 Column 5 of its `compositiondata.txt` is -1, so a run reads every level of each ion. Put a level count there for a
 quicker run. A build without libzstd reads no compressed input file, so decompress each `.zst` file of the archive.
 
-[artisatomic](https://github.com/artis-mcrt/artisatomic) converts atomic data of several published sources into the
-ARTIS format. The `atomic_data_logs` folder of each archive holds the log of that conversion for each ion.
+The maintainers will publish the databases of the other model types. Until then, make a database with
+[artisatomic](https://github.com/artis-mcrt/artisatomic), which converts atomic data of several published sources into
+the ARTIS format. The `atomic_data_logs` folder of each archive holds the log of that conversion for each ion.
 
 ## The model of the ejecta
 
@@ -73,6 +74,8 @@ A run needs two model files, and some runs need more:
 - `abundances.txt`: the elemental mass fractions of each cell;
 - `Ye.txt`: the electron fraction of a kilonova model;
 - `recombrates.txt`: the tabulated recombination rates, e.g. for the nebular test.
+
+artistools also writes `gridcontributions.txt` for a kilonova model, but `sn3d` does not read that file.
 
 The `tests/*_inputfiles` folders hold small models of each type: 1D spherical, 2D cylindrical, and 3D Cartesian. They
 are the quickest examples of the format.

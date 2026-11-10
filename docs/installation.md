@@ -61,7 +61,7 @@ export MAKEFLAGS="--jobs=$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
 
 ## Select a preset and build
 
-The build needs an `artisoptions.h` in the repository root. That file is gitignored. Symlink one of the presets to it:
+The build needs an `artisoptions.h` in the repository root. That file is gitignored. Symlink one of the {term}`presets <preset>` to it:
 
 ```sh
 ln -s artisoptions_classic.h artisoptions.h

@@ -1,6 +1,6 @@
 # Input files
 
-Put these files in the model folder. Keep the ARTIS source folder, or a symlink to it, in the model folder with the
+Put these files in the {term}`model folder`. Keep the ARTIS source folder, or a symlink to it, in the model folder with the
 name `artis`. The code looks for an input file in the model folder, then in `data/`, and then in `artis/data/`. It
 thus finds the physics data that comes with the source, and you copy nothing (see
 [Atomic and model data](data.md)).
@@ -51,14 +51,14 @@ at 0:
 [tests/classicmode_3d_inputfiles/input-newrun.txt](https://github.com/artis-mcrt/artis/blob/main/tests/classicmode_3d_inputfiles/input-newrun.txt)
 for a complete example with a comment on every line.
 
-The timesteps:
+The {term}`timesteps <timestep>`:
 
 - `timestep_start` must be 0 or more, and it must be less than `ntimesteps`. `timestep_finish` must not be less than
   `timestep_start`, and it must not be more than `ntimesteps`.
 - Give the number of timesteps as the stop value for the whole model. Long simulations run in several jobs, and the
   wall-time mechanism (`sn3d -w`) advances the start timestep at each restart and keeps the stop value.
 - A smaller stop value makes the simulation stop earlier, e.g. to examine the partial results. The simulation
-  continues only after you edit `input.txt`. The last restart files of such a run hold the start of its last
+  continues only after you edit `input.txt`. The last {term}`restart files <restart file>` of such a run hold the start of its last
   timestep. The continuation job therefore propagates that timestep again and writes its spectra and light curves
   again.
 - `sn3d` writes the restart files at the start of each timestep after the first timestep of the job, so give a job at
@@ -66,17 +66,17 @@ The timesteps:
 - `tmin_days` must be more than 0 and less than `tmax_days`. The snapshot time of `model.txt` must not be after
   `tmin_days`.
 
-The LTE timesteps and the grey cells:
+The {term}`LTE` timesteps and the grey cells:
 
 - With a value for `MULTIBIN_RADFIELD_FIRST_TIMESTEP`, `num_lte_timesteps` must not be larger than that value.
 - With the Spencer-Fano solver (`NT_SCHEME`), the first solution comes at the timestep `num_lte_timesteps` + 1.
 - `sn3d` calculates the grey optical depth from each cell to the outer boundary of the model. A cell with a depth of
-  `optical_depth_is_thick` or more gets the grey opacity treatment. This applies to each timestep before the timestep
+  `optical_depth_is_thick` or more gets the {term}`grey opacity` treatment. This applies to each timestep before the timestep
   `num_grey_timesteps`.
 
 At the start of a new simulation, `sn3d` writes `input.txt` again with a comment on each line and with the value of
 `nprocs_exspec`. It keeps the same content in `input-newrun.txt`. If `input.txt` is absent at the start of a run,
-rank 0 restores it from `input-newrun.txt`.
+{term}`rank` 0 restores it from `input-newrun.txt`.
 
 ## model.txt
 
@@ -439,7 +439,7 @@ transition:
   level number in the file is 0, and at 1 otherwise.
 - The autoionising levels of an ion must be one block of levels with no gap, and the block must end at the highest
   level of the ion.
-- The autoionising levels of the file must all be NLTE levels, or none of them must be an NLTE level.
+- The autoionising levels of the file must all be {term}`NLTE` levels, or none of them must be an NLTE level.
 - The A value must not be negative.
 
 ## The gamma-ray line files

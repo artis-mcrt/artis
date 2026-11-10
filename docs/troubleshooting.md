@@ -6,7 +6,7 @@ This page gives the messages that stop a build or a run, and what each one needs
 
 ### make cannot find artisoptions.h
 
-The build needs an `artisoptions.h` in the repository root, and git does not track that file. Symlink a preset to it:
+The build needs an `artisoptions.h` in the repository root, and git does not track that file. Symlink a {term}`preset` to it:
 
 ```sh
 ln -s artisoptions_classic.h artisoptions.h
@@ -39,8 +39,8 @@ repository root (see [Make options](makeoptions.md#the-build-folders)).
 
 ### The photoionisation data needs phixsdata.txt or phixsdata_v2.txt
 
-The model folder holds no photoionisation file. [Atomic and model data](data.md) gives the datasets and the download
-command. A run also needs `adata.txt`, `transitiondata.txt`, and `compositiondata.txt`.
+The {term}`model folder` holds no photoionisation file. [Atomic and model data](data.md) gives the datasets, and each dataset holds such a
+file. A run also needs `adata.txt`, `transitiondata.txt`, and `compositiondata.txt`.
 
 ### Not enough slots available
 
@@ -50,7 +50,7 @@ Open MPI stops when the rank count is higher than the core count of the machine.
 ### The log ends with RESTART_NEEDED
 
 This is the clean end of a job, and not an error. `sn3d` writes that text when too little wall time remains for
-another timestep. It then writes the restart files and updates `input.txt`, so that the next job continues the
+another {term}`timestep`. It then writes the {term}`restart files <restart file>` and updates `input.txt`, so that the next job continues the
 simulation. The job scripts of `scripts/` search the log for the text and submit the next job. See
 [Running sn3d](running.md).
 
@@ -79,8 +79,8 @@ it is shorter than the time range of the run. The row `arrival times` of `artist
 ## The log
 
 [Running sn3d](running.md#the-logs) gives the names of the log files. Each line starts with the time in Coordinated
-Universal Time (UTC). A rank writes the messages of the cells that it updates, so the message about a cell can be in
-the log of a rank other than rank 0.
+Universal Time (UTC). A {term}`rank` writes the messages of the cells that it updates, so the message about a cell can
+be in the log of a rank other than rank 0.
 
 ### The tags of the log lines
 

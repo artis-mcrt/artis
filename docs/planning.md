@@ -21,7 +21,7 @@ model. [Example: a nebular spectrum](example.md) shows the effect of some of the
 
 ## The packets
 
-Each rank gets an equal share of [NUM_PACKETS](options.md#num_packets), and it keeps that share in memory for the
+Each {term}`rank` gets an equal share of [NUM_PACKETS](options.md#num_packets), and it keeps that share in memory for the
 whole run. The log of each rank gives the number and the memory of its packets:
 
 ```text
@@ -32,13 +32,13 @@ Simulation propagates 2500000 packets on this rank (total 1e+07 with nprocs 4)
 These lines come from the run of [Example: a nebular spectrum](example.md). The size of a packet depends on the
 build, so read the value from your log.
 
-Each rank also writes its packets to a restart file, `packets_nnnn_ts*.tmp`, which has approximately the size of its
-packets in memory.
+Each rank also writes its packets to a {term}`restart file`, `packets_nnnn_ts*.tmp`, which has approximately the size
+of its packets in memory.
 
 The spectrum of a timestep holds the escaped packets that arrive at the observer in that timestep, so their number
 sets the noise of the spectrum. The relative noise of a sum of N packets of equal energy is 1/sqrt(N). The log of
 each rank gives the packets that escaped during the propagation of a timestep. This count is only a guide. It
-counts each type of escaped packet, also the gamma packets, and the spectrum holds only the r-packets. The light
+counts each type of escaped packet, also the {term}`gamma packets <gamma packet>`, and the spectrum holds only the {term}`r-packets <r-packet>`. The light
 travel time also moves a packet to the timestep of its arrival:
 
 ```text
@@ -59,7 +59,7 @@ Each timestep has one grid update, one propagation of all the packets, and one s
 
 - the number of grid updates and of writes of the restart files;
 - the time resolution of `spec.out` and of `light_curve.out`, because `sn3d` writes one spectrum for each timestep;
-- the number of iterations of the gas state. The grid update of a timestep uses the estimators of the timestep
+- the number of iterations of the gas state. The grid update of a timestep uses the {term}`estimators <estimator>` of the timestep
   before it, so the gas state needs some timesteps to follow a change.
 
 With [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep), the error of the time term
@@ -70,7 +70,7 @@ that ratio is above 0.1.
 
 The time range also sets how the packets divide over the time:
 
-- The pellets decay between the first and the last time of the simulation (see
+- The {term}`pellets <pellet>` decay between the first and the last time of the simulation (see
   [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies)). A longer time range thus gives each interval of
   time a smaller share of the packets.
 - [INITIAL_PACKETS_ON](options.md#initial_packets_on) gives a share of the packets to the energy that the ejecta
@@ -87,7 +87,7 @@ The first timesteps of a run use approximations:
 - The first `num_lte_timesteps` timesteps solve the ionisation balance in LTE. The value must be 1 or more. With the
   Spencer-Fano solver, the first solution is at timestep `num_lte_timesteps` + 1.
 - In the first `num_grey_timesteps` timesteps, a cell is thick when its grey optical depth to the outer boundary is
-  at or above `optical_depth_is_thick`. A thick cell gets a grey opacity, and its k-packets emit from a Planck
+  at or above `optical_depth_is_thick`. A thick cell gets a {term}`grey opacity`, and its {term}`k-packets <k-packet>` emit from a Planck
   function (see [Methods and references](methods.md#the-grey-opacity-of-a-thick-cell)). The log of the rank names
   each thick cell at each timestep.
 - [MULTIBIN_RADFIELD_FIRST_TIMESTEP](options.md#multibin_radfield_first_timestep) and
@@ -102,7 +102,7 @@ the timestep, and how many timesteps the solution needs to become stable there. 
 
 Each rank does two types of work in each timestep:
 
-- **The grid update.** `sn3d` divides the model grid cells that contain matter equally among the ranks, in the order
+- **The grid update.** `sn3d` divides the {term}`model grid cells <model grid cell>` that contain matter equally among the ranks, in the order
   of the cells. Each rank solves the state of its own cells. `modelgridrankassignments.out` and the log of each
   rank give the cells of that rank. When the rank count is at or above the number of model grid cells, each of the
   first ranks gets one cell, and the other ranks update no cell.
@@ -122,7 +122,7 @@ or above the rank count. [Running sn3d](running.md) describes the threads.
 ## The grid
 
 Each model grid cell that contains matter needs one solution of the gas state at each timestep. The packets move
-through the propagation cells. With [GRID_TYPE_OVERRIDE](options.md#grid_type_override), a 1D or a 2D model goes on a
+through the {term}`propagation cells <propagation cell>`. With [GRID_TYPE_OVERRIDE](options.md#grid_type_override), a 1D or a 2D model goes on a
 3D Cartesian grid, and [CUBOID_NCOORDGRID_X](options.md#cuboid_ncoordgrid_x) and the two other values set the size of
 that grid. The number of solutions of the gas state stays the same, because more than one propagation cell then
 shares one model grid cell. A model grid cell that holds the centre of no propagation cell is the exception. It

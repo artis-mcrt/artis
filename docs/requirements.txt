@@ -3,3 +3,4 @@ myst-parser==5.1.0
 furo==2025.12.19
 sphinx-copybutton==0.5.2
 sphinxext-opengraph[social-cards]==0.13.0
+sphinxcontrib-mermaid==2.1.1
