@@ -9,12 +9,9 @@ ARTIS uses indivisible energy packets (Lucy (2002), A&A, 384, 725-735, doi:10.10
 never splits a packet into smaller packets, and it follows each packet until the packet escapes or the simulation
 ends. A packet changes its type as its energy changes its form:
 
-- each pellet holds the same energy, which is the decay energy of the whole model between the first and the last
-  time of the simulation, divided by the number of packets.
-  A pellet moves with the ejecta until the time of its decay.
-  [INITIAL_PACKETS_ON](options.md#initial_packets_on) adds the initial energy of the cells to that sum. With
-  [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies) false, the decay times are uniform instead, and the
-  energy of each pellet follows the decay power at its own time;
+- each pellet holds the same energy by default, which is the decay energy of the whole model between the first and
+  the last time of the simulation, divided by the number of packets. A pellet moves with the ejecta until the time
+  of its decay;
 - the decay makes a gamma packet, or a packet of positrons, electrons, alpha particles, or fission fragments;
 - a gamma packet gives its energy to the gas by Compton scattering, by photoelectric absorption, or by pair
   production;
@@ -22,9 +19,7 @@ ends. A packet changes its type as its energy changes its form:
   solver gives the three fractions (see [NT_SCHEME](options.md#nt_scheme)). The alpha particles and the fission
   fragments give all of their energy to the heating, so they need no such solution;
 - a k-packet holds thermal energy. A cooling channel of the cell converts it into radiation or into a macro atom. In
-  an optically thick cell, the k-packet emits an r-packet from a Planck function instead. A
-  k-packet also loses energy: the diffusion step takes the adiabatic loss of the radiation, and the thermal balance
-  of the cell gives the share that becomes radiation;
+  an optically thick cell, the k-packet emits an r-packet from a Planck function instead;
 - a macro atom makes internal transitions until it emits radiation or becomes a k-packet again;
 - an r-packet is ultraviolet, optical, or infrared radiation. It moves until it reaches a line, a continuum
   absorption, or an electron scattering.

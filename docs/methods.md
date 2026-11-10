@@ -13,8 +13,11 @@ The radiation field is a set of indivisible energy packets. A packet changes its
 form, and the code follows it until it escapes or the simulation ends. [How a simulation works](simulation.md) gives
 the types of the packets.
 
-- Options: [NUM_PACKETS](options.md#num_packets), [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies),
-  and [INITIAL_PACKETS_ON](options.md#initial_packets_on).
+- Options:
+    - [NUM_PACKETS](options.md#num_packets) sets the number of packets of all ranks together.
+    - [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies) gives each pellet the same energy. With the value
+      false, the decay times are uniform instead, and the energy of each pellet follows the decay power at its time.
+    - [INITIAL_PACKETS_ON](options.md#initial_packets_on) adds packets for the initial energy of the cells.
 - References: Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 describes the packets. An early version
   of the code is described in Sim (2007), MNRAS, 375, 154-162, doi:10.1111/j.1365-2966.2006.11271.x and Kromer & Sim
   (2009), MNRAS, 398, 1809-1826, doi:10.1111/j.1365-2966.2009.15256.x.
@@ -101,7 +104,7 @@ log of the rank has a message with the text `failed to converge`.
 
 From the timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep), the
 equations of the ion populations have a time term. The ion populations are then not in a statistical equilibrium,
-but the level populations inside each ion are. These solutions always use the lower-upper (LU) decomposition. The
+but the level populations inside each ion are. The
 time term needs a complete NLTE solution of the cell from the timestep before. A cell without one keeps the
 equations with no time term for that timestep, e.g. after an LTE timestep, after the grey opacity, or after a
 fallback to LTE.

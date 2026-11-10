@@ -110,9 +110,6 @@ cp input-newrun.txt input.txt
 The script makes the folder, a symlink `artis` to the clone, and an `input.txt` from `scripts/input-template.txt`.
 The last command replaces that `input.txt` with the file of the test model.
 
-The archive and the input folder both hold a `compositiondata.txt`. The archive comes first, so the file of the test
-model has priority, as it does in the test. That file keeps ten elements, and the file of the archive keeps three.
-
 For a production run, clone the repository into the model folder in place of the symlink (see [Runs on a cluster](clusters.md)).
 
 The atomic data of the test covers only a few elements, with few levels. [Atomic and model data](data.md) says where a larger dataset and other models come from.

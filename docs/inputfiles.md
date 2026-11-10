@@ -9,9 +9,6 @@ A build with libzstd also reads a text input file in zstd compressed form, e.g. 
 `transitiondata.txt.zst`, or `packets/packets00_0000.out.zst` for `exspec`. The plain file has priority when both
 exist.
 
-`sn3d` writes the final packet files of a job into the folder `packets/`, and the virtual packet files into
-`vpackets/`, `vspecpol/`, and `vpkt_grid/`. `exspec` reads the packet files there.
-
 | File | Necessary | Content |
 | --- | --- | --- |
 | [input.txt](#inputtxt) | yes, or `input-newrun.txt` | the run-time parameters |
@@ -25,7 +22,6 @@ exist.
 | [Ye.txt](#yetxt) | with `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, if `model.txt` has no `Ye` column | the electron fraction of each cell |
 | [recombrates.txt](#recombratestxt) | no | the recombination rate coefficients for the calibration |
 | [autoion.txt](#autoiontxt) | no | the autoionisation rates |
-| [gridcontributions.txt](#gridcontributionstxt) | no | `sn3d` does not read this file |
 | [gamma_*.txt](#the-gamma-ray-line-files) | for six nuclides | the gamma-ray lines of each nuclide, which come with the source in `artis/data` |
 
 In the layouts of this page, `<name>` is a value that you supply. Where this page says that a file can have comment
@@ -37,36 +33,21 @@ lines, `sn3d` ignores each blank line and each line whose first character that i
 lines must stay. The file can have comment lines. `sn3d` ignores the text after the values of a line, so each line
 can end with a comment.
 
-The line numbers of this table count only the lines that are not comment lines, and they start at 0:
+The file has 24 lines. The line numbers of this table count only the lines that are not comment lines, and they start
+at 0:
 
 | Line | Values | Meaning |
 | --- | --- | --- |
-| 0 | `pre_zseed` | The seed of the random number generator. A positive value is the seed. For zero or a negative value, `sn3d` makes a random seed. Reproducible results need a fixed seed, and a build with `REPRODUCIBLE=ON` stops without a positive value. In a build for a CPU, the seed plus 13 times the rank number times the thread count must fit in an unsigned 32-bit integer. |
+| 0 | `pre_zseed` | The seed of the random number generator. A positive value is the seed. For zero or a negative value, `sn3d` makes a random seed. Reproducible results need a fixed seed, and a build with `REPRODUCIBLE=ON` stops without a positive value. |
 | 1 | `ntimesteps` | The number of timesteps of the model. |
 | 2 | `timestep_start timestep_finish` | The first timestep of this job, and the stop timestep. The job does not run the stop timestep. |
 | 3 | `tmin_days tmax_days` | The start time and the end time of the model in days. |
-| 4 | | Unused (`nusyn_min_mev nusyn_max_mev`). |
-| 5 | | Unused (`nsyn_time`). |
-| 6 | | Unused (the start and end times for the synthesis). |
-| 7 | | Unused (the number of dimensions of `model.txt`). `sn3d` finds this number from `model.txt`. |
-| 8 | | Unused (the mode of the light curve). |
-| 9 | | Unused (`n_out_it`). |
-| 10 | | Unused (the factor for the speed of light). |
-| 11 | | Unused (`gamma_kappagrey`). |
-| 12 | | Unused (`syn_dir`). The direction is always `0 0 1`. |
-| 13 | | Unused (`opacity_case`). |
-| 14 | | Unused (`rho_crit_para`). |
-| 15 | | Unused (`debug_packet`). |
 | 16 | `simulation_continued_from_saved` | The value must be 0 or 1. 0 starts a new simulation. 1 continues from the restart files of a previous job. With `timestep_start` 0, the run is always a new simulation. |
-| 17 | | Unused (`rfcut`). |
 | 18 | `num_lte_timesteps` | The number of timesteps at the start of the model that use LTE populations. The value must be 1 or more. |
 | 19 | `optical_depth_is_thick num_grey_timesteps` | The condition for the grey opacity treatment of a cell (see below). |
-| 20 | | Unused (`max_bf_continua`). |
 | 21 | `nprocs_exspec` | The number of packet files that `exspec` reads, one for each `sn3d` rank. `sn3d` sets this line itself. |
-| 22 | | Unused (`do_emission_res`). |
-| 23 | | Unused (the diffusion values of the k-packets). |
 
-Sixteen of the 24 lines are unused. See
+`sn3d` does not use the other 16 lines, but they must stay. Start from `scripts/input-template.txt`, or see
 [tests/classicmode_3d_inputfiles/input-newrun.txt](https://github.com/artis-mcrt/artis/blob/main/tests/classicmode_3d_inputfiles/input-newrun.txt)
 for a complete example with a comment on every line.
 
@@ -156,7 +137,7 @@ The columns of each cell:
 | Column | Model | Meaning |
 | --- | --- | --- |
 | `#inputcellid` | all | The cell id. The ids start at 0 or at 1, and they increase by one for each cell. |
-| `vel_r_max_kmps` | 1D | The velocity of the outer boundary of the shell [km/s]. Each value must be larger than the value of the cell before. The first value must be above 0, and `sn3d` does no check of it. |
+| `vel_r_max_kmps` | 1D | The velocity of the outer boundary of the shell [km/s]. Each value must be larger than the value of the cell before, and the first value must be above 0. |
 | `logrho` | 1D | The base-10 logarithm of the density [g/cm^3] at `t_model`. A value of -90 or less gives an empty cell. |
 | `pos_rcyl_mid`, `pos_z_mid` | 2D | The midpoint of the cell [cm] at `t_model`. |
 | `pos_x_min`, `pos_y_min`, `pos_z_min` | 3D | The corner of the cell with the lowest coordinates [cm] at `t_model`. |
@@ -165,7 +146,6 @@ The columns of each cell:
 | `X_<nuclide>` | all | The mass fraction of one nuclide at `t_model`, e.g. `X_Ni56`. The name has the element symbol and the mass number. The value must be in the range from 0 to 1. `sn3d` sets a negative value above -1e-6 to 0, and a value below that limit stops the run. |
 | `Ye` or `cellYe` | all | The electron fraction. |
 | `q` | all | The trapped radiation energy per mass [erg/g] at `t_model`. The value must not be negative. |
-| `tracercount` | all | `sn3d` reads this column and does not use it. |
 
 More rules for the cells:
 
@@ -174,8 +154,7 @@ More rules for the cells:
   holds the other columns.
 - The cells of a 2D model go through the r index first and then through the z index. The z midpoints start at the
   negative boundary. `sn3d` calculates the midpoint of each cell from `vmax` and `t_model`, and it stops if a value
-  of the file differs by more than 0.1 percent. A model with an odd number of z cells has a middle row at z = 0.
-  For that row, the limit is 0.1 percent of `vmax` times `t_model` divided by the number of z cells.
+  of the file differs by more than 0.1 percent.
 - The cells of a 3D model go through the x index first, then the y index, and then the z index. The three position
   values of a row can have the sequence x, y, z or the sequence z, y, x. `sn3d` compares the positions in both
   sequences with the values that it calculates from `vmax` and `t_model`. If each sequence has a difference of more
@@ -229,8 +208,8 @@ file has one row for each element:
 | --- | --- |
 | `Z` | The atomic number, which must be in the range from 1 to 118. |
 | `nions` | The number of ion stages, which must not be negative. With the value 0, the element has no ions, and the code keeps only its nuclide abundances. |
-| lowest ion stage | The lowest ion stage of the run. The ion stage 1 is the neutral atom, so the value must be 1 or more. `sn3d` does no check of this limit. |
-| highest ion stage | The highest ion stage of the run. The value must not be above `Z` + 1, which is the bare nucleus, and `sn3d` does no check of this limit. For an element with ions, `nions` must be equal to the highest ion stage - the lowest ion stage + 1. An element with `nions` 0 has no such rule. |
+| lowest ion stage | The lowest ion stage of the run. The ion stage 1 is the neutral atom, so the value must be 1 or more. |
+| highest ion stage | The highest ion stage of the run. The value must not be above `Z` + 1, which is the bare nucleus. For an element with ions, `nions` must be equal to the highest ion stage - the lowest ion stage + 1. An element with `nions` 0 has no such rule. |
 | `nlevelsmax` | The maximum number of levels that the code reads for each ion of the element. A negative value reads every level. The value 0 stops the run for an element with ions. With `SINGLE_LEVEL_TOP_ION`, the highest ion stage keeps one level. |
 | abundance | Unused. The value must be 0 or more. |
 | mass | The mean mass of the stable nuclides of the element in atomic mass units. The value must be above 0. |
@@ -291,7 +270,7 @@ Then one row for each transition:
   a collisional rate of zero. If the collision strength is not available, the value is -1.0 for a permitted transition
   and -2.0 for a forbidden transition.
 - The forbidden flag is 1 for a forbidden transition and 0 for a permitted transition.
-- An A value must not be negative. `sn3d` does no check of this value.
+- An A value must not be negative.
 - The rows of a block can have no comment lines between them.
 
 The code also accepts an older format of four columns, without the collision strength and the forbidden flag:
@@ -413,8 +392,7 @@ needs an electron fraction above 0 from this file or from that column, or the ru
 ```
 
 The second line occurs once for each row. The cell ids are the ids of `model.txt`. The file can hold a subset of the
-cells. The number of rows can be 0, and it must not be negative. With a negative number, `sn3d` reads no row and gives
-no error.
+cells. The number of rows can be 0, and it must not be negative.
 
 ## recombrates.txt
 
@@ -462,25 +440,12 @@ transition:
 - The autoionising levels of an ion must be one block of levels with no gap, and the block must end at the highest
   level of the ion.
 - The autoionising levels of the file must all be NLTE levels, or none of them must be an NLTE level.
-- The A value must not be negative. `sn3d` does no check of this value.
-
-## gridcontributions.txt
-
-`sn3d` does not read this file. [artistools](https://github.com/artis-mcrt/artistools) writes it together with a
-kilonova model, and it gives the contribution of each tracer particle to each cell. The files of the tests have these
-columns:
-
-- `particleid`;
-- `cellindex`;
-- `frac_of_cellmass`;
-- `frac_of_cellmass_includemissing`.
+- The A value must not be negative.
 
 ## The gamma-ray line files
 
 The gamma-ray lines of each nuclide are in the `data` folder of the repository. The file of a nuclide has the name
-`gamma_<nuclide>.txt` with lower-case letters, e.g. `gamma_ni56.txt`. The code also accepts the name
-`<nuclide>_lines.txt`. The code looks for each file in the model folder first, then in `data/`, and then in
-`artis/data/`. The file can have comment lines.
+`gamma_<nuclide>.txt` with lower-case letters, e.g. `gamma_ni56.txt`. The file can have comment lines.
 
 ```text
 <number of lines>
@@ -488,8 +453,7 @@ The gamma-ray lines of each nuclide are in the `data` folder of the repository. 
 ```
 
 The number of lines must not be negative. The second line occurs once for each gamma-ray line. The energy and the
-number of photons must not be negative,
-and `sn3d` does no check of these values. A nuclide without a file, but with a gamma-ray energy in its
+number of photons must not be negative. A nuclide without a file, but with a gamma-ray energy in its
 decay data, gets one line at that energy. These nuclides are an exception, and the run stops when one of them is in
 the run and has no file:
 

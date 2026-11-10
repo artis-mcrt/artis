@@ -71,8 +71,7 @@ A run needs two model files, and some runs need more:
 
 - `model.txt`: the grid, the density of each cell, and the nuclear composition;
 - `abundances.txt`: the elemental mass fractions of each cell;
-- `Ye.txt` and `gridcontributions.txt`: the electron fraction and the tracer particle contributions of a kilonova
-  model;
+- `Ye.txt`: the electron fraction of a kilonova model;
 - `recombrates.txt`: the tabulated recombination rates, e.g. for the nebular test.
 
 The `tests/*_inputfiles` folders hold small models of each type: 1D spherical, 2D cylindrical, and 3D Cartesian. They
