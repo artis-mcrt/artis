@@ -1093,7 +1093,7 @@ void open_log_files_and_log_job_configuration(const CommandLineOptions& options)
 #endif
 }
 
-void read_input_and_initialise_simulation(std::vector<Packet>& packets) {
+void read_input_and_initialise_simulation(std::span<Packet> packets) {
   // Read in parameters from input.txt
   read_parameterfile(packets);
 
