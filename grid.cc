@@ -370,11 +370,8 @@ void set_initenergyq(const int modelgridindex, const float initenergyq) {
   std::array<double, max_atomic_number + 1> massfrac_sum_by_atomic_number{};
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     const int atomic_number = decay::get_nuc_z(nucindex);
-    // a negative atomic number marks a model.txt column that is not an isotope of an element
-    if (atomic_number >= 0) {
-      assert_always(atomic_number <= max_atomic_number);
-      massfrac_sum_by_atomic_number[atomic_number] += get_modelinitnucmassfrac(mgi, nucindex);
-    }
+    assert_always(atomic_number <= max_atomic_number);
+    massfrac_sum_by_atomic_number[atomic_number] += get_modelinitnucmassfrac(mgi, nucindex);
   }
   return massfrac_sum_by_atomic_number;
 }
@@ -1089,7 +1086,7 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
 
   std::vector<int> nucindexlist(zlist.size());
   for (auto i = 0Z; i < std::ssize(zlist); i++) {
-    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
+    nucindexlist[i] = (zlist[i] >= 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
   }
 
   assert_always(npts_model > 0);
