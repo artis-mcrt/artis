@@ -29,8 +29,7 @@ mymodel/                              the model folder
 During a run, the model folder also holds the restart files `gridsave_ts*.tmp` and `packets_*_ts*.tmp`.
 
 A build with libzstd writes each `.out` file zstd compressed, e.g. `spec.out.zst`, so that no separate compression
-step is necessary. The logs, `input.txt`, `artis.pid`, `syn_dir.txt`, and the restart files stay plain. Every file
-gets zstd level 9.
+step is necessary. The logs, `input.txt`, and the restart files stay plain.
 [artistools](https://github.com/artis-mcrt/artistools) reads both forms.
 
 The first two sections of this page list the files. [The format of the files](#the-format-of-the-files) gives the
@@ -48,12 +47,10 @@ Each job writes these files into its job folder:
     - without the option, each rank writes its own file, `estimators_nnnn.out`. A rank that updates no cell writes
       no file.
 
-    The option gives the same choice for the nlte and the radfield files, e.g. `nlte_allranks.out`. With the constant
-    `LOG_MACROATOM` in `macroatom.cc`, it also gives `macroatom_allranks.out`.
+    The option gives the same choice for the nlte and the radfield files, e.g. `nlte_allranks.out`.
     `scripts/combine_allrank_out_files.py` makes the combined files from the files of the ranks, and it keeps the
     files of the ranks unless you give `--rm`. Run the script with uv, e.g.
     `uv run artis/scripts/combine_allrank_out_files.py`.
-  The script needs Python 3.14 or a later version, and uv gets that version from the metadata of the script.
 
 ## The files of the whole simulation
 
@@ -90,7 +87,6 @@ A run writes these files into the model folder:
     - `gammalinelist.out`: each gamma line of each nuclide, with its energy in MeV and its number of photons for
       each decay;
     - `bflist.out`: each bound-free continuum, with its ion, its lower level, and its upper level.
-- `syn_dir.txt`: the unit vector of the theta = 0 direction of the direction bins. The code keeps the value `0 0 1`.
 - `artis.pid`: the process id of rank 0 and the path of the model folder. `sn3d` and `exspec` stop when this file
   names a process that still runs in the same folder, and each program removes the file at the end.
 - `gridsave_ts*.tmp` and `packets_*_ts*.tmp`: restart files that hold the state at the start of a timestep, after its
@@ -294,22 +290,6 @@ The row of the full spectrum (`bin_num` -1) holds 0 in `nu_lower`, in `nu_upper`
 line with a detailed estimator holds the frequency of the line in `nu_lower` and in `nu_upper`, and the estimator of
 the line in `J_nu_avg`. Its other values are -1.
 
-### The macroatom file
-
-`macroatom_allranks.out` is a file for a developer, which only a build with the constant `LOG_MACROATOM` of
-`macroatom.cc` writes. It has a header row and then one row for each radiative de-excitation that ends a macro
-atom. The table gives the columns in the sequence of the file:
-
-| Column | Meaning |
-| --- | --- |
-| `timestep`, `modelgridindex` | The timestep and the model cell, both from 0. |
-| `Z` | The atomic number. |
-| `ionstage_in`, `ionstage_out` | The ion stage of the macro atom at its activation, and at the de-excitation. |
-| `level_in`, `level_out` | The level index of the macro atom at its activation, and at the de-excitation. |
-| `activline` | The line index of the absorption that activated the macro atom, or a negative value for another activation. |
-| `nu_cmf_in`, `nu_cmf_out` | The frequency of the packet in the comoving frame [Hz], at the activation and after the de-excitation. |
-| `nu_rf_in`, `nu_rf_out` | The frequency of the packet in the rest frame [Hz], at the activation and after the de-excitation. |
-
 ### The packet files
 
 A packet file has a header row that starts with `#` and names the columns. Then it has one row for each packet of
@@ -386,7 +366,6 @@ The values of `absorption_type`:
 | -1 | free-free absorption |
 | -2 | bound-free absorption |
 | -3, -4, -5 | Compton scattering, photoelectric absorption, and pair production of a gamma ray |
-| -6 | a reserved value of older packet files, for a pellet with no gamma-ray spectrum. The current code does not set it. |
 | -7 | a pellet that decayed before the start time of the model, or the initial energy of the cells |
 | -10 | a pellet decay to a particle |
 | -11 | a bound-bound absorption in a binned opacity, which has no line index |
@@ -445,9 +424,8 @@ whose virtual packet escaped in one direction or more:
 
 ## A new simulation removes the files of the previous one
 
-A new simulation first removes the output files, the restart files, the `job_from_ts*` folders, and the `*.slurm`
-job scripts of the previous simulation. It removes the same files as `scripts/clean.sh`, except `slurm-*.out`,
-`machine.file.*`, and `core.*`, which can belong to the current job.
+A new simulation first removes the output files, the restart files, and the `job_from_ts*` folders of the previous
+simulation. `scripts/clean.sh` removes the same files, and also the Slurm output files and the core files.
 
 ## Plotting and analysis
 

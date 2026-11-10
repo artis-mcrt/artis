@@ -1,7 +1,6 @@
 # Troubleshooting
 
-This page gives the messages that stop a build or a run, and what each one needs. The log file of {term}`rank` 0 holds the git
-version and the compile-time options of a run.
+This page gives the messages that stop a build or a run, and what each one needs.
 
 ## The build
 
@@ -13,13 +12,12 @@ The build needs an `artisoptions.h` in the repository root, and git does not tra
 ln -s artisoptions_classic.h artisoptions.h
 ```
 
-[Option presets](presets.md) says what each preset is for. Use a symlink and not a copy, because the symlink follows
-each change of the preset file.
+[Option presets](presets.md) says what each preset is for.
 
 ### The build folder is large
 
-Each set of make options and each content of `artisoptions.h` has its own folder in `build/`. An edit of an option
-value makes a new build folder and keeps the old one. `make clean` removes all build folders and the program symlinks.
+Each set of make options and each content of `artisoptions.h` has its own folder in `build/` (see
+[Make options](makeoptions.md#the-build-folders)). `make clean` removes all build folders and the program symlinks.
 
 ### make cannot run 'mpicxx --version'
 
@@ -33,10 +31,9 @@ The build needs gcc 14 or a later version. Load a newer gcc. With Open MPI you c
 
 ### The binary does not hold your change
 
-The symlink of each program points at the most recent build of any configuration, e.g. at the build of a test after
-`tests/runtest.sh`. Look at the symlink before you copy a binary, and copy it with `cp -L` from the repository root.
-A build folder of an older compiler otherwise gives you the old binary. [Make options](makeoptions.md) describes the
-names of the build folders.
+The `sn3d` symlink of the repository root points at the most recent build of any configuration, e.g. at the build of a
+test after `tests/runtest.sh`. Look at the symlink before you copy a binary, and copy it with `cp -L` from the
+repository root (see [Make options](makeoptions.md#the-build-folders)).
 
 ## The run
 
@@ -49,17 +46,6 @@ file. A run also needs `adata.txt`, `transitiondata.txt`, and `compositiondata.t
 
 Open MPI stops when the rank count is higher than the core count of the machine. Give `mpirun` the option
 `--oversubscribe`, as `tests/runtest.sh` does.
-
-### A run with TESTMODE=ON crashes in the MPI library
-
-A build with `TESTMODE=ON` has the sanitizers, so a run needs two settings:
-
-```sh
-export ASAN_OPTIONS=detect_stack_use_after_return=1:detect_leaks=0
-export OMPI_MCA_memory='^patcher'
-```
-
-`tests/runtest.sh` sets both when `TESTMODE=ON` is in the environment.
 
 ### The log ends with RESTART_NEEDED
 
@@ -85,22 +71,16 @@ job, because it continues the simulation.
 
 ### artistools draws fewer times than the run holds
 
-artistools accepts only the times at which the whole model can have sent light to the observer. The fastest ejecta set
-that limit, so the limit is earlier than the last timestep of the run. `--plotinvalidpart` draws the later times.
-
-### The checksums of a local test differ from the reference files
-
-Continuous integration makes the reference checksums on an arm64 runner with one gcc version. Another CPU type or
-another compiler can give other values, and no test covers that case. Push the branch and let CI decide. See
-[Testing](testing.md).
+The light of the far side of the ejecta reaches the observer later than the light of the near side. artistools
+therefore accepts only the observer times that have light from the whole model. The fastest ejecta set that range, so
+it is shorter than the time range of the run. The row `arrival times` of `artistools check` gives it, and
+`--plotinvalidpart` draws the other times.
 
 ## The log
 
-`sn3d` writes one log file for each rank and each thread into the {term}`job folder`, with the name `output_n-t.txt` for
-the rank n and the thread t. `output_0-0.txt` in the model folder is a symlink to the log of rank 0 and thread 0
-(see [Running sn3d](running.md)). Each line starts with the time in Coordinated Universal Time (UTC). A rank writes
-the messages of the cells that it updates, so the message about a cell can be in the log of a different rank or
-thread.
+[Running sn3d](running.md#the-logs) gives the names of the log files. Each line starts with the time in Coordinated
+Universal Time (UTC). A {term}`rank` writes the messages of the cells that it updates, so the message about a cell can
+be in the log of a rank other than rank 0.
 
 ### The tags of the log lines
 
@@ -123,10 +103,9 @@ and to the standard error, which a Slurm job puts into its output file. The mess
 `artistools logsummary <model folder>` counts each kind of warning in the logs of rank 0, with the first and the last
 timestep of each kind.
 
-### Warnings that the tests also give
+### Warnings that most runs give
 
-The first job of the tests `classicmode_1d_3dgrid`, `kilonova_1d`, and `nebular_1d_3dgrid` writes these warnings, and
-the run continues to its end:
+The run continues after each of these warnings:
 
 | Start of the message | Meaning |
 | --- | --- |
@@ -138,11 +117,9 @@ the run continues to its end:
 | `frac_sum is ..., but should be 1.0` | The three fractions of the Spencer-Fano solution do not sum to 1. The code sets the heating fraction to 1 minus the two other fractions, with the limits 0 and 1. If the two other fractions sum to more than 1, the heating fraction is 0 and the sum stays above 1. |
 | `cell ... timestep ...: B_planck(T_e=...) peak at ... is outside the radiation field frequency range` | The Planck function of the electron temperature has its peak outside the range from [NU_MIN_R](options.md#nu_min_r) to [NU_MAX_R](options.md#nu_max_r). |
 | `calculate_ionfractions: ... non-finite ionfract set to zero` | An ion fraction of the ionisation balance was not finite, and the code uses zero for that ion. |
-| `Compiled with MAX_NODE_SIZE ...` | The build has the make option `MAX_NODE_SIZE`, which the tests use. |
-
 ### Warnings of the temperature limits
 
-The same three tests also write the warnings below. The run continues, but each of these warnings says that a
+The run also continues after the warnings below, but each of these warnings says that a
 temperature is at [MINTEMP](options.md#mintemp) or at [MAXTEMP](options.md#maxtemp), and not at its solution:
 
 - `get_T_J_from_J: ... Clamping to MINTEMP` or `Clamping to MAXTEMP`, and `temperature estimator T_R = ... Setting T_R

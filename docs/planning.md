@@ -29,15 +29,12 @@ Simulation propagates 2500000 packets on this rank (total 1e+07 with nprocs 4)
 [info] mem_usage: packets occupy 572.205 MB
 ```
 
-These lines come from the run of [Example: a nebular spectrum](example.md), where one packet takes 240 bytes. The
-size depends on the build, e.g. a build for a graphics processing unit (GPU) adds the state of the random generator
-to each packet, so read the value
-from your log.
+These lines come from the run of [Example: a nebular spectrum](example.md). The size of a packet depends on the
+build, so read the value from your log.
 
-At the start of each {term}`timestep` after the first timestep of a job, each rank writes its packets to a {term}`restart file`,
-`packets_nnnn_ts*.tmp`. The file of a rank has approximately the size of its packets in memory. `sn3d` removes the
-files of the previous timestep only after all the ranks have written the new files, so the {term}`model folder` holds two
-sets for a short time.
+Each rank also writes its packets to a {term}`restart file`, `packets_nnnn_ts*.tmp`, which has approximately the size
+of its packets in memory. `sn3d` removes the files of the previous timestep only after it writes the new files,
+so the model folder needs space for two sets.
 
 The spectrum of a timestep holds the escaped packets that arrive at the observer in that timestep, so their number
 sets the noise of the spectrum. The relative noise of a sum of N packets of equal energy is 1/sqrt(N). The log of
@@ -74,19 +71,16 @@ that ratio is above 0.1.
 
 The time range also sets how the packets divide over the time:
 
-- With [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies) true, which every {term}`preset` has, each {term}`pellet`
-  holds the same energy. Its decay time is a sample of the decay curve between the first and the last time of the
-  simulation. With the value false, the decay times are uniform, and the energy of each pellet follows the decay
-  power at its time. In both modes, a longer time range gives each interval of time a smaller share of the packets.
+- The {term}`pellets <pellet>` decay between the first and the last time of the simulation (see
+  [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies)). A longer time range thus gives each interval of
+  time a smaller share of the packets.
 - [INITIAL_PACKETS_ON](options.md#initial_packets_on) gives a share of the packets to the energy that the ejecta
   hold at `tmin_days`. With this option, the decay times of the pellets start at the snapshot time of `model.txt`,
   and not at `tmin_days`. A pellet that decays before `tmin_days` becomes a packet of that initial energy.
 
-The light of the far side of the ejecta reaches the observer later than the light of the near side. artistools
-therefore accepts only the observer times that have light from the whole model, and that range is shorter than the
-time range of the run. The row `arrival times` of `artistools check` gives it. For the model of
-[Example: a nebular spectrum](example.md), which has a maximum velocity of 12415 km/s, a run from 170 to 250 days
-gives the range from 177.04 to 232.07 days.
+artistools plots only the observer times that have light from the whole model, and that range is shorter than the
+time range of the run (see [Troubleshooting](troubleshooting.md#the-results)). For the model of
+[Example: a nebular spectrum](example.md), a run from 170 to 250 days gives the range from 177.04 to 232.07 days.
 
 ### The first timesteps
 
@@ -120,9 +114,8 @@ The ranks wait for each other after the grid update and after the propagation. T
 time of a timestep. `artistools plotlogfiles <model folder>` plots the time that each rank took.
 
 The memory of a node has two parts. The ranks of one node share most of the large arrays, so a node holds one copy
-of them. Most `mem_usage` lines of these arrays have the text `(node shared memory)`. Some shared arrays have a line
-without that text, e.g. the photoionisation tables, the cooling list, and the non-thermal excitations. Each rank holds
-its own packets and its own accumulators of the estimators, e.g. the radiation field bin accumulators.
+of them. Most `mem_usage` lines of these arrays have the text `(node shared memory)`. Each rank holds its own packets
+and its own accumulators of the estimators.
 
 A resumed run needs the same rank count as the run that wrote the restart files. It also needs the same binary, and
 thus the same `NUM_PACKETS`, because the restart files hold the packets of the first job. `NUM_PACKETS` must be at
@@ -149,9 +142,9 @@ levels, the lines, and the bound-free transitions of each ion after it reads the
 ```
 
 [ION_NLEVELS_EXCITED_NLTE](options.md#ion_nlevels_excited_nlte) sets the number of excited levels of each ion in
-full NLTE. The NLTE solver puts these levels of all the ions of an element into one rate matrix. The matrix also has
-a row for the ground level of each ion and a row for the {term}`superlevel` of each ion that has one. Each autoionising
-level that is not an NLTE level also gets a row. The option thus sets most of the size of that matrix. The log gives
+full NLTE. The NLTE solver puts these levels of all the ions of an element into one rate matrix (see
+[Methods and references](methods.md#the-nlte-populations)), so the option sets most of the size of that matrix. The
+log gives
 the sum of the excited NLTE levels and of the superlevels over all ions:
 
 ```text

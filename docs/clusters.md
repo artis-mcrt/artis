@@ -32,12 +32,9 @@ Next, symlink an options {term}`preset` to `artisoptions.h`:
 ln -s artisoptions_classic.h artisoptions.h
 ```
 
-Set the number of packets of all {term}`ranks <rank>` together (`NUM_PACKETS`) with a text editor, e.g. `vim artisoptions.h`. [Option presets](presets.md) says what each preset is for, and
-[Compile-time options](options.md) describes every option.
-
-Most presets have `NUM_PACKETS` values for production runs with approximately 1000 ranks. The `nltephotospheric`
-preset has a much smaller value. Increase `NUM_PACKETS` for a production run with that preset. Each rank keeps its
-share of the packets in memory. Decrease `NUM_PACKETS` for a run with fewer ranks.
+[Option presets](presets.md) says what each {term}`preset` is for, and [Compile-time options](options.md) describes every
+option. Set the number of packets of all {term}`ranks <rank>` together (`NUM_PACKETS`) for your rank count, e.g. with
+`vim artisoptions.h`. The value of a preset is not always correct for a production run (see [Option presets](presets.md#which-preset)).
 
 Next, compile and go up a level to the model folder:
 
