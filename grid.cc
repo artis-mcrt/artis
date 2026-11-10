@@ -23,6 +23,7 @@
 #include <numbers>
 #include <optional>
 #include <print>
+#include <ranges>
 #include <set>
 #include <span>
 #include <sstream>
@@ -1075,7 +1076,16 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
 
   parse_model_headerline(headerline, zlist, alist, colnames);
 
-  decay::init_nuclides(zlist, alist);
+  // a column that is not a nuclide has Z = -1
+  std::vector<int> nuclide_columns_z;
+  std::vector<int> nuclide_columns_a;
+  for (const auto [z, a] : std::views::zip(zlist, alist)) {
+    if (z >= 0) {
+      nuclide_columns_z.push_back(z);
+      nuclide_columns_a.push_back(a);
+    }
+  }
+  decay::init_nuclides(nuclide_columns_z, nuclide_columns_a);
 
   std::vector<int> nucindexlist(zlist.size());
   for (auto i = 0Z; i < std::ssize(zlist); i++) {

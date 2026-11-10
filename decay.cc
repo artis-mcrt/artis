@@ -1125,9 +1125,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   assert_always(he4_nucindex >= 0 || !decaypaths_produce_he4());
   isotopes_of_z.assign(1 + std::ranges::max(nuclides | std::views::transform(&Nuclide::z)), {});
   for (int nucindex = 0; nucindex < std::ssize(nuclides); nucindex++) {
-    if (nuclides[nucindex].z >= 0) {
-      isotopes_of_z[nuclides[nucindex].z].push_back({.a = nuclides[nucindex].a, .nucindex = nucindex});
-    }
+    isotopes_of_z[nuclides[nucindex].z].push_back({.a = nuclides[nucindex].a, .nucindex = nucindex});
   }
   for (auto& isotopes : isotopes_of_z) {
     std::ranges::sort(isotopes, {}, &ZIsotope::a);
