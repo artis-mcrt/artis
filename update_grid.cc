@@ -276,13 +276,16 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   }
   std::println(estimators_file);
 
-  std::print(estimators_file,
-             "heating: ff {:11.5e} bf {:11.5e} coll {:11.5e}       dep {:11.5e} heating_dep/total_dep {:.3f}\n",
-             heatingcoolingrates.heating_ff, heatingcoolingrates.heating_bf, heatingcoolingrates.heating_collisional,
-             heatingcoolingrates.heating_dep, heatingcoolingrates.dep_frac_heating);
-  std::print(estimators_file, "cooling: ff {:11.5e} fb {:11.5e} coll {:11.5e} adiabatic {:11.5e}\n",
-             heatingcoolingrates.cooling_ff, heatingcoolingrates.cooling_fb, heatingcoolingrates.cooling_collisional,
-             heatingcoolingrates.cooling_adiabatic);
+  // the first timestep of a resumed job has no thermal balance solution, so it has no rates to write
+  if (!globals::simulation_continued_from_saved || timestep != globals::timestep_initial) {
+    std::print(estimators_file,
+               "heating: ff {:11.5e} bf {:11.5e} coll {:11.5e}       dep {:11.5e} heating_dep/total_dep {:.3f}\n",
+               heatingcoolingrates.heating_ff, heatingcoolingrates.heating_bf, heatingcoolingrates.heating_collisional,
+               heatingcoolingrates.heating_dep, heatingcoolingrates.dep_frac_heating);
+    std::print(estimators_file, "cooling: ff {:11.5e} fb {:11.5e} coll {:11.5e} adiabatic {:11.5e}\n",
+               heatingcoolingrates.cooling_ff, heatingcoolingrates.cooling_fb, heatingcoolingrates.cooling_collisional,
+               heatingcoolingrates.cooling_adiabatic);
+  }
 
   const auto write_estim_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_write_estimators).count();

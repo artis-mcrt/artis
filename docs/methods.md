@@ -4,27 +4,65 @@ This page gives each method of ARTIS: a short description, the options that sele
 you describe the method of your results. [How a simulation works](simulation.md) gives the sequence of the steps, and
 [Compile-time options](options.md) describes each option in full.
 
-The log file of rank 0 holds the git version and the options of a run (see [Running sn3d](running.md)).
+The log file of {term}`rank` 0 holds the git version and the options of a run (see [Running sn3d](running.md)).
 `artistools describe <model folder>` gives the main options of a run together with their effect.
 
 ## The energy packets
+
+Code: `packet.cc` and `decay.cc` (see [Code map](codemap.md)).
 
 The radiation field is a set of indivisible energy packets. A packet changes its type when its energy changes its
 form, and the code follows it until it escapes or the simulation ends. [How a simulation works](simulation.md) gives
 the types of the packets.
 
-- Options: [NUM_PACKETS](options.md#num_packets), [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies),
-  and [INITIAL_PACKETS_ON](options.md#initial_packets_on).
-- References: Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 describes the packets. An early version
-  of the code is described in Sim (2007), MNRAS, 375, 154-162, doi:10.1111/j.1365-2966.2006.11271.x and Kromer & Sim
-  (2009), MNRAS, 398, 1809-1826, doi:10.1111/j.1365-2966.2009.15256.x.
+The sum of the energy of the {term}`pellets <pellet>` of a rank is the energy that the model releases in the simulation:
+
+$$
+\varepsilon = \frac{1}{N_\mathrm{rank}} \sum_\mathrm{cells} V(t_\mathrm{min}) \, \rho(t_\mathrm{min}) \,
+\left( e_\mathrm{decay} + q \right)
+$$
+
+- $\varepsilon$ is the energy of one pellet in the comoving frame.
+- $N_\mathrm{rank}$ is the number of packets of the rank, so each rank holds the energy of the whole model.
+- $V$ and $\rho$ are the volume and the density of a {term}`propagation cell`.
+- $e_\mathrm{decay}$ is the decay energy per unit mass of the cell in the time range of the simulation.
+- $q$ is the `q` column of `model.txt`, multiplied by $t_\mathrm{model} / t_\mathrm{min}$ for the adiabatic loss. It is
+  zero without [INITIAL_PACKETS_ON](options.md#initial_packets_on).
+
+The code selects a cell in proportion to its energy, and then a decay chain. With
+[UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies), it adds one exponential sample of the mean lifetime for
+each nuclide of the chain to the snapshot time of `model.txt`. It samples again until the result is inside the time
+range of the simulation.
+
+- Options:
+    - [NUM_PACKETS](options.md#num_packets) sets the number of packets of all ranks together.
+    - [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies) gives each pellet the same energy. With the value
+      false, the decay times are uniform instead, and the energy of each pellet follows the decay power at its time.
+    - [INITIAL_PACKETS_ON](options.md#initial_packets_on) adds the initial energy of the cells to the energy that the
+      packets share. The number of packets stays the same.
+- References: Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 describes the packets. Sim (2007),
+  MNRAS, 375, 154-162, doi:10.1111/j.1365-2966.2006.11271.x and Kromer & Sim (2009), MNRAS, 398, 1809-1826,
+  doi:10.1111/j.1365-2966.2009.15256.x describe an early version of the code.
 
 ## The opacity of the r-packets
 
-An r-packet moves until it reaches a line, a continuum absorption, or an electron scattering. The default mode gives
-each line its own Sobolev optical depth. The expansion of the ejecta shifts the comoving frequency of the packet
+Code: `rpkt.cc` (see [Code map](codemap.md)).
+
+An {term}`r-packet` moves until it reaches a line, a continuum absorption, or an electron scattering. The default mode gives
+each line its own {term}`Sobolev <Sobolev approximation>` optical depth. The expansion of the ejecta shifts the comoving frequency of the packet
 through the lines one after the other. The continuum opacity is the sum of the electron scattering, the
 bound-free, and the free-free opacities.
+
+The Sobolev optical depth of a line from the lower level $l$ to the upper level $u$ is:
+
+$$
+\tau_{lu} = \max\left[ 0, \; \left( B_{lu} n_l - B_{ul} n_u \right) \frac{hc}{4\pi} \, t \right]
+$$
+
+$B_{lu}$ and $B_{ul}$ are the Einstein coefficients, $n_l$ and $n_u$ are the level populations, and $t$ is the time at
+which the packet reaches the line. A packet samples an optical depth $\tau_\mathrm{rnd} = -\ln \xi$ with $\xi$ a
+uniform random number in $(0, 1]$. The event occurs where the sum of the line optical depths and of the continuum
+optical depth $\chi_\mathrm{cont} \, d$ reaches $\tau_\mathrm{rnd}$. The distance $d$ is the path of the packet.
 
 - Options:
     - [USE_RELATIVISTIC_DOPPLER_SHIFT](options.md#use_relativistic_doppler_shift) selects the full Doppler factor.
@@ -33,18 +71,20 @@ bound-free, and the free-free opacities.
       points.
     - [DIPOLE](options.md#dipole) selects the direction of an electron scattering.
     - [NU_MIN_R](options.md#nu_min_r) and [NU_MAX_R](options.md#nu_max_r) set the frequency limits of the spectra.
-      They also limit the frequency that a k-packet samples from a Planck function, so they change the transport.
+      They also limit the frequency that a {term}`k-packet` samples from a Planck function, so they change the transport.
 - The alternatives are the [binned opacities](#the-binned-opacities-and-the-thermalisation-probability) and the
   [grey opacity of a thick cell](#the-grey-opacity-of-a-thick-cell).
 
 ## The macro atom and the k-packets
 
-A macro atom makes internal radiative and collisional transitions between the levels and the ions. It stops when it
+Code: `macroatom.cc` and `kpkt.cc` (see [Code map](codemap.md)).
+
+A {term}`macro atom` makes internal radiative and collisional transitions between the levels and the ions. It stops when it
 emits an r-packet or becomes a k-packet. Each type of absorption has its own result:
 
 - In the default mode, an absorption in a line activates a macro atom.
-- A bound-free absorption activates a macro atom with the probability nu_edge / nu, where nu_edge is the threshold
-  frequency of the continuum. It makes a k-packet otherwise.
+- A bound-free absorption activates a macro atom with the probability $\min(1, \nu_\mathrm{edge} / \nu)$, where
+  $\nu_\mathrm{edge}$ is the threshold frequency of the continuum. It makes a k-packet otherwise.
 - A free-free absorption makes a k-packet.
 
 A k-packet holds thermal energy. The code adds the
@@ -62,16 +102,18 @@ collisional excitation, and the collisional ionisation.
 
 ## The gas state
 
-The grid update solves the state of each model grid cell that contains matter: the electron temperature T_e, the
+The grid update solves the state of each {term}`model grid cell` that contains matter: the electron temperature T_e, the
 electron density, and the ion and level populations. Kromer & Sim (2009), MNRAS, 398, 1809-1826,
 doi:10.1111/j.1365-2966.2009.15256.x describes the classic mode. Shingles et al. (2020), MNRAS, 492, 2029-2043,
-doi:10.1093/mnras/stz3412 describes the mode with the non-LTE (NLTE) populations. [Option presets](presets.md) says
-which preset selects which mode.
+doi:10.1093/mnras/stz3412 describes the mode with the non-LTE ({term}`NLTE`) populations. [Option presets](presets.md) says
+which {term}`preset` selects which mode.
 
 ### The populations without NLTE levels
 
-The first `num_lte_timesteps` timesteps of `input.txt` solve the ionisation balance in local thermodynamic equilibrium
-(LTE). After these timesteps, an element without NLTE levels gets a photoionisation equilibrium for its ions and
+Code: `ltepop.cc` (see [Code map](codemap.md)).
+
+The first `num_lte_timesteps` {term}`timesteps <timestep>` of `input.txt` solve the ionisation balance in local thermodynamic equilibrium
+({term}`LTE`). After these timesteps, an element without NLTE levels gets a photoionisation equilibrium for its ions and
 Boltzmann populations for its levels. An element that [FORCE_SAHA_ION_BALANCE](options.md#force_saha_ion_balance)
 selects keeps the Saha ionisation balance. The kilonova preset selects each element except Sr, Y, and Zr.
 
@@ -87,10 +129,21 @@ selects keeps the Saha ionisation balance. The kilonova preset selects each elem
 
 ### The NLTE populations
 
+Code: `nltepop.cc` (see [Code map](codemap.md)).
+
 The solver puts the radiative rates, the collisional rates, and the non-thermal ionisation and excitation rates of
 all the levels of all the ions of an element into one rate matrix. The solution of the statistical equilibrium gives the level
-populations. Each ion has a ground level and a number of excited levels in full NLTE. An ion with more levels above
-them also has one superlevel for those levels. An autoionising level is not in the superlevel, and it keeps its own
+populations $n_i$:
+
+$$
+\sum_{j \neq i} n_j R_{ji} - n_i \sum_{j \neq i} R_{ij} = 0
+$$
+
+$R_{ij}$ is the total rate for one particle from level $i$ to level $j$. The first equation of the set is replaced by
+the condition that the populations sum to the population of the element, $\sum_i n_i = n_\mathrm{element}$.
+
+Each ion has a ground level and a number of excited levels in full NLTE. An ion with more levels above
+them also has one {term}`superlevel` for those levels. An autoionising level is not in the superlevel, and it keeps its own
 row in the matrix. The cell repeats the solutions of the populations, of T_e, and of the
 non-thermal electrons until T_e and the electron density change by less than a tolerance. With
 [NLTE_TE_NNE_USE_ANDERSON_ACCEL](options.md#nlte_te_nne_use_anderson_accel), the iteration also needs an estimate of
@@ -101,9 +154,19 @@ log of the rank has a message with the text `failed to converge`.
 
 From the timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep), the
 equations of the ion populations have a time term. The ion populations are then not in a statistical equilibrium,
-but the level populations inside each ion are. These solutions always use the lower-upper (LU) decomposition. The
+but the level populations inside each ion are. The equation of the ground level of each ion, except the lowest ion,
+becomes:
+
+$$
+\sum_{j \neq g} n_j R_{jg} - n_g \sum_{j \neq g} R_{gj} - \frac{n_\mathrm{ion}}{\Delta t}
+= -\frac{n_\mathrm{ion}^\mathrm{old}}{\Delta t}
+$$
+
+$n_\mathrm{ion}$ is the sum of the populations of the ion, and $n_\mathrm{ion}^\mathrm{old}$ is its value at the
+grid update before. $\Delta t$ is the time between the two grid updates. The sum over the levels of an ion removes the transitions inside the ion, so the sum is the
+backward Euler step of the ion population. The
 time term needs a complete NLTE solution of the cell from the timestep before. A cell without one keeps the
-equations with no time term for that timestep, e.g. after an LTE timestep, after the grey opacity, or after a
+equations with no time term for that timestep, e.g. after an LTE timestep, after the {term}`grey opacity`, or after a
 fallback to LTE.
 
 If the solution of an element fails, the solver removes one ion and solves again, or the element falls back to
@@ -141,6 +204,8 @@ LTE. The log of the rank has a warning for each fallback to LTE.
 
 ### The thermal balance
 
+Code: `thermalbalance.cc` (see [Code map](codemap.md)).
+
 A cell in an LTE timestep, and a cell with the grey opacity, have no thermal balance. The code sets their T_e to the
 temperature of the mean intensity. The first timestep of a new simulation is different: each cell keeps its initial
 temperature.
@@ -152,16 +217,39 @@ loses energy to the expansion in proportion to 1/t. A decay at the time `t_decay
 `t_decay / t_mid` of its energy at the midpoint `t_mid` of the first timestep. The `q` energy keeps the fraction
 `t_model / t_mid`, where `t_model` is the snapshot time.
 
-For each other cell, the code solves heating = cooling for the electron temperature. The heating rates are the
-bound-free heating, the free-free heating, the collisional de-excitation, and the non-thermal heating. With
-[USE_ION_BFHEATING_ESTIMATORS](options.md#use_ion_bfheating_estimators), a Monte Carlo estimator corrects the
+For each other cell, the code solves this equation for the electron temperature:
+
+$$
+H_\mathrm{bf} + H_\mathrm{ff} + H_\mathrm{coll} + H_\mathrm{dep} =
+C_\mathrm{ff} + C_\mathrm{fb} + C_\mathrm{coll} + C_\mathrm{ad} + C_\mathrm{time}
+$$
+
+The heating rates $H$ are the bound-free heating, the free-free heating, the collisional de-excitation, and the
+non-thermal heating. The non-thermal heating is:
+
+$$
+H_\mathrm{dep} = f_\mathrm{heat} \, D_\mathrm{lepton} + D_\mathrm{alpha} + D_\mathrm{fission}
+$$
+
+$D$ is a deposition rate density, and $f_\mathrm{heat}$ is the heating fraction of the non-thermal solution. With
+[USE_ION_BFHEATING_ESTIMATORS](options.md#use_ion_bfheating_estimators), a Monte Carlo {term}`estimator` corrects the
 bound-free heating (see [the radiation field model](#the-radiation-field-model)). Without
 [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), the collisional heating comes
 from a Monte Carlo estimator, which also holds the collisional recombination heating.
 
-The cooling rates are the free-free, the free-bound, and the collisional cooling, and the adiabatic cooling of the
-expansion. From the timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep),
-the cooling also holds the change of the thermal energy of the gas in the timestep. This term has the same condition as the time
+The cooling rates $C$ are the free-free, the free-bound, and the collisional cooling, and the adiabatic cooling of
+the expansion. With the gas pressure $p = (n_\mathrm{ion} + n_e) \, k_\mathrm{B} T_e$ and a volume that grows as
+$t^3$, the adiabatic cooling is $C_\mathrm{ad} = 3 p / t$.
+
+From the timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep),
+the cooling also holds the change of the thermal energy of the gas in the timestep:
+
+$$
+C_\mathrm{time} = \frac{3}{2} k_\mathrm{B} \,
+\frac{n_\mathrm{tot} \left( T_e - T_e^\mathrm{old} \right) + T_e^\mathrm{old} \left( n_e - n_e^\mathrm{old} \right)}{\Delta t}
+$$
+
+$n_\mathrm{tot}$ is $n_\mathrm{ion} + n_e$. This term has the same condition as the time
 term of the ion populations: the cell needs a complete NLTE solution from the timestep before.
 
 The code keeps T_e between [MINTEMP](options.md#mintemp) and [MAXTEMP](options.md#maxtemp). A cell at one of these
@@ -175,7 +263,21 @@ limits has no thermal balance, and the log of its rank has a warning (see
 
 ## The radiation field model
 
-The packets add to the estimators of the radiation field of each cell that they enter. The grid update fits a dilute
+Code: `radfield.cc` (see [Code map](codemap.md)).
+
+The packets add to the estimators of the radiation field of each cell that they enter. The mean intensity of a cell
+is:
+
+$$
+J = \frac{1}{4\pi \, V \, \Delta t \, N_\mathrm{ranks}} \sum_\mathrm{paths} \varepsilon_\mathrm{cmf} \, ds
+$$
+
+$V$ is the volume of the model grid cell at the midpoint of the timestep of the packets, and $\Delta t$ is the width
+of that timestep. $\varepsilon_\mathrm{cmf}$ is the comoving energy of a packet, and $ds$ is the length of a path in
+the cell. The sum holds the paths of all ranks. Each rank holds the energy of the whole model, so the code divides by
+$N_\mathrm{ranks}$. The estimator of $\nu J$ has the additional factor $\nu_\mathrm{cmf}$ in the sum.
+
+The grid update fits a dilute
 blackbody to the full spectrum of each cell, with a dilution factor W and a radiation temperature T_R. With the
 multibin model, it also fits a dilute blackbody to each frequency bin. The last bin is an exception: its temperature
 is the electron temperature of the cell, and only its dilution factor comes from the fit.
@@ -205,6 +307,8 @@ cell (see [the thermal balance](#the-thermal-balance)).
 
 ## The photoionisation rates and the bound-free estimators
 
+Code: `ratecoeff.cc` and `radfield.cc` (see [Code map](codemap.md)).
+
 The photoionisation rate coefficient of a level comes from one of three sources:
 
 - a table for a Planck radiation field, which the code multiplies by the dilution factor W and by the ratio of a Monte
@@ -214,25 +318,62 @@ The photoionisation rate coefficient of a level comes from one of three sources:
   ([DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP](options.md#detailed_bf_estimators_first_timestep) and
   [DETAILED_BF_ESTIMATORS_LEVEL_SELECTED](options.md#detailed_bf_estimators_level_selected)).
 
-If the model folder holds `recombrates.txt`, the code calibrates the total recombination rate of an ion to that file
-at the temperature [RECOMBCALIBRATION_T_ELEC](options.md#recombcalibration_t_elec). An ion gets no calibration when
-the file has no block for it, when the file gives a negative rate, or when the atomic data gives no recombination
-for it. The log gives the result for each ion (see [Input files](inputfiles.md)).
+The detailed estimator of a continuum is:
+
+$$
+\gamma = \frac{1}{h \, V \, \Delta t \, N_\mathrm{ranks}}
+\sum_\mathrm{paths} \sigma_\mathrm{contr}(\nu_\mathrm{cmf}) \, \frac{\varepsilon_\mathrm{cmf}}{\nu_\mathrm{cmf}} \, ds
+$$
+
+$\sigma_\mathrm{contr}$ is the cross section of the continuum, multiplied by the probability of its target level and
+by a factor for the stimulated recombination. The volume, the width, and $\varepsilon_\mathrm{cmf}$ are the same as
+for the mean intensity.
+
+If the {term}`model folder` holds `recombrates.txt`, the code calibrates the total recombination rate of an ion to that file
+at the temperature [RECOMBCALIBRATION_T_ELEC](options.md#recombcalibration_t_elec).
+[Input files](inputfiles.md#recombratestxt) gives the rules of the calibration, and the log gives the result for each
+ion.
 
 - Reference: Shingles et al. (2020), MNRAS, 492, 2029-2043, section 2.2, doi:10.1093/mnras/stz3412.
 
 ## The non-thermal electrons
 
+Code: `nonthermal.cc` (see [Code map](codemap.md)).
+
 The deposited energy of the gamma rays, of the positrons, and of the electrons makes fast leptons. These leptons
 lose their energy to the heating, the ionisation, and the excitation of the gas. The
-Spencer-Fano solver finds the energy spectrum of these electrons on a uniform energy grid. The spectrum gives the
+Spencer-Fano solver finds the energy spectrum $y(E)$ of these electrons on a uniform energy grid. The code solves the
+integral form of the equation of Kozma & Fransson (1992), ApJ, 390, 602-621, doi:10.1086/171311, equation 7:
+
+$$
+\begin{aligned}
+& L(E) \, y(E)
++ \sum_{\mathrm{exc}} n_l \int_E^{E + \epsilon_\mathrm{exc}} y(E') \, \sigma_\mathrm{exc}(E') \, dE' \\
+& + \sum_{\mathrm{shells}} n_\mathrm{ion} \int_E^{E_\mathrm{max}} y(E')
+\int_{\max(E' - E, \, I)}^{(E' + I)/2} \sigma_\mathrm{ion}(E', \epsilon) \, d\epsilon \, dE' \\
+& - \sum_{\mathrm{shells}} n_\mathrm{ion} \int_{2E + I}^{E_\mathrm{max}} y(E')
+\int_{E + I}^{(E' + I)/2} \sigma_\mathrm{ion}(E', \epsilon) \, d\epsilon \, dE'
+= \int_E^{E_\mathrm{max}} S(E') \, dE'
+\end{aligned}
+$$
+
+- $L(E)$ is the energy loss rate of a fast electron to the free thermal electrons.
+- $\epsilon_\mathrm{exc}$ and $\sigma_\mathrm{exc}$ are the energy and the cross section of an excitation from a
+  level with the population $n_l$.
+- $I$ is the ionisation potential of a shell, and $\epsilon$ is the energy that an ionisation transfers.
+- $\sigma_\mathrm{ion}(E', \epsilon)$ is the differential ionisation cross section.
+- $S(E)$ is the source of electrons. It is constant over a narrow range at the top of the energy grid.
+
+The first ionisation integral holds the primary electrons that fall below $E$. The second integral holds the secondary
+electrons that start above $E$. The code writes the equation as an upper triangular matrix and solves it by
+back-substitution. The spectrum gives the
 three fractions of the deposited energy, and the non-thermal ionisation and excitation rates for the NLTE solver.
 With [SF_AUGER_CONTRIBUTION_ON](options.md#sf_auger_contribution_on), the equation also has the source term of the
 Auger electrons. The work function approximation is the alternative. It gives ionisation rates and no excitation
 rates, and the thermal balance then counts all of the deposited lepton energy as heat.
 
 - Options:
-    - [NT_SCHEME](options.md#nt_scheme) selects the Spencer-Fano solution, the work function approximation, or no
+    - [NT_SCHEME](options.md#nt_scheme) selects the {term}`Spencer-Fano solution`, the work function approximation, or no
       non-thermal ionisation. With no non-thermal ionisation, the run also has no non-thermal excitation, and all of
       the deposited lepton energy heats the gas.
     - [SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF](options.md#sf_re_solve_within_timestep_min_nneperion_fracdiff)
@@ -253,16 +394,17 @@ rates, and the thermal balance then counts all of the deposited lepton energy as
 
 ## The decays and the thermalisation of the particles
 
+Code: `decay.cc` and `update_packets.cc` (see [Code map](codemap.md)).
+
 The decay network holds the alpha decays, the beta-minus decays, the beta-plus decays, the electron captures, and
 the spontaneous fission decays. The code gets the abundance of each nuclide at
 each time from the solutions of the Bateman equation. The `data` folder of the repository holds the decay data and
-the gamma-ray line tables of some nuclides (see [Atomic and model data](data.md)). A nuclide with gamma-ray energy in
-the decay data and no table gets one line at its mean gamma-ray energy for each decay. Fe52 and Mn52 have neither, so
-they get one line at 0.86 MeV and at 3.415 MeV. The decay particles deposit their energy in one of three ways:
+the gamma-ray line tables of some nuclides. [Input files](inputfiles.md#the-gamma-ray-line-files) says which lines a
+nuclide without a table gets. The decay particles deposit their energy in one of three ways:
 
 - They deposit all of their energy at once.
 - The code transports them, and they lose their energy over time.
-- With an analytic thermalisation efficiency, a packet of particles deposits its energy at once with the probability
+- With an analytic {term}`thermalisation` efficiency, a packet of particles deposits its energy at once with the probability
   of that efficiency. If not, the packet escapes and deposits nothing.
 
 The fragments of a spontaneous fission are an exception. They always deposit all of their energy at once.
@@ -290,7 +432,9 @@ the positrons goes to the non-thermal electrons (see [the non-thermal electrons]
 
 ## The gamma rays
 
-A gamma packet gives its energy to the gas by Compton scattering, by photoelectric absorption, or by pair production.
+Code: `gammapkt.cc` (see [Code map](codemap.md)).
+
+A {term}`gamma packet` gives its energy to the gas by Compton scattering, by photoelectric absorption, or by pair production.
 Every preset transports the gamma packets with frequency-dependent opacities. The alternatives are a grey opacity
 and an analytic thermalisation efficiency. With that efficiency, a gamma packet deposits all of its energy at once
 with the probability of the efficiency, and it escapes if not.
@@ -312,6 +456,8 @@ with the probability of the efficiency, and it escapes if not.
 
 ## The grey opacity of a thick cell
 
+Code: `grid.cc` and `rpkt.cc` (see [Code map](codemap.md)).
+
 `input.txt` holds an optical depth limit and a number of grey timesteps (see [Plan a simulation](planning.md)). In
 these first timesteps, a cell with a grey optical depth to the outer boundary at or above the limit is thick. An
 r-packet in a thick cell gets a grey opacity, and a k-packet there emits an r-packet from a Planck function.
@@ -323,8 +469,10 @@ r-packet in a thick cell gets a grey opacity, and a k-packet there emits an r-pa
 
 ## The polarisation and the virtual packets
 
+Code: `vpkt.cc` (see [Code map](codemap.md)).
+
 With [POL_ON](options.md#pol_on), the code follows the Stokes parameters of the packets. With
-[VPKT_ON](options.md#vpkt_on), it also sends virtual packets towards the observer directions of `vpkt.txt` at an
+[VPKT_ON](options.md#vpkt_on), it also sends {term}`virtual packets <virtual packet>` towards the observer directions of `vpkt.txt` at an
 emission or a scattering event of a real packet. An event in a cell with the grey opacity
 sends none, and `vpkt.txt` gives the range of the arrival times and the wavelength ranges of the events that send
 them. `vpkt.txt` can also give a limit of the grey optical depth. A cell above that limit sends no virtual packet,
@@ -349,6 +497,8 @@ spectrum of each direction with less noise than the real packets give.
 
 ## The binned opacities and the thermalisation probability
 
+Code: `rpkt.cc` and `vpkt.cc` (see [Code map](codemap.md)).
+
 The binned opacities replace the line-by-line opacities with one opacity for each wavelength bin. Each line adds a
 weight to the sum of its bin, and an option selects the weight from the Sobolev optical depth of the line. A
 thermalisation probability for each bound-bound absorption can replace the macro atom. With that probability, the
@@ -364,7 +514,7 @@ not become a k-packet. With the remaining probability, the packet scatters and k
     - [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](options.md#rpkt_boundbound_thermalisation_probability) sets the
       thermalisation probability.
 - References:
-    - the expansion opacity: Eastman & Pinto (1993), ApJ, 412, 731-751, doi:10.1086/172957;
+    - the {term}`expansion opacity`: Eastman & Pinto (1993), ApJ, 412, 731-751, doi:10.1086/172957;
     - the line-binned opacity: Fontes, Fryer, Hungerford, Wollaeger & Korobkin (2020), MNRAS, 493, 4143-4171,
       doi:10.1093/mnras/staa485;
     - these modes in ARTIS: Shingles et al. (in prep).
