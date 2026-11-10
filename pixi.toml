@@ -5,7 +5,7 @@ platforms = ["linux-64"]
 version = "0.1.0"
 
 [tasks.make]
-cmd = "make --check-symlink-times --jobs=$(nproc)"
+cmd = "make --jobs=$(nproc)"
 
 [dependencies]
 # usually better to use whatever MPI library is available on the HPC cluster

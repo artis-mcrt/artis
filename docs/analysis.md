@@ -1,8 +1,8 @@
 # Analyse the results
 
 [artistools](https://github.com/artis-mcrt/artistools) reads the output files of a {term}`model folder`. The
-[Quickstart](quickstart.md) says how to install it. Each command takes the model folder as its last argument, and
-`.` is the current folder. Each plot command writes a PDF file into the current folder. `--help` after a command lists
+[Quickstart](quickstart.md) says how to install it. Each command takes the model folder as a positional argument, and
+`.` is the current folder. Put the model folder before an option that takes more than one value, e.g. `--filter`. Each plot command writes a PDF file into the current folder. `--help` after a command lists
 its options.
 
 ## Start with the checks
@@ -22,15 +22,15 @@ file. `check` gives one row for each check of the results. `logsummary` counts e
 | Task | Command |
 | --- | --- |
 | the bolometric light curve | `artistools plotlightcurves <model folder>` |
-| the light curves of some filters | `artistools plotlightcurves --filter B V <model folder>` |
-| the deposition of the decay products | `artistools plotlightcurves --deposition gamma betaplus <model folder>` |
+| the light curves of some filters | `artistools plotlightcurves <model folder> --filter B V` |
+| the deposition of the decay products | `artistools plotlightcurves <model folder> --deposition gamma betaplus` |
 | the spectrum at one time | `artistools plotspectra -t <days> <model folder>` |
 | the spectrum by emission and absorption process | `artistools plotspectra -t <days> --emissionabsorption <model folder>` |
 | the emission of each element | `artistools plotspectra -t <days> --showemission --groupby element <model folder>` |
 | the spectrum from the packet files | `artistools plotspectra -t <days> --frompackets <model folder>` |
 | the spectra of each timestep as text | `artistools writespectra <model folder>` |
 | an estimator of one cell against the timestep | `artistools plotestimators Te -x timestep --cell <cell> <model folder>` |
-| estimators of all cells at one time | `artistools plotestimators -t <days> -p Te nne <model folder>` |
+| estimators of all cells at one time | `artistools plotestimators <model folder> -t <days> -p Te nne` |
 | the populations of one ion | `artistools plotnltepops Fe --ion-stages 2 --cell <cell> -t <days> <model folder>` |
 | the radiation field of a cell | `artistools plotradfield --cell <cell> -t <days> <model folder>` |
 | the deposition rates of the cells | `artistools deposition <model folder>` |
@@ -45,8 +45,8 @@ file. `check` gives one row for each check of the results. `logsummary` counts e
 A 2D or a 3D model gives the results of each observer direction bin. Each `--plotviewingangle` number is one bin:
 
 ```sh
-artistools plotspectra -t <days> --plotviewingangle 0 <model folder>
-artistools plotlightcurves --plotviewingangle 0 10 <model folder>
+artistools plotspectra -t <days> <model folder> --plotviewingangle 0
+artistools plotlightcurves <model folder> --plotviewingangle 0 10
 artistools plotspherical <model folder>
 ```
 

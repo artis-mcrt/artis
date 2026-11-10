@@ -3,8 +3,10 @@
 #ifndef LTEPOP_H
 #define LTEPOP_H
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <vector>
 
 #include "artisoptions.h"
@@ -13,6 +15,9 @@
 #include "globals.h"
 #include "grid.h"
 #include "mpi_logging.h"
+
+// Floor of nne. The stored nne is a float, and a fast-math build flushes a denormal float to zero.
+constexpr double MINNNE = std::max(MINPOP, static_cast<double>(std::numeric_limits<float>::min()));
 
 // Level population [cm^-3]: NLTE where the solver provided one, else Boltzmann off the ground level. Floored at
 // MINPOP when the element is present (0 when it is absent), except where the underlying calculation flags that

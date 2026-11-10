@@ -24,7 +24,7 @@ exist.
 | [Ye.txt](#yetxt) | with `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, if `model.txt` has no `Ye` column | the electron fraction of each cell |
 | [recombrates.txt](#recombratestxt) | no | the recombination rate coefficients for the calibration |
 | [autoion.txt](#autoiontxt) | no | the autoionisation rates |
-| [gamma_*.txt](#the-gamma-ray-line-files) | for six nuclides | the gamma-ray lines of each nuclide, which come with the source in `artis/data` |
+| [gamma_*.txt](#the-gamma-ray-line-files) | for seven nuclides | the gamma-ray lines of each nuclide, which come with the source in `artis/data` |
 
 In the layouts of this page, `<name>` is a value that you supply. Where this page says that a file can have comment
 lines, `sn3d` ignores each blank line and each line whose first character that is not a space is `#`.
@@ -72,7 +72,8 @@ The {term}`LTE` timesteps and the grey cells:
 
 - With a value for `MULTIBIN_RADFIELD_FIRST_TIMESTEP`, `num_lte_timesteps` must not be larger than that value.
 - With the Spencer-Fano solver (`NT_SCHEME`), the first solution comes at the timestep `num_lte_timesteps` + 1.
-- `sn3d` calculates the grey optical depth from each cell to the outer boundary of the model. A cell with a depth of
+- `sn3d` estimates the grey optical depth of each cell as its grey opacity, times its density, times the distance from
+  the cell to the outer boundary of the model. A cell with a depth of
   `optical_depth_is_thick` or more gets the {term}`grey opacity` treatment. This applies to each timestep before the timestep
   `num_grey_timesteps`.
 
@@ -453,8 +454,9 @@ cross-sections of each ion, so that its recombination rate coefficient at the te
 The calibration has two limits, and the log gives the result for each ion:
 
 - `sn3d` makes no calibration of an ion whose recombination rate coefficient from the atomic data is not positive.
-- `sn3d` does not scale the low-n levels if the necessary factor is below 0.05, or if it is 2.0 or more. It then
-  still makes the calibration to the total rate coefficient.
+- The calibration to `rrc_low_n` scales the cross-sections of all levels of the ion. `sn3d` skips this calibration if
+  the necessary factor is below 0.05, or if it is 2.0 or more. It then still makes the calibration to the total rate
+  coefficient.
 
 The file has one block for each ion that it calibrates. An ion with no block gets no calibration:
 
@@ -509,7 +511,8 @@ the run and has no file:
 
 - Ni56 and Co56;
 - Cr48 and V48;
-- Ni57 and Co57.
+- Ni57 and Co57;
+- Sc44.
 
 Fe52 and Mn52 have no file and no gamma-ray energy in the decay data. Without a file, they get one line each, at
 0.86 MeV and at 3.415 MeV.

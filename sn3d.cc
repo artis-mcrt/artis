@@ -667,7 +667,7 @@ auto walltime_sufficient_for_timestep(const int nts, const int nts_prev, const i
              walltime_propagation_and_grid_update_seconds, nts_prev, nts);
 
   bool enough_walltime_for_timestep = true;
-  if (walltime_limit_seconds > 0 && nts < globals::timestep_finish) {
+  if (walltime_limit_seconds > 0) {
     const auto walltime_used_seconds =
         std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - real_time_start).count();
     const auto walltime_remaining_seconds = walltime_limit_seconds - walltime_used_seconds;
@@ -809,7 +809,7 @@ auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime
   // update_grid() reads the estimators of the previous timestep.
   zero_estimators();
 
-  if ((nts < globals::timestep_finish) && enough_walltime_for_timestep) {
+  if (enough_walltime_for_timestep) {
     // Now process the packets.
 
     update_packets(nts, packets);
@@ -1055,7 +1055,7 @@ void open_log_files_and_log_job_configuration(const CommandLineOptions& options)
 #ifdef USE_SIMPSON_INTEGRATOR
   printlnlog("Simpson rule");
 #else
-  printlnlog("Boost Gauss-Kronrod quadrature");
+  printlnlog("Gauss-Kronrod quadrature");
 #endif
 
   if (!options.walltime_limit_hours_str.empty()) {
@@ -1224,13 +1224,6 @@ void log_job_end(const bool terminate_early) {
 
 auto main(int argc, char* argv[]) -> int {
   real_time_start = std::chrono::steady_clock::now();
-
-  if constexpr (VPKT_ON) {
-    vpkt::nvpkt_created = 0;
-    vpkt::nvpkt_esc_from_rpkt = 0;
-    vpkt::nvpkt_esc_from_kpkt = 0;
-    vpkt::nvpkt_esc_from_macroatom = 0;
-  }
 
   MPI_Init(&argc, &argv);
 

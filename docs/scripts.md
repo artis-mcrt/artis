@@ -39,3 +39,5 @@ The `scripts` folder holds the job scripts of the clusters that we use and some 
   removes the `job_from_ts*` folders of `sn3d` and the `*.slurm` folders of older versions.
 - `sumcorehoursslurm.py`: calculate the summed core hours of all jobs from the Slurm job output files.
 - `make_options_docs.py`: write the [Compile-time options](options.md) page from `artisoptions_doc.md` and the {term}`presets <preset>`.
+- `check_docs.py`: compare the make options, the quoted log messages, and the `input.txt` table of `docs/` with the
+  source.

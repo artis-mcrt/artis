@@ -66,9 +66,9 @@ reaches the end of the timestep or escapes.
 
 | Packet type | Function | Next type |
 | --- | --- | --- |
-| `TYPE_RADIOACTIVE_PELLET` | `update_pellet()` | gamma, particle, or deposited energy |
-| `TYPE_GAMMA` | `gammapkt::do_gamma()` | gamma, deposited energy, or escape |
-| `TYPE_NONTHERMAL_PREDEPOSIT_*` | `do_nonthermal_predeposit()` | deposited energy |
+| `TYPE_RADIOACTIVE_PELLET` | `update_pellet()` | gamma, particle, deposited energy, or pre-k-packet |
+| `TYPE_GAMMA` | `gammapkt::do_gamma()` | gamma, particle, deposited energy, or escape |
+| `TYPE_NONTHERMAL_PREDEPOSIT_*` | `do_nonthermal_predeposit()` | deposited energy, the same type in the next timestep, or escape |
 | `TYPE_NTLEPTON_DEPOSITED` | `nonthermal::do_ntlepton_deposit()` | k-packet or macro atom |
 | `TYPE_NTALPHA_FISPROD_DEPOSITED` | `nonthermal::do_ntalpha_fisprod_deposit()` | k-packet |
 | `TYPE_KPKT` | `kpkt::do_kpkt()` or `kpkt::do_kpkt_blackbody()` | r-packet or macro atom |

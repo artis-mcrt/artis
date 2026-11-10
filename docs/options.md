@@ -612,7 +612,15 @@ The energy grid of the Spencer-Fano solution is not an option of artisoptions.h.
 
 `NonThermalScheme NT_SCHEME`
 
-How the code deposits the energy of the non-thermal leptons. NT_OFF: no non-thermal ionisation. NT_SPENCERFANO: the Spencer-Fano solution (Kozma & Fransson 1992, ApJ, 390, 602-621, doi:10.1086/171311; Shingles et al. 2020, MNRAS, 492, 2029-2043, section 2.5, doi:10.1093/mnras/stz3412). It also gives the non-thermal excitation rates for the NLTE population solver, the macroatom, and the NTLEPTON packets. NT_AXELRODAPPROX: the work function approximation of Axelrod (1980, PhD thesis, University of California, Santa Cruz). The ion balance gets the ionisation rates of that approximation, with no excitation rates. The lepton packets deposit all of their energy as heat, and the thermal balance counts all of it as heat.
+How the code deposits the energy of the non-thermal leptons. NT_OFF: no non-thermal ionisation. NT_SPENCERFANO: the Spencer-Fano solution (Kozma & Fransson 1992, ApJ, 390, 602-621, doi:10.1086/171311; Shingles et al. 2020, MNRAS, 492, 2029-2043, section 2.5, doi:10.1093/mnras/stz3412). It also gives the non-thermal excitation rates for the NLTE population solver, the macroatom, and the NTLEPTON packets. NT_AXELRODAPPROX: the work function approximation of Axelrod (1980, PhD thesis, University of California, Santa Cruz). The ion balance gets the ionisation rates of that approximation, with no excitation rates. The lepton packets deposit all of their energy as heat, and the thermal balance counts all of it as heat. With NT_SPENCERFANO, the first Spencer-Fano solution of a cell comes one timestep after its first NLTE solution. The line num_lte_timesteps of input.txt gives the number of LTE timesteps, and the timestep numbers start at 0:
+
+- a timestep before num_lte_timesteps has LTE populations, and the ion balance has no non-thermal ionisation;
+
+- the timestep num_lte_timesteps has NLTE populations with the ionisation rates of the work function approximation;
+
+- the timestep num_lte_timesteps + 1 and each later timestep have the Spencer-Fano solution.
+
+For example, with num_lte_timesteps = 2, timestep 2 has the approximation and timestep 3 has the first solution. Until the first Spencer-Fano solution, a cell has no non-thermal excitation and only single ionisations. Its lepton packets give 97 percent of their energy to heat and 3 percent to ionisation. A cell with no lepton deposition also has these values.
 
 **Preset values:** classic `NonThermalScheme::NT_OFF`, kilonova_lte `NonThermalScheme::NT_OFF`, nltenebular `NonThermalScheme::NT_SPENCERFANO`, nltephotospheric `NonThermalScheme::NT_SPENCERFANO`
 
@@ -620,7 +628,7 @@ How the code deposits the energy of the non-thermal leptons. NT_OFF: no non-ther
 
 `double SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF`
 
-After the LTE timesteps, the code solves the Spencer-Fano equation at the first NLTE iteration of each timestep. A later iteration of the same timestep keeps that solution, unless nne per ion (nne divided by the total ion density) changed by this fraction or more, e.g. 0.5 for 50 percent. A value of 0 gives a new solution at each iteration. This value has an effect only with NT_SPENCERFANO.
+From timestep num_lte_timesteps + 1, the code solves the Spencer-Fano equation at the first NLTE iteration of each timestep. Before that timestep, the code uses the work function approximation. A later iteration of the same timestep keeps that solution, unless nne per ion (nne divided by the total ion density) changed by this fraction or more, e.g. 0.5 for 50 percent. A value of 0 gives a new solution at each iteration. This value has an effect only with NT_SPENCERFANO.
 
 **Every preset:** `0.05`
 

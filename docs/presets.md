@@ -82,8 +82,8 @@ The historic mode of ARTIS for Type Ia supernovae, as
 [Kromer & Sim (2009), MNRAS, 398, 1809-1826, doi:10.1111/j.1365-2966.2009.15256.x](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract)
 describes it. The preset uses the tabulated photoionisation coefficients (`USE_LUT_PHOTOION`), {term}`LTE` excitation with the
 radiation temperature (`LTEPOP_EXCITATION_USE_TJ`), one level for the top ion, and no non-thermal solver. Polarisation
-is on, and the packets get a dipole scattering distribution. The 3D grid of a 1D or a 2D model has 100 cells per
-coordinate.
+is on, and the packets get a dipole scattering distribution. With `GRID_TYPE_OVERRIDE` set to `GridType::CARTESIAN3D`, the 3D grid
+of a 1D or a 2D model has 100 cells per coordinate.
 
 ## kilonova_lte
 
@@ -111,4 +111,4 @@ describes the method. The preset has these methods:
 ## nltephotospheric
 
 The photospheric phase of a supernova with the NLTE populations, the Spencer-Fano solver, and the multibin radiation
-field model. The preset keeps 100 excited levels for each ion below calcium and 200 for the heavier ions.
+field model. The preset keeps 100 excited levels for each ion of an element below calcium, and 200 for calcium and the heavier elements.

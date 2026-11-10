@@ -39,7 +39,8 @@ removes the folder of the check before it, so run only one check at a time in a 
 
 A check differs from a run in these points:
 
-- The check needs `input.txt`. A run restores an absent `input.txt` from `input-newrun.txt`, but the check does not.
+- A run restores an absent `input.txt` from `input-newrun.txt`. The check restores no file. Without `input.txt`, it
+  reads `input-newrun.txt` directly.
 - The check of a new simulation needs little memory for the packets, so a low rank count is sufficient, e.g. on a
   login node.
 - The check of a resumed simulation needs the rank count and the memory of the simulation, because each rank reads
@@ -47,9 +48,10 @@ A check differs from a run in these points:
 
 ## A simulation in several jobs
 
-To split a long simulation across several queued jobs, run `sn3d` with `-w WALLTIMELIMITHOURS`. When too little wall
-time remains to complete another timestep, the run finishes cleanly and prints `RESTART_NEEDED` into the log. It then
-writes the restart files and updates `input.txt`. The bundled cluster job scripts detect that text and submit a
+To split a long simulation across several queued jobs, run `sn3d` with `-w WALLTIMELIMITHOURS`. From the second
+timestep of a job, `sn3d` writes the restart files and updates `input.txt` after the grid update of each timestep. Then it
+tests the remaining wall time. When too little wall time remains to complete another timestep, the job stops cleanly, and the
+log then ends with `RESTART_NEEDED`. The bundled cluster job scripts detect that text and submit a
 continuation job, and they pass the remaining Slurm allocation time automatically (see
 [Runs on a cluster](clusters.md)).
 

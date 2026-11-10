@@ -1264,6 +1264,7 @@ void test_nonthermal_solve_upper_triangular() {
 }
 
 void test_chargetransfer_helpers() {
+  std::println("charge transfer rate fit and helpers...");
   // fit form of Kingdon & Ferland (1996), ApJS, 106, 205-211, doi:10.1086/192335:
   // k = a * (T/1e4)^b * (1 + c * exp(d * T/1e4)) * exp(-eexp/T)
   check(chargetransfer::evaluate_ctfit(1e-9, 0., 0., 0., 0., 1e3, 1e5, 1e4) == 1e-9,
@@ -1332,6 +1333,7 @@ void test_chargetransfer_helpers() {
 
 // the TOMS 748 root finder and Gauss-Kronrod quadrature extracted from Boost.Math
 void test_toms748_and_gauss_kronrod() {
+  std::println("TOMS 748 root finder and Gauss-Kronrod quadrature...");
   const auto f_cosfixedpoint = [](const double x) { return std::cos(x) - x; };
   std::uintmax_t iterations = 50;
   const auto [rootlow, roothigh] =

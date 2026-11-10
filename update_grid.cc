@@ -197,16 +197,14 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
       continue;
     }
 
-    print_perion_line("gamma_R", element, nions - 1, [&](const int ion) {
-      return calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false, false);
-    });
+    print_perion_line("gamma_R", element, nions - 1,
+                      [&](const int ion) { return calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false); });
 
     // if we have bound-free estimators, we might want to compare how gamma_R would be if we used the radiation field
     // model instead
     if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
-      print_perion_line("gamma_R_integral", element, nions - 1, [&](const int ion) {
-        return calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false, true);
-      });
+      print_perion_line("gamma_R_integral", element, nions - 1,
+                        [&](const int ion) { return calculate_iongamma_per_ionpop(nonemptymgi, element, ion, true); });
     }
 
     if (NT_SCHEME != NonThermalScheme::NT_OFF) {
@@ -389,15 +387,10 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
     calculate_ion_heating_cooling_rates(nonemptymgi, heatingcoolingrates, bfheatingcoeffs);
 
     if (globals::total_nlte_levels == 0) {
-      const auto sys_time_start_pops = std::chrono::steady_clock::now();
-      calculate_ion_balance_nne(nonemptymgi);
-      const auto duration_solve_pops =
-          std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_pops).count();
-
+      // the last call of the T_e solver set the ion balance and nne for the final T_e
       printlnlog(
-          "Grid solver cell {} timestep {}: time spent on: Spencer-Fano {:.1f}s, partfuncs/gamma {:.1f}s, T_e {:.1f}s, "
-          "populations {:.1f}s",
-          mgi, nts, duration_solve_spencerfano, duration_solve_partfuncs, duration_solve_T_e, duration_solve_pops);
+          "Grid solver cell {} timestep {}: time spent on: Spencer-Fano {:.1f}s, partfuncs/gamma {:.1f}s, T_e {:.1f}s",
+          mgi, nts, duration_solve_spencerfano, duration_solve_partfuncs, duration_solve_T_e);
       break;  // no iteration is needed without nlte pops
     }
 
@@ -501,7 +494,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
           }
           // the electron density has the same floor as the ion balance, so the stored float stays positive
           const bool step_accepted = std::isfinite(T_e_next) && std::isfinite(nne_next) && T_e_next >= MINTEMP &&
-                                     T_e_next <= MAXTEMP && nne_next >= MINPOP &&
+                                     T_e_next <= MAXTEMP && nne_next >= MINNNE &&
                                      nne_next <= grid::get_nnetot(nonemptymgi) && ion_pops_usable &&
                                      stepsq <= 4. * residualsq;
           if (step_accepted) {

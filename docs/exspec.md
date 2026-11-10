@@ -6,9 +6,10 @@ post-processing.
 :::
 
 `make` builds `exspec` together with `sn3d`. It combines the packet files of all {term}`ranks <rank>` into spectra and light curves,
-with the same code that `sn3d` uses, so it gives the same files. It reads the packet files of `packets/`, which `sn3d`
-writes at the last requested {term}`timestep`. A simulation that stopped earlier has no packet files, and `exspec` then gives
-nothing. Two situations need `exspec`:
+with the same code that `sn3d` uses, so it gives the same files for a simulation that ran to the last timestep of the
+model. `exspec` writes all timesteps of the model, and a timestep after the last requested timestep holds zeros. It reads the packet files of `packets/`, which `sn3d`
+writes at the last requested {term}`timestep`. A simulation that stopped earlier has no packet files, and `exspec` then stops
+with an error. Two situations need `exspec`:
 
 - You need the files again with other settings, e.g. after a change of the frequency range. You then build the code
   again and run `exspec`, and you need no new simulation.
