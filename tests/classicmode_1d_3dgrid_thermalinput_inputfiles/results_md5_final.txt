@@ -10,7 +10,7 @@ bb096bd193437225409eb398c22d4271  emissiontrue.out
 8fbe0059ae62ad39ce8d15b593ea764f  light_curve.out
 4100be6cbfed0c62a03355f949c066ff  linelist.out
 41a1c375110d8edbf421edca3fc426e8  modelgridrankassignments.out
-71f968bc58f3151bb6e39bc3b2b8902e  nuclides.out
+579f42a6982c71a6e4eee4c340396e7c  nuclides.out
 3c4d916276d0d2f2c4eae1791a6df106  spec.out
 44b5936911f3d21bf2ad517752b1d49f  specpol.out
 bc01f046eab9bf3802149e0ff63d5069  timesteps.out

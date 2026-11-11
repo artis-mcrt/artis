@@ -10,7 +10,7 @@ c0604236aa7df99cda43e5c7bbe7b6f4  bflist.out
 5438324cb3ef416af0c27a9fb5c2f001  light_curve.out
 4100be6cbfed0c62a03355f949c066ff  linelist.out
 41a1c375110d8edbf421edca3fc426e8  modelgridrankassignments.out
-71f968bc58f3151bb6e39bc3b2b8902e  nuclides.out
+579f42a6982c71a6e4eee4c340396e7c  nuclides.out
 1c6e3dc955ca8706da06c90ead21dd95  spec.out
 08a191b16d22e64f5a99fe80f15a67c1  specpol.out
 bc01f046eab9bf3802149e0ff63d5069  timesteps.out
