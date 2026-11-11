@@ -124,6 +124,9 @@ void log_write(std::string_view message, bool add_newline) noexcept;
 [[noreturn]] [[gnu::cold]] void report_fatal_error_and_abort(const char* file, int line, const char* func,
                                                              const char* message) noexcept;
 
+// Make std::terminate(), e.g. for an uncaught exception, write a fatal error and stop the run of every rank
+void set_terminate_handler_to_fatal_error() noexcept;
+
 #define __artis_assert(e)                                                 \
   {                                                                       \
     const bool assertpass = static_cast<bool>(e);                         \

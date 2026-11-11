@@ -6,6 +6,8 @@
 #include <cstdarg>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
+#include <format>
 #include <iostream>
 #include <print>
 #include <sstream>
@@ -108,4 +110,20 @@ void report_fatal_error_and_abort(const char* file, const int line, const char* 
   }
   std::println(std::cerr, "\n[rank {}] [error] {}:{} in {}: {}", globals::my_rank, file, line, func, message);
   abort_run();
+}
+
+void set_terminate_handler_to_fatal_error() noexcept {
+  std::set_terminate([] {
+    std::string message = "std::terminate() stopped the run";
+    try {
+      if (const auto exception = std::current_exception()) {
+        std::rethrow_exception(exception);
+      }
+    } catch (const std::exception& error) {
+      message += std::format(" after an uncaught exception: {}", error.what());
+    } catch (...) {
+      message += " after an uncaught exception that is not a std::exception";
+    }
+    report_fatal_error_and_abort(__FILE__, __LINE__, "the terminate handler", message.c_str());
+  });
 }
