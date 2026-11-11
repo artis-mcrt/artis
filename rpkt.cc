@@ -329,7 +329,7 @@ void electron_scatter_rpkt(Packet& pkt) {
     // the trial angles and x is a uniform draw from [0, 2] (an upper bound on p); the trial is accepted when x <= p.
     double p = 0.;
     double x = 1.;
-    while (x > p) {
+    while (x > p || p == 0.) {
       M = (2. * rng_uniform_pos(get_rngstate(pkt))) - 1.;
       const double musquared = pow2(M);
       phisc = 2 * PI * rng_uniform(get_rngstate(pkt));
