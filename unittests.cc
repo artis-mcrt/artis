@@ -268,7 +268,7 @@ void test_zero_polarisation_intensity() {
     check(probability == 0. && probability * q == 0. && probability * u == 0.,
           "zero intensity gives finite zero contributions to all Stokes parameters");
   }
-  const auto [direction, q, u, probability] =
+  [[maybe_unused]] const auto [direction, q, u, probability] =
       scatter_polarisation_to_rf(old_dir_cmf, new_dir_cmf, std::nextafter(1., 0.), 0., Vec3d{0., 0., 0.});
   check(probability > 0. && std::isfinite(q) && std::isfinite(u), "a small positive intensity keeps its contribution");
 }
