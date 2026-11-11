@@ -221,6 +221,18 @@ void test_expanding_shell_intersection() {
   check_close(
       grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(Vec3d{0., 0., 0.}, Vec3d{1., 0., 0.}, 2., 1., 1.),
       2., 1e-12, "a ray from the centre reaches the outer sphere at the analytic distance");
+
+  // A cylindrical shell that expands faster than the transverse packet speed gives a < 0.
+  const auto pos_between_shells = std::array{1.5, 0.};
+  check_close(
+      grid::expanding_shell_intersection<grid::BoundaryType::LOWER>(pos_between_shells, outward_dir, 0.5, 1., 1.), 0.5,
+      1e-12, "a faster inner shell catches an outward ray at the analytic distance");
+  check_close(
+      grid::expanding_shell_intersection<grid::BoundaryType::LOWER>(pos_between_shells, inward_dir, 0.5, 1., 1.),
+      1. / 6., 1e-12, "a faster inner shell catches an inward ray at the analytic distance");
+  check(
+      grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(pos_between_shells, outward_dir, 0.5, 2., 1.) < 0.,
+      "a ray cannot reach an outer shell that expands faster than the ray");
 }
 
 void test_escapedirectionbin() {

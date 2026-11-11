@@ -40,16 +40,6 @@ template <BoundaryType boundarytype, size_t S1>
   const double b = 2 * (dot(dir, pos) - (pow2(shellradiuststart) / tstart / speed));
   const double c = dot(pos, pos) - pow2(shellradiuststart);
 
-  // Equal transverse speeds give a linear equation. The sign of b gives the crossing direction.
-  if (a == 0.) {
-    const bool crosses_boundary = (boundarytype == BoundaryType::LOWER) ? b < 0. : b > 0.;
-    if (!crosses_boundary) {
-      return -1.;
-    }
-    const double distance = -c / b;
-    return distance >= 0. ? distance : -1.;
-  }
-
   const double discriminant = pow2(b) - (4 * a * c);
 
   if (discriminant < 0) {
@@ -62,9 +52,10 @@ template <BoundaryType boundarytype, size_t S1>
   if (discriminant > 0) {
     // two intersections
     // Use addition for one root and the product of the roots for the other.
-    // Subtraction loses precision when the transverse packet speed is close to the shell speed.
+    // Subtraction loses precision when the packet speed is close to the shell speed.
+    // Equal speeds give a = 0 and a linear equation, with the single root c / distance_numerator = -c / b.
     const double distance_numerator = (-b - std::copysign(std::sqrt(discriminant), b)) / 2.;
-    double dist1 = distance_numerator / a;
+    double dist1 = (a != 0.) ? distance_numerator / a : -1.;
     double dist2 = c / distance_numerator;
 
     std::array<double, S1> posfinal1{};
