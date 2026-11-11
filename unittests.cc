@@ -233,6 +233,45 @@ void test_expanding_shell_intersection() {
   check(
       grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(pos_between_shells, outward_dir, 0.5, 2., 1.) < 0.,
       "a ray cannot reach an outer shell that expands faster than the ray");
+
+  // Compare with a choice by the radial speed at both roots, for a packet inside the outer or outside the inner shell.
+  rngstate_type rngstate{747};
+  bool roots_agree = true;
+  for (int i = 0; i < 10000; i++) {
+    const auto pos_random = vec_scale(get_rand_isotropic_unitvec(rngstate), 2. * rng_uniform(rngstate));
+    const auto dir_random = get_rand_isotropic_unitvec(rngstate);
+    const double packet_speed = 0.3 + (1.7 * rng_uniform(rngstate));
+    const double shell_radius = 0.5 + rng_uniform(rngstate);  // also the shell speed, because tstart = 1
+    const double a = 1. - pow2(shell_radius / packet_speed);
+    const double b = 2 * (dot(dir_random, pos_random) - (pow2(shell_radius) / packet_speed));
+    const double c = dot(pos_random, pos_random) - pow2(shell_radius);
+    const double discriminant = pow2(b) - (4 * a * c);
+    if (discriminant <= 0.) {
+      continue;
+    }
+    const bool packet_inside_shell = c < 0.;
+    double expected_distance = -1.;
+    for (const double root : {(-b + std::sqrt(discriminant)) / (2 * a), (-b - std::sqrt(discriminant)) / (2 * a)}) {
+      const auto pos_root = Vec3d{
+          pos_random[0] + (root * dir_random[0]),
+          pos_random[1] + (root * dir_random[1]),
+          pos_random[2] + (root * dir_random[2]),
+      };
+      const bool packet_overtakes_shell = dot(dir_random, pos_root) * packet_speed / vec_len(pos_root) > shell_radius;
+      if (root >= 0. && packet_overtakes_shell == packet_inside_shell &&
+          (expected_distance < 0. || root < expected_distance)) {
+        expected_distance = root;
+      }
+    }
+    const double distance = packet_inside_shell ? grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(
+                                                      pos_random, dir_random, packet_speed, shell_radius, 1.)
+                                                : grid::expanding_shell_intersection<grid::BoundaryType::LOWER>(
+                                                      pos_random, dir_random, packet_speed, shell_radius, 1.);
+    roots_agree = roots_agree && ((expected_distance < 0.)
+                                      ? distance < 0.
+                                      : std::abs(distance - expected_distance) <= 1e-6 * (1. + expected_distance));
+  }
+  check(roots_agree, "the root of each boundary type agrees with the choice by the radial speed at both roots");
 }
 
 void test_escapedirectionbin() {

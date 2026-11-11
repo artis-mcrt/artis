@@ -3,7 +3,6 @@
 #ifndef GRID_H
 #define GRID_H
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -50,66 +49,34 @@ template <BoundaryType boundarytype, size_t S1>
   }
 
   if (discriminant > 0) {
-    // two intersections
-    // Use addition for one root and the product of the roots for the other.
-    // Subtraction loses precision when the packet speed is close to the shell speed.
-    // Equal speeds give a = 0 and a linear equation, with the single root c / distance_numerator = -c / b.
-    const double distance_numerator = (-b - std::copysign(std::sqrt(discriminant), b)) / 2.;
-    double dist1 = (a != 0.) ? distance_numerator / a : -1.;
-    double dist2 = c / distance_numerator;
-
-    std::array<double, S1> posfinal1{};
-    std::array<double, S1> posfinal2{};
-    for (auto d = 0ZU; d < S1; d++) {
-      posfinal1[d] = pos[d] + (dist1 * dir[d]);
-      posfinal2[d] = pos[d] + (dist2 * dir[d]);
+    // At a root, the derivative 2 a d + b of |pos + d dir|^2 - R(d)^2 is +sqrt(D) or -sqrt(D). It is positive exactly
+    // when the radial speed of the packet is greater than the shell speed. The packet leaves through an UPPER
+    // boundary at the root with +sqrt(D), and a LOWER boundary overtakes the packet at the root with -sqrt(D).
+    // Each form avoids the difference of two almost equal numbers. For a = 0, one form gives -c / b and the other an
+    // infinite distance.
+    const double sqrt_discriminant = std::sqrt(discriminant);
+    double distance = -1.;
+    if constexpr (boundarytype == BoundaryType::UPPER) {
+      distance = (b < 0.) ? (-b + sqrt_discriminant) / (2 * a) : 2 * c / (-b - sqrt_discriminant);
+    } else {
+      distance = (b > 0.) ? (-b - sqrt_discriminant) / (2 * a) : 2 * c / (-b + sqrt_discriminant);
     }
 
-    const double v_rad_shell = shellradiuststart / tstart;
-    const double v_rad_final1 = dot(dir, posfinal1) * speed / vec_len(posfinal1);
-    const double v_rad_final2 = dot(dir, posfinal2) * speed / vec_len(posfinal2);
-
-    // Keep only a crossing in the requested radial direction.
-    if constexpr (boundarytype == BoundaryType::LOWER) {
-      // The packet must enter through the inner shell, so the shell must overtake it.
-      if (v_rad_final1 > v_rad_shell) {
-        dist1 = -1;
-      }
-      if (v_rad_final2 > v_rad_shell) {
-        dist2 = -1;
-      }
-    } else {
-      // The packet must leave through the outer shell, so it must overtake the shell.
-      if (v_rad_final1 < v_rad_shell) {
-        dist1 = -1;
-      }
-      if (v_rad_final2 < v_rad_shell) {
-        dist2 = -1;
-      }
+    // A negative distance lies behind the packet.
+    if (!std::isfinite(distance) || distance < 0.) {
+      return -1.;
     }
 
 #if (TESTMODE)
-    if (dist1 >= 0) {
-      const double shellradiusfinal1 = shellradiuststart / tstart * (tstart + (dist1 / speed));
-      assert_testmodeonly(fabs((vec_len(posfinal1) / shellradiusfinal1) - 1.) < 1e-3);
+    std::array<double, S1> posfinal{};
+    for (auto d = 0ZU; d < S1; d++) {
+      posfinal[d] = pos[d] + (distance * dir[d]);
     }
-    if (dist2 >= 0) {
-      const double shellradiusfinal2 = shellradiuststart / tstart * (tstart + (dist2 / speed));
-      assert_testmodeonly(fabs((vec_len(posfinal2) / shellradiusfinal2) - 1.) < 1e-3);
-    }
+    const double shellradiusfinal = shellradiuststart / tstart * (tstart + (distance / speed));
+    assert_testmodeonly(fabs((vec_len(posfinal) / shellradiusfinal) - 1.) < 1e-3);
 #endif
 
-    // A negative distance lies behind the packet. Keep the first forward crossing.
-    if (dist1 < 0 && dist2 < 0) {
-      return -1;
-    }
-    if (dist2 < 0) {
-      return dist1;
-    }
-    if (dist1 < 0) {
-      return dist2;
-    }
-    return std::min(dist1, dist2);
+    return distance;
   }
 
   // A tangent touches the shell and keeps the packet in its current cell.
