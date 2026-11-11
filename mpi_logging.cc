@@ -8,6 +8,8 @@
 #include <cstring>
 #include <iostream>
 #include <print>
+#include <sstream>
+#include <string>
 #include <string_view>
 
 #pragma clang unsafe_buffer_usage begin
@@ -16,6 +18,7 @@
 
 #include "constants.h"
 #include "outputfilestream.h"
+#include "version.h"
 
 namespace {
 
@@ -59,6 +62,18 @@ void print_line_start() noexcept {
 
 // the logs stay plain, so tail -f and the job scripts read them. exspec-after.sh compresses them later.
 void set_log_file(const std::string_view filename) noexcept { output_file = open_uncompressed_output_file(filename); }
+
+void log_git_metadata_and_artisoptions() {
+  printlnlog("git branch: {}", GIT_BRANCH);
+  printlnlog("git version: {}", GIT_VERSION);
+  printlnlog("git status: {}", GIT_STATUS);
+  std::istringstream option_lines{std::string{ARTISOPTIONS_LINES}};
+  for (std::string option_line; std::getline(option_lines, option_line);) {
+    if (!option_line.empty()) {
+      printlnlog("artisoptions.h: {}", option_line);
+    }
+  }
+}
 
 void log_write(const std::string_view message, const bool add_newline) noexcept {
   print_line_start();

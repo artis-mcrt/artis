@@ -1140,12 +1140,9 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       const auto nu_upper = get_expopac_bin_nu_upper(binindex);
       const auto nu_mid = (nu_upper + nu_lower) / 2.;
       // the thermal pool gets all of the free-free absorption and the heating fraction of the bound-free absorption
-      double chi_bf_heating = 0.;
-      if (globals::nbfcontinua > 0) {
-        Phixslist phixslist_without_estimators{};
-        chi_bf_heating =
-            calculate_chi_bf_gammacontr<false, false, true>(nonemptymgi, nu_mid, phixslist_without_estimators);
-      }
+      Phixslist phixslist_without_estimators{};
+      const double chi_bf_heating =
+          calculate_chi_bf_gammacontr<false, false, true>(nonemptymgi, nu_mid, phixslist_without_estimators);
       const auto bin_kappa_cont = (calculate_chi_ffheating(nonemptymgi, nu_mid, false) + chi_bf_heating) / rho;
 
       const auto planck_val = radfield::planck(nu_mid, temperature);

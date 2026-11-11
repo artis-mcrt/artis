@@ -130,14 +130,11 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     // ionisation to higher ionisation stage
     for (int level = 0; level < nionisinglevels; level++) {
       const auto uniquelevelindex = ionuniquelevelindexstart + level;
-      const double epsilon_current = epsilon(uniquelevelindex);
       const double nnlevel = update_cellcache_contribs ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex)
                                                        : calculate_levelpop(nonemptymgi, element, ion, level);
       const int nphixstargets = get_nphixstargets(uniquelevelindex);
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-        const int upper = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
-        const double epsilon_upper = epsilon(element, ion + 1, upper);
-        const double epsilon_trans = epsilon_upper - epsilon_current;
+        const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
         const double C =
             nnlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans) *
             epsilon_trans;

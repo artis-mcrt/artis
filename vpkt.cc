@@ -172,9 +172,8 @@ void add_to_vspecpol(const double nu_rf, const double e_rf, const double prob, c
 
 // Add an escaping virtual packet to the optional velocity-space map, binned by the emitting material's
 // velocity projected onto the plane perpendicular to the observer direction
-void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, const double stokes_q,
-                      const double stokes_u, const Vec3d& vel, const int wlbin, const int obsdirindex,
-                      const Vec3d& obsdir) {
+void add_to_vpkt_grid(const double e_rf, const double prob, const double stokes_q, const double stokes_u,
+                      const Vec3d& vel, const int wlbin, const int obsdirindex, const Vec3d& obsdir) {
   double vref1{NAN};
   double vref2{NAN};
 
@@ -212,18 +211,15 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, 
   const int nz = std::min(static_cast<int>((globals::vmax - vref2) / (2 * globals::vmax / VGRID_NZ)), VGRID_NZ - 1);
 
   // Add contribution
-  if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].I, prob * e_rf);
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].Q, prob * stokes_q * e_rf);
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].U, prob * stokes_u * e_rf);
-  }
+  atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].I, prob * e_rf);
+  atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].Q, prob * stokes_q * e_rf);
+  atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].U, prob * stokes_u * e_rf);
 }
 
 auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const double nu_rf, const double e_rf,
                           const double rpkt_doppler, const int obsdirindex, const enum packet_type type_before_rpkt,
                           std::string& vpkt_contrib_row) -> bool {
   const auto& obsdir = obsdirs[obsdirindex];
-  int mgi = 0;
 
   auto cellindex = rpkt.cellindex;
   // The vpkt leaves from the real packet's position with the same comoving-frame frequency (nu_cmf does not
@@ -281,16 +277,15 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
   // compute the optical depth to boundary
 
-  mgi = grid::get_propcell_modelgridindex(cellindex);
+  int nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
   THREADLOCALONHOST auto chi_vpkt_cont = ContinuumOpacity{false};
 
   while (!end_packet) {
     // distance to the next cell
     const auto [boundarydist, next_cellindex] = grid::boundary_distance(obsdir, vpktpos, t_future, cellindex);
-    if (mgi < 0) {
+    if (nonemptymgi < 0) {
       next_trans = -1;
     } else if (boundarydist > 0) {
-      const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
       const auto doppler = calculate_doppler_nucmf_on_nurf(vpktpos, obsdir, t_future);
       calculate_chi_rpkt_cont<false>(nu_cmf, chi_vpkt_cont, nonemptymgi);
 
@@ -487,14 +482,10 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
         grid::snap_pos_to_cell(vpktpos, t_future, next_cellindex);
       }
       cellindex = next_cellindex;
-      mgi = grid::get_propcell_modelgridindex(cellindex);
-      if (mgi >= 0) {
-        const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
-
-        // kill vpkt with pass through a thick cell
-        if (grid::thick_allcells[nonemptymgi] != grid::CellThickness::THIN) {
-          return false;
-        }
+      nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
+      // kill vpkt with pass through a thick cell
+      if (nonemptymgi >= 0 && grid::thick_allcells[nonemptymgi] != grid::CellThickness::THIN) {
+        return false;
       }
     } else {
       end_packet = true;
@@ -545,7 +536,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
       if ((nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) &&
           (t_arrive > tmin_grid && t_arrive < tmax_grid))  // Frequency selection
       {  // Time selection
-        add_to_vpkt_grid(nu_rf, e_rf, prob, q_rf, u_rf, vel_vec, wlbin, obsdirindex, obsdir);
+        add_to_vpkt_grid(e_rf, prob, q_rf, u_rf, vel_vec, wlbin, obsdirindex, obsdir);
       }
     }
   }
@@ -802,8 +793,6 @@ void read_vpktparameterfile() {
   if (nspectra_customlist_flag != 1) {
     nspectraperobsdir = 1;
     opacityexclusions.resize(nspectraperobsdir, 0);
-
-    opacityexclusions[0] = 0;
   } else {
     assert_always(static_cast<bool>(input_file >> nspectraperobsdir));
     if (nspectraperobsdir < 1) {

@@ -456,10 +456,7 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu_minus_nu_edge, 
                                                  const double modified_departure_ratio,
                                                  const std::span<const float> photoion_xs, const float T_e,
                                                  const int nonemptymgi) -> double {
-  double corrfactor = 1. - (modified_departure_ratio * exp(-HOVERKB * nu_minus_nu_edge / T_e));
-  if (corrfactor < 0) {
-    corrfactor = 0.;
-  }
+  const double corrfactor = std::max(0., 1. - (modified_departure_ratio * exp(-HOVERKB * nu_minus_nu_edge / T_e)));
 
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
 
@@ -537,9 +534,7 @@ auto calculate_modified_departure_ratio(const int nonemptymgi, const int element
   const double nnupperionlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, upperuniquelevelindex)
                                                : calculate_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
 
-  const double modified_departure_ratio =
-      nnlevel > 0. ? nnupperionlevel / nnlevel * clumpednne * modified_sahafact : 1.;
-  return std::isfinite(modified_departure_ratio) ? modified_departure_ratio : 0.;
+  return nnlevel > 0. ? nnupperionlevel / nnlevel * clumpednne * modified_sahafact : 1.;
 }
 
 void setup_photoion_luts() {
@@ -914,11 +909,9 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
     const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
     const int nphixstargets = get_nphixstargets(element, ion, level);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-      const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-
       ionisation_rate_rad += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, false);
 
-      const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
+      const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
 
       ionisation_rate_coll +=
           nnlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans);

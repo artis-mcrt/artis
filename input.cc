@@ -217,14 +217,6 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
       // top ion has only one level, so send it to that level
       upperlevel = 0;
     }
-    // a target level above the levels kept from compositiondata.txt would index the level block of the next ion
-    if (upperlevel >= get_nlevels(element, upperion)) {
-      fatal_crash(
-          "Z={} ionstage {} level {} photoionises to level {} of ionstage {}, but compositiondata.txt keeps only {} "
-          "levels of that ion",
-          get_atomicnumber(element), get_ionstage(element, lowerion), lowerlevel, upperlevel,
-          get_ionstage(element, upperion), get_nlevels(element, upperion));
-    }
 
     tmpallphixstargets.push_back({.probability = 1., .levelindex = upperlevel});
   } else {  // upperlevel < 0, indicating that a table of upper levels and their probabilities will follow
@@ -245,13 +237,6 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
         assert_always(get_noncommentline(phixsfile, phixsline));
         assert_always(std::stringstream(phixsline) >> upperlevel_in >> phixstargetprobability);
         const int upperlevel = upperlevel_in - phixs_groundstate_index_in;
-        if (upperlevel < 0 || upperlevel >= get_nlevels(element, upperion)) {
-          fatal_crash(
-              "Z={} ionstage {} level {} photoionises to level {} of ionstage {}, but compositiondata.txt keeps only "
-              "{} levels of that ion",
-              get_atomicnumber(element), get_ionstage(element, lowerion), lowerlevel, upperlevel,
-              get_ionstage(element, upperion), get_nlevels(element, upperion));
-        }
         assert_always(phixstargetprobability > 0);
         tmpallphixstargets.push_back({.probability = phixstargetprobability, .levelindex = upperlevel});
 
@@ -288,6 +273,17 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
 
       // send it to the ground state of the top ion
       tmpallphixstargets.push_back({.probability = 1., .levelindex = 0});
+    }
+  }
+
+  // a target level outside the levels kept from compositiondata.txt would index the level block of another ion
+  for (const auto& phixstarget : std::span{tmpallphixstargets}.subspan(phixstargetstart)) {
+    if (phixstarget.levelindex < 0 || phixstarget.levelindex >= get_nlevels(element, upperion)) {
+      fatal_crash(
+          "Z={} ionstage {} level {} photoionises to level {} of ionstage {}, but compositiondata.txt keeps only {} "
+          "levels of that ion",
+          get_atomicnumber(element), get_ionstage(element, lowerion), lowerlevel, phixstarget.levelindex,
+          get_ionstage(element, upperion), get_nlevels(element, upperion));
     }
   }
 
@@ -744,21 +740,6 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
         // combine it into the existing line. The duplicate immediately follows the first occurrence
         // (the table is sorted), so the transition entries filled most recently are the ones to update.
 
-        if ((temp_linelist[prev_lineindex].elementindex != element) ||
-            (temp_linelist[prev_lineindex].ionindex != ion) ||
-            (temp_linelist[prev_lineindex].upperlevelindex != upperlevel) ||
-            (temp_linelist[prev_lineindex].lowerlevelindex != lowerlevel)) {
-          printlnlog("   element {} ion {} lowerlevel {} upperlevel {}", element, ion, lowerlevel, upperlevel);
-          printlnlog("   duplicate of lineindex {}", prev_lineindex);
-          printlnlog("   A_ul {:g}, coll_str {:g}", transition.A, transition.coll_str);
-          printlnlog(
-              "   globals::linelist[lineindex].elementindex {}, globals::linelist[lineindex].ionindex {}, "
-              "globals::linelist[lineindex].upperlevelindex {}, globals::linelist[lineindex].lowerlevelindex {}",
-              temp_linelist[prev_lineindex].elementindex, temp_linelist[prev_lineindex].ionindex,
-              temp_linelist[prev_lineindex].upperlevelindex, temp_linelist[prev_lineindex].lowerlevelindex);
-          fatal_crash("Failure to identify level pair for duplicate bb-transition");
-        }
-
         auto& downtransition =
             temp_alltranslist[ion_levels[upperlevel].alltrans_startdown + ion_levels[upperlevel].ndowntrans - 1];
 
@@ -1193,19 +1174,14 @@ void read_autoion_data() {
       for (int ion = 0; ion < nions; ion++) {
         const int nlevels = get_nlevels(element, ion);
         int nlevels_autoion = 0;
-        bool found_autoion_level = false;
         for (int level = 0; level < nlevels; level++) {
           const auto level_is_autoionizing = get_nautoiondowntrans(element, ion, level) > 0;
 
           nautoiondowntrans_sum += get_nautoiondowntrans(element, ion, level);
+          // once we have found one autoionizing level, all higher levels should also be autoionizing
+          assert_always(level_is_autoionizing || nlevels_autoion == 0);
           if (level_is_autoionizing) {
             nlevels_autoion++;
-            found_autoion_level = true;
-          }
-
-          // once we have found one autoionizing level, all higher levels should also be autoionizing
-          if (found_autoion_level) {
-            assert_always(level_is_autoionizing);
           }
         }
         globals::elements[element].ions[ion].nlevels_autoion = nlevels_autoion;
@@ -1610,7 +1586,7 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
   }
 }
 
-// sort the temporary linelist by descending frequency and warn about any duplicate transitions
+// sort the temporary linelist by descending frequency
 void sort_temp_linelist(std::vector<TempLineTransitionInput>& temp_linelist) {
   if (globals::rank_in_node == 0) {
     assert_always(globals::nlines == std::ssize(temp_linelist));
@@ -1821,9 +1797,9 @@ void create_shared_linelist(std::vector<TempLineTransitionInput>& temp_linelist)
   printlnlog("[info] mem_usage: linelist occupies {:.3f} MB (node shared memory)", linelist_mem_MB);
 }
 
-// read the full atomic dataset: the composition (compositiondata.txt), then the levels and
-// transitions (adata.txt, transitiondata.txt) and photoionisation cross-sections
-// (phixsdata_v2.txt) for every included ion, building the global element/ion/level/line lists
+// read the atomic data of each included ion: the composition (compositiondata.txt), the levels and the transitions
+// (adata.txt, transitiondata.txt), the autoionisation data (autoion.txt), and the photoionisation cross-sections
+// (phixsdata.txt, phixsdata_v2.txt, or both). The function also makes the global lists of the levels and the lines.
 void read_atomicdata_files() {
   const auto nlevelsmax_readin = read_compositiondata();
 

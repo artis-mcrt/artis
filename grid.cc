@@ -319,9 +319,8 @@ void report_negative_input_massfracs() {
 void set_ffegrp(const int modelgridindex, float x) {
   if (!(x >= 0.)) {
     if (!(x > -1e-6)) {
-      printlnlog("[error] Fe-group mass fraction {:g} is negative in cell {}", x, modelgridindex);
+      fatal_crash("Fe-group mass fraction {:g} is negative in cell {}", x, modelgridindex);
     }
-    assert_always(x > -1e-6);
     count_negative_input_massfrac(modelgridindex, -1, -1, x);
     x = 0.;
   }
@@ -345,10 +344,9 @@ void set_modelinitnucmassfrac(const int modelgridindex, const int nucindex, floa
   assert_always(nucindex >= 0);
   if (!(abund >= 0.)) {
     if (!(abund > -1e-6)) {
-      printlnlog("[error] mass fraction {:g} for Z={} A={} is negative in cell {}", abund, decay::get_nuc_z(nucindex),
-                 decay::get_nuc_a(nucindex), modelgridindex);
+      fatal_crash("mass fraction {:g} for Z={} A={} is negative in cell {}", abund, decay::get_nuc_z(nucindex),
+                  decay::get_nuc_a(nucindex), modelgridindex);
     }
-    assert_always(abund > -1e-6);
     count_negative_input_massfrac(modelgridindex, decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex), abund);
     abund = 0.;
   }
@@ -569,7 +567,6 @@ void allocate_nonemptymodelcells() {
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     if (get_numpropcells(mgi) > 0) {
-      assert_always(get_rho_tmin(mgi) >= 0);
       nonemptymgi_of_mgi[mgi] = nonemptymgi;
       mgi_of_nonemptymgi[nonemptymgi] = mgi;
       nonemptymgi++;
@@ -587,10 +584,7 @@ void allocate_nonemptymodelcells() {
   }
   MPI_Barrier_allranks();
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    const int mgi = get_propcell_modelgridindex(cellindex);
-    if (mgi < 0) {
-      propcell_nonemptymgi[cellindex] = -1;
-    } else {
+    if (const int mgi = get_propcell_modelgridindex(cellindex); mgi >= 0) {
       propcell_nonemptymgi[cellindex] = get_nonemptymgi_of_mgi(mgi);
     }
   }
@@ -769,7 +763,7 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
           break;
         }
 
-        if (abund_in < 0. || abund_in < std::numeric_limits<float>::min()) {
+        if (abund_in < std::numeric_limits<float>::min()) {
           assert_always(abund_in > -1e-6);
           abund_in = 0.;
         }
@@ -1575,15 +1569,12 @@ template <BoundaryType boundarytype, size_t S1>
     double dist1 = (-b + sqrt(discriminant)) / 2 / a;
     double dist2 = (-b - sqrt(discriminant)) / 2 / a;
 
-    const auto [posfinal1, posfinal2] = [&] {
-      std::array<double, S1> posf1{};
-      std::array<double, S1> posf2{};
-      for (auto d = 0ZU; d < S1; d++) {
-        posf1[d] = pos[d] + (dist1 * dir[d]);
-        posf2[d] = pos[d] + (dist2 * dir[d]);
-      }
-      return std::tuple{posf1, posf2};
-    }();
+    std::array<double, S1> posfinal1{};
+    std::array<double, S1> posfinal2{};
+    for (auto d = 0ZU; d < S1; d++) {
+      posfinal1[d] = pos[d] + (dist1 * dir[d]);
+      posfinal2[d] = pos[d] + (dist2 * dir[d]);
+    }
 
     const double v_rad_shell = shellradiuststart / tstart;
     const double v_rad_final1 = dot(dir, posfinal1) * speed / vec_len(posfinal1);
@@ -2169,7 +2160,6 @@ void read_ejecta_model() {
     // for a 3D input model, the propagation cells will match the input cells exactly
     ncoordgrid = ncoord_model;
     ngrid = npts_model;
-    min_den = -1.;
   }
 
   const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
@@ -2524,8 +2514,6 @@ void init_grid() {
     }
   }
 
-  allocate_nonemptymodelcells();
-
   // the rank ranges need the count of the non-empty cells
   setup_nstart_ndo();
 
@@ -2838,71 +2826,40 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
         }
       }
     }
+  }
 
-    // Z boundaries are Cartesian
-    constexpr int d = 1;
+  // The z axis of a 2D grid and the three axes of a 3D grid are Cartesian. For x, the packet trajectory is
+  // x = x0 + (dir.x) * c * (t - tstart)
+  // the boundaries follow
+  // x+/- = x+/-(tmin) * (t/tmin)
+  // so the crossing occurs when
+  // t - tstart = (x0 - x+/-(tmin)/tmin * tstart) / (x+/-(tmin)/tmin - (dir.x)*c)
+  // distance = c * (t - tstart)
+  for (int d = (prop_gridtype == GridType::CARTESIAN3D) ? 0 : 1; d < get_ndim(prop_gridtype); d++) {
     if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {
-      const double d_coordmaxboundary_z =
+      const double d_coordmaxboundary =
           is_boundary_overshoot_within_tolerance<BoundaryType::UPPER>(pktposgridcoord[d], pktvelgridcoord[d],
                                                                       cellcoordmax[d], tstart)
               ? 0.
-              : distance_cartesian_boundary(pktposgridcoord[1], pktvelgridcoord[d], cellcoordmax[d], tstart);
+              : distance_cartesian_boundary(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmax[d], tstart);
 
-      if ((d_coordmaxboundary_z >= 0.) && (d_coordmaxboundary_z < distance)) {
-        distance = d_coordmaxboundary_z;
+      if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
+        distance = d_coordmaxboundary;
         next_cellindex = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexstride(d);
       }
     } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
-      const double d_coordminboundary_z =
+      const double d_coordminboundary =
           is_boundary_overshoot_within_tolerance<BoundaryType::LOWER>(pktposgridcoord[d], pktvelgridcoord[d],
                                                                       cellcoordmin[d], tstart)
               ? 0.
               : distance_cartesian_boundary(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmin[d], tstart);
 
-      if ((d_coordminboundary_z >= 0.) && (d_coordminboundary_z < distance)) {
-        distance = d_coordminboundary_z;
+      // lower d coordinate of the current cell
+      if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
+        distance = d_coordminboundary;
         next_cellindex = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexstride(d);
       }
     }
-
-  } else if (prop_gridtype == GridType::CARTESIAN3D) {
-    // There are six possible boundary crossings. Each of the three
-    // cartesian coordinates may be taken in turn. For x, the packet trajectory is
-    // x = x0 + (dir.x) * c * (t - tstart)
-    // the boundaries follow
-    // x+/- = x+/-(tmin) * (t/tmin)
-    // so the crossing occurs when
-    // t - tstart = (x0 - x+/-(tmin)/tmin * tstart) / (x+/-(tmin)/tmin - (dir.x)*c)
-    // distance = c * (t - tstart)
-
-    for (int d = 0; d < 3; d++) {
-      if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {
-        const double d_coordmaxboundary =
-            is_boundary_overshoot_within_tolerance<BoundaryType::UPPER>(pktposgridcoord[d], pktvelgridcoord[d],
-                                                                        cellcoordmax[d], tstart)
-                ? 0.
-                : distance_cartesian_boundary(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmax[d], tstart);
-
-        if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
-          distance = d_coordmaxboundary;
-          next_cellindex = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexstride(d);
-        }
-      } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
-        const double d_coordminboundary =
-            is_boundary_overshoot_within_tolerance<BoundaryType::LOWER>(pktposgridcoord[d], pktvelgridcoord[d],
-                                                                        cellcoordmin[d], tstart)
-                ? 0.
-                : distance_cartesian_boundary(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmin[d], tstart);
-
-        // lower d coordinate of the current cell
-        if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
-          distance = d_coordminboundary;
-          next_cellindex = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexstride(d);
-        }
-      }
-    }
-  } else {
-    assert_always(false);
   }
 
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {

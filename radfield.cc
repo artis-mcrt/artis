@@ -106,6 +106,7 @@ std::vector<double> J;  // after normalisation: [ergs/s/sr/cm2/Hz]
 std::vector<double> nuJ;  // after normalisation: [ergs/s/sr/cm2]
 
 JobFolderOutputFile radfieldfile;
+PaddedMutex radfieldfile_mutex;
 
 constexpr auto get_bin_nu_upper(const int binindex) -> double {
   assert_testmodeonly(binindex >= 0);
@@ -442,52 +443,46 @@ auto get_allcontindex(const int element, const int lowerion, const int lower, co
 void write_to_file(const int nonemptymgi, const int timestep) {
   assert_always(MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value());
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-#ifdef _OPENMP
-#pragma omp critical(out_file)
-  {
-#endif
+  [[maybe_unused]] const ScopedMutex lock{radfieldfile_mutex};
 
-    for (int binindex = -1 - detailed_linecount; binindex < RADFIELDBINCOUNT; binindex++) {
-      double nu_lower = 0.;
-      double nu_upper = 0.;
-      double nuJ_out = 0.;
-      double J_out = 0.;
-      float T_R = 0.;
-      float W = 0.;
-      double J_nu_bar = 0.;
+  for (int binindex = -1 - detailed_linecount; binindex < RADFIELDBINCOUNT; binindex++) {
+    double nu_lower = 0.;
+    double nu_upper = 0.;
+    double nuJ_out = 0.;
+    double J_out = 0.;
+    float T_R = 0.;
+    float W = 0.;
+    double J_nu_bar = 0.;
 
-      if (binindex >= 0) {
-        nu_lower = get_bin_nu_lower(binindex);
-        nu_upper = get_bin_nu_upper(binindex);
-        nuJ_out = get_bin_nuJ(nonemptymgi, binindex);
-        J_out = get_bin_J(nonemptymgi, binindex);
-        T_R = get_bin_T_R(nonemptymgi, binindex);
-        W = get_bin_W(nonemptymgi, binindex);
-        J_nu_bar = J_out / (nu_upper - nu_lower);
-      } else if (binindex == -1) {  // bin -1 is the full spectrum fit
-        nuJ_out = nuJ[nonemptymgi];
-        J_out = J[nonemptymgi];
-        T_R = grid::TR_allcells[nonemptymgi];
-        W = grid::W_allcells[nonemptymgi];
-      } else {  // use binindex < -1 for detailed line Jb_lu estimators
-        const int jblueindex = -2 - binindex;  // -2 is the first detailed line, -3 is the second, etc
-        const int lineindex = detailed_lineindices[jblueindex];
-        const double nu_trans = globals::linelist.nu[lineindex];
-        nu_lower = nu_trans;
-        nu_upper = nu_trans;
-        nuJ_out = -1.;
-        J_out = -1.;
-        T_R = -1.;
-        W = -1.;
-        J_nu_bar = prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
-      }
-
-      std::println(radfieldfile.stream(), "{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:.1f} {:.5e}", timestep,
-                   modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, T_R, W);
+    if (binindex >= 0) {
+      nu_lower = get_bin_nu_lower(binindex);
+      nu_upper = get_bin_nu_upper(binindex);
+      nuJ_out = get_bin_nuJ(nonemptymgi, binindex);
+      J_out = get_bin_J(nonemptymgi, binindex);
+      T_R = get_bin_T_R(nonemptymgi, binindex);
+      W = get_bin_W(nonemptymgi, binindex);
+      J_nu_bar = J_out / (nu_upper - nu_lower);
+    } else if (binindex == -1) {  // bin -1 is the full spectrum fit
+      nuJ_out = nuJ[nonemptymgi];
+      J_out = J[nonemptymgi];
+      T_R = grid::TR_allcells[nonemptymgi];
+      W = grid::W_allcells[nonemptymgi];
+    } else {  // use binindex < -1 for detailed line Jb_lu estimators
+      const int jblueindex = -2 - binindex;  // -2 is the first detailed line, -3 is the second, etc
+      const int lineindex = detailed_lineindices[jblueindex];
+      const double nu_trans = globals::linelist.nu[lineindex];
+      nu_lower = nu_trans;
+      nu_upper = nu_trans;
+      nuJ_out = -1.;
+      J_out = -1.;
+      T_R = -1.;
+      W = -1.;
+      J_nu_bar = prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
     }
-#ifdef _OPENMP
+
+    std::println(radfieldfile.stream(), "{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:.1f} {:.5e}", timestep,
+                 modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, T_R, W);
   }
-#endif
 }
 
 }  // anonymous namespace
@@ -642,23 +637,8 @@ auto get_Jblueindex(const int lineindex) -> int {
     return -1;
   }
 
-  // use a binary search, assuming the list is sorted
-
-  int low = 0;
-  int high = detailed_linecount - 1;
-  while (low <= high) {
-    const int mid = low + ((high - low) / 2);
-    if (detailed_lineindices[mid] < lineindex) {
-      low = mid + 1;
-    } else if (detailed_lineindices[mid] > lineindex) {
-      high = mid - 1;
-    } else {
-      assert_always(mid < detailed_linecount);
-      return mid;
-    }
-  }
-
-  return -1;
+  const int jblueindex = int_index_lowerbound(detailed_lineindices, lineindex);
+  return (jblueindex < detailed_linecount && detailed_lineindices[jblueindex] == lineindex) ? jblueindex : -1;
 }
 
 auto get_Jb_lu(const int nonemptymgi, const int jblueindex) -> std::optional<double> {
@@ -768,12 +748,6 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
     printlnlog(
         "timestep {} cell {}: radfield bins sum to J of {:g} ({:.1f}% of total J). Finding parameters for {} bins...",
         timestep, mgi, J_bin_sum, 100. * J_bin_sum / J[nonemptymgi], RADFIELDBINCOUNT);
-
-    double J_bin_max = 0.;
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      const double J_bin = get_bin_J(nonemptymgi, binindex);
-      J_bin_max = std::max(J_bin_max, J_bin);
-    }
 
     int count_T_R_min = 0;
     int count_T_R_max = 0;
@@ -953,14 +927,12 @@ void reduce_estimators() {
   MPI_Allreduce_safe(nuJ, MPI_SUM, MPI_COMM_WORLD);
 
   if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
-    // reduce all ranks on each node first, then reduce the node leaders
-    // then broadcast the final result to all ranks on each node
+    // reduce all ranks on each node first, then reduce the node leaders, which are the only readers
     // this seems necessary to avoid congestion compared to a single MPI_Allreduce when using many ranks per node
     MPI_Reduce_safe(bfrate_raw, MPI_SUM, 0, globals::mpi_comm_node);
     if (globals::rank_in_node == 0) {
       MPI_Allreduce_safe(bfrate_raw, MPI_SUM, globals::mpi_comm_internode);
     }
-    MPI_Bcast_safe(bfrate_raw, 0, globals::mpi_comm_node);
   }
 
   if constexpr (MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value()) {

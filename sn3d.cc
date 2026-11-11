@@ -37,7 +37,6 @@
 #include <ranges>
 #endif
 #include <span>
-#include <sstream>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -66,7 +65,6 @@
 #include "stats.h"
 #include "update_grid.h"
 #include "update_packets.h"
-#include "version.h"
 #include "vpkt.h"
 
 namespace {
@@ -1061,18 +1059,7 @@ void open_log_files_and_log_job_configuration(const CommandLineOptions& options)
 
   printlnlog("The per-rank output files go into the job folder '{}'", globals::jobfolder);
 
-  printlnlog("git branch: {}", GIT_BRANCH);
-
-  printlnlog("git version: {}", GIT_VERSION);
-
-  printlnlog("git status: {}", GIT_STATUS);
-
-  std::istringstream option_lines{std::string{ARTISOPTIONS_LINES}};
-  for (std::string option_line; std::getline(option_lines, option_line);) {
-    if (!option_line.empty()) {
-      printlnlog("artisoptions.h: {}", option_line);
-    }
-  }
+  log_git_metadata_and_artisoptions();
 
   printlnlog("sn3d compiled at {} on {}", __TIME__, __DATE__);
 
@@ -1153,7 +1140,6 @@ void read_input_and_initialise_simulation(std::span<Packet> packets) {
 
   if (!globals::simulation_continued_from_saved) {
     packet_init(packets);
-    zero_estimators();
   }
 
   // log the range of model cells that setup_nstart_ndo() in grid.cc assigned to this rank for update_grid()

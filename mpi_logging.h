@@ -107,6 +107,9 @@ inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_node); }
 
 void set_log_file(std::string_view filename) noexcept;
 
+// Write the git branch, version, and status of the build and the lines of artisoptions.h to the log file.
+void log_git_metadata_and_artisoptions();
+
 // Write an already-formatted message to the log file, prepending a timestamp at the start of each line. When
 // add_newline is set, a trailing newline is appended and the next write starts a new line.
 void log_write(std::string_view message, bool add_newline) noexcept;

@@ -767,8 +767,8 @@ void macroatom_write_timestep_text() { macroatom_file.write_timestep_text(); }
       // crude Van-Regemorter formula, with the exponential integral E1 replaced by its small-argument
       // expansion E1(x) ~ -EULERGAMMA - log(x)
       const double exp_eoverkt = std::exp(eoverkt);
-
-      const double gauntfac = std::max(g_bar, 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt)));
+      const double gauntfac =
+          (eoverkt > 0.33421) ? g_bar : std::max(g_bar, 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt)));
       return C_0 * clumpednne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow2(H_ionpot / epsilon_trans) *
              eoverkt / exp_eoverkt * gauntfac;
     }

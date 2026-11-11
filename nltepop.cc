@@ -102,33 +102,22 @@ struct RateMatrices {
     assert_always(std::cmp_less_equal(used_dim_squared, summed_rates.capacity()));
     summed_rates.resize(used_dim_squared);
     assert_always(std::cmp_less_equal(used_dim_squared, rad_bb.capacity()));
-    rad_bb.resize(used_dim_squared);
+    rad_bb.assign(used_dim_squared, 0.);
     assert_always(std::cmp_less_equal(used_dim_squared, coll_bb.capacity()));
-    coll_bb.resize(used_dim_squared);
+    coll_bb.assign(used_dim_squared, 0.);
     assert_always(std::cmp_less_equal(used_dim_squared, ntcoll_bb.capacity()));
-    ntcoll_bb.resize(used_dim_squared);
+    ntcoll_bb.assign(used_dim_squared, 0.);
     assert_always(std::cmp_less_equal(used_dim_squared, rad_bf.capacity()));
-    rad_bf.resize(used_dim_squared);
+    rad_bf.assign(used_dim_squared, 0.);
     assert_always(std::cmp_less_equal(used_dim_squared, coll_bf.capacity()));
-    coll_bf.resize(used_dim_squared);
+    coll_bf.assign(used_dim_squared, 0.);
     assert_always(std::cmp_less_equal(used_dim_squared, ntcoll_bf.capacity()));
-    ntcoll_bf.resize(used_dim_squared);
+    ntcoll_bf.assign(used_dim_squared, 0.);
     assert_always(std::cmp_less_equal(used_dim_squared, autoion.capacity()));
-    autoion.resize(used_dim_squared);
+    autoion.assign(used_dim_squared, 0.);
     if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
       assert_always(std::cmp_less_equal(used_dim_squared, chargetransfer.capacity()));
-      chargetransfer.resize(used_dim_squared);
-    }
-
-    std::ranges::fill(rad_bb, 0.);
-    std::ranges::fill(coll_bb, 0.);
-    std::ranges::fill(ntcoll_bb, 0.);
-    std::ranges::fill(rad_bf, 0.);
-    std::ranges::fill(coll_bf, 0.);
-    std::ranges::fill(ntcoll_bf, 0.);
-    std::ranges::fill(autoion, 0.);
-    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
-      std::ranges::fill(chargetransfer, 0.);
+      chargetransfer.assign(used_dim_squared, 0.);
     }
   }
 
@@ -316,10 +305,9 @@ void print_level_rates_summary(const int element, const int selected_ion, const 
   }
 }
 
-void print_element_rates_summary(const int element, const int modelgridindex, const int timestep, const int nlte_iter,
+void print_element_rates_summary(const int element, const int nonemptymgi, const int timestep, const int nlte_iter,
                                  std::span<const double> popvec, const RateMatrices& rate_matrices,
                                  const int first_ion_used, const int nions_used) {
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
   for (int ion = first_ion_used; ion < first_ion_used + nions_used - 1; ion++) {
     const int nlevels = get_nlevels(element, ion);
     const int nlevels_nlte = get_nlevels_excited_nlte(element, ion);
@@ -333,8 +321,8 @@ void print_element_rates_summary(const int element, const int modelgridindex, co
       if (level == 0) {
         printlnlog(
             "  modelgridindex {} timestep {} NLTE iteration {} Te {:g} nne {:g}: NLTE summary for Z={} ionstage {}:",
-            modelgridindex, timestep, nlte_iter, grid::Te_allcells[nonemptymgi], grid::get_nne(nonemptymgi),
-            atomic_number, ionstage);
+            grid::get_mgi_of_nonemptymgi(nonemptymgi), timestep, nlte_iter, grid::Te_allcells[nonemptymgi],
+            grid::get_nne(nonemptymgi), atomic_number, ionstage);
         printlnlog(
             "                         pop       rates     bb_rad     bb_col   bb_ntcol     bf_rad     bf_col   "
             "bf_ntcol autoion   chargetr");
@@ -1629,7 +1617,7 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 
   // output NLTE stats every nth timestep for the first NLTE iteration only
   if ((timestep % 5 == 0) && (nlte_iter == 0)) {
-    print_element_rates_summary(element, modelgridindex, timestep, nlte_iter, popvec, rate_matrices, first_ion_used,
+    print_element_rates_summary(element, nonemptymgi, timestep, nlte_iter, popvec, rate_matrices, first_ion_used,
                                 nions_used);
   }
 
@@ -1679,9 +1667,6 @@ auto elem_has_nlte_solution(const int nonemptymgi, const int element) -> bool {
   for (int ion = 0; ion < get_nions(element); ion++) {
     if (get_nlevels_excited_nlte(element, ion) > 0) {
       return get_nlte_levelpop_over_rho(nonemptymgi, element, ion, 1) >= 0.;
-    }
-    if (ion_has_superlevel(element, ion)) {
-      return get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion) >= 0.;
     }
   }
   return false;
@@ -1891,7 +1876,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 DEVICE_FUNC auto superlevel_boltzmann(const int nonemptymgi, const int element, const int ion, const int level)
     -> double {
   // autoionising levels are also allowed here: outside the NLTE solver their populations are
-  // attached to the superlevel (see the comment in read_autoion_data())
+  // attached to the superlevel
   assert_testmodeonly(level_isinsuperlevel(element, ion, level) || level_isautoionising(element, ion, level));
   const int level_superlevel_start = get_nlevels_excited_nlte(element, ion) + 1;
   const double T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::TJ_allcells[nonemptymgi] : grid::Te_allcells[nonemptymgi];

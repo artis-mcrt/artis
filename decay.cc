@@ -476,15 +476,10 @@ void filter_unused_nuclides(const std::span<const int> custom_zlist, const std::
     }
 
     const bool in_any_decaypath = std::ranges::any_of(decaypaths, [&nuc](const auto& decaypath) {
-      for (const auto [z, a] : std::views::zip(decaypath.z, decaypath.a)) {
-        if (z == nuc.z && a == nuc.a) {
-          // nuc is in the decay path
-          return true;
-        }
-      }
-
-      // return true if nuc is the final daughter of a decay path
-      return (decaypath.z.back() == nuc.z && decaypath.a.back() == nuc.a);
+      return std::ranges::any_of(std::views::zip(decaypath.z, decaypath.a), [&nuc](const auto& z_and_a) {
+        const auto [z, a] = z_and_a;
+        return z == nuc.z && a == nuc.a;
+      });
     });
 
     return !in_any_decaypath;
@@ -520,12 +515,11 @@ auto calc_decaypath_unitfactor(const int decaypathindex, const double time, cons
 // the first time at which a packet can decay. Initial packets can decay from the model snapshot time.
 [[nodiscard]] auto get_tdecaymin() -> double { return INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin; }
 
-auto sample_decaytime(const int decaypathindex, const double tdecaymin, const double tdecaymax, rngstate_type& rngstate)
-    -> double {
+auto sample_decaytime(const int decaypathindex, rngstate_type& rngstate) -> double {
   // the two times are the same for every packet, so the decayed fractions come from the cache
   assert_always(!decaypath_fdecayed_tmin.empty());
-  assert_testmodeonly(tdecaymin == get_tdecaymin());
-  assert_testmodeonly(tdecaymax == globals::tmax);
+  const double tdecaymin = get_tdecaymin();
+  const double tdecaymax = globals::tmax;
   const double fdecayed_tmin = decaypath_fdecayed_tmin[decaypathindex];
   const double fdecayed_tmax = decaypath_fdecayed_tmax[decaypathindex];
   // the fraction that decays inside the time range. calc_energy_per_massoftopnuc_decaypath() uses the same
@@ -1523,7 +1517,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
   const double tdecaymin = get_tdecaymin();
 
   if constexpr (UNIFORM_PELLET_ENERGIES) {
-    pkt.tdecay = sample_decaytime(decaypathindex, tdecaymin, globals::tmax, get_rngstate(pkt));
+    pkt.tdecay = sample_decaytime(decaypathindex, get_rngstate(pkt));
     pkt.e_cmf = e_cmf_per_packet;
   } else {
     // use uniform decay time distribution and scale the packet energies instead.

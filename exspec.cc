@@ -15,8 +15,6 @@
 #include <format>
 #include <functional>
 #include <span>
-#include <sstream>
-#include <string>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -30,7 +28,6 @@
 #include "packet.h"
 #include "sn3d.h"
 #include "spectrum_lightcurve.h"
-#include "version.h"
 
 auto main(int argc, char* argv[]) -> int {
   const auto sys_time_start = std::chrono::steady_clock::now();
@@ -46,18 +43,7 @@ auto main(int argc, char* argv[]) -> int {
     set_log_file("exspec.txt");
   }
 
-  printlnlog("git branch: {}", GIT_BRANCH);
-
-  printlnlog("git version: {}", GIT_VERSION);
-
-  printlnlog("git status: {}", GIT_STATUS);
-
-  std::istringstream option_lines{std::string{ARTISOPTIONS_LINES}};
-  for (std::string option_line; std::getline(option_lines, option_line);) {
-    if (!option_line.empty()) {
-      printlnlog("artisoptions.h: {}", option_line);
-    }
-  }
+  log_git_metadata_and_artisoptions();
 
   printlnlog("exspec compiled at {} on {}", __TIME__, __DATE__);
 
