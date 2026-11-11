@@ -48,6 +48,8 @@ inline void acquire_run_lock() {
     // abort_run() removes the file after a fatal error, also after a failed write
     globals::owned_run_lock_path = lock_path;
     std::println(lock_file, "{}\n{}", getpid(), std::filesystem::current_path().generic_string());
+    // fatal_crash() does not return, so lock_file is not null here
+    // cppcheck-suppress nullPointerOutOfResources
     assert_always(std::fclose(lock_file) == 0);
   }
   MPI_Barrier_allranks();
