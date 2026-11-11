@@ -938,12 +938,9 @@ void enter_inputcheck_folder() {
   const auto* const foldername = "inputcheck";
   std::error_code ec;
   if (globals::my_rank == 0) {
-    std::filesystem::remove_all(foldername, ec);
-    if (!ec) {
-      std::filesystem::create_directory(foldername, ec);
-    }
+    std::filesystem::create_directory(foldername, ec);
     if (ec) {
-      fatal_crash("could not make an empty folder '{}': {}", foldername, ec.message());
+      fatal_crash("Could not create the folder '{}': {}", foldername, ec.message());
     }
     std::println("input check: sn3d writes into the folder '{}' and changes no other file of the model folder",
                  foldername);
@@ -953,6 +950,19 @@ void enter_inputcheck_folder() {
   if (ec) {
     fatal_crash("could not change to the folder '{}': {}", foldername, ec.message());
   }
+  acquire_run_lock();
+  if (globals::my_rank == 0) {
+    // Keep the lock while we remove the output of an earlier input check.
+    for (const auto& entry : std::filesystem::directory_iterator(".")) {
+      if (entry.path().filename() != "artis.pid") {
+        std::filesystem::remove_all(entry.path(), ec);
+        if (ec) {
+          fatal_crash("Could not remove '{}' from inputcheck: {}", entry.path().string(), ec.message());
+        }
+      }
+    }
+  }
+  MPI_Barrier_allranks();
   globals::path_to_modelfolder = "../";
 }
 
@@ -1212,9 +1222,9 @@ auto main(int argc, char* argv[]) -> int {
 
   if (options.check_inputs_only) {
     enter_inputcheck_folder();
+  } else {
+    acquire_run_lock();
   }
-
-  check_already_running();
 
   setup_jobfolder();
 
@@ -1258,8 +1268,8 @@ auto main(int argc, char* argv[]) -> int {
     if (globals::my_rank == 0) {
       std::println("input check: complete");
     }
+    release_run_lock();
     MPI_Finalize();
-    std::filesystem::remove("artis.pid");
     return 0;
   }
 
@@ -1286,9 +1296,8 @@ auto main(int argc, char* argv[]) -> int {
 
   log_job_end(terminate_early);
 
+  release_run_lock();
   MPI_Finalize();
-
-  std::filesystem::remove("artis.pid");
 
   return 0;
 }

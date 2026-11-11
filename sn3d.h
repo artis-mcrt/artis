@@ -4,20 +4,19 @@
 #ifndef SN3D_H
 #define SN3D_H
 
-#include <sys/wait.h>
 #include <unistd.h>
 
 #include <algorithm>
 #include <array>
 #include <cassert>
 #include <cmath>
-#include <csignal>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <ios>
 #include <iostream>
@@ -25,46 +24,42 @@
 #include <print>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <vector>
 
 #include "mpi_logging.h"
 #include "outputfilestream.h"
+#include "run_lock.h"
 
-[[nodiscard]] inline auto is_pid_running(pid_t pid) -> bool {
-  while (waitpid(-1, nullptr, WNOHANG) > 0) {
-    // Wait for defunct....
-  }
-
-  return (kill(pid, 0) == 0);
+inline auto get_run_lock() -> RunLock& {
+  static RunLock run_lock;
+  return run_lock;
 }
 
-inline void check_already_running() {
+inline void acquire_run_lock() {
   if (globals::my_rank == 0) {
-    const pid_t artispid = getpid();
-
-    if (std::filesystem::exists("artis.pid")) {
-      auto pidfile = std::fstream("artis.pid", std::ios::in);
-      pid_t artispid_in = 0;
-      std::string line;
-      std::getline(pidfile, line);
-      std::istringstream{line} >> artispid_in;
-      std::getline(pidfile, line);
-      pidfile.close();
-      if (is_pid_running(artispid_in) && std::filesystem::current_path().generic_string() == line) {
-        fatal_crash(
-            "artis or exspec is already running in this folder with existing pid {}. Refusing to "
-            "start. (delete artis.pid if you are sure this is incorrect)",
-            artispid_in);
-      }
+    const auto contents = std::format("{}\n{}\n", getpid(), std::filesystem::current_path().generic_string());
+    const auto error = get_run_lock().acquire("artis.pid", contents);
+    if (error == std::errc::file_exists) {
+      fatal_crash(
+          "artis.pid exists. Confirm that sn3d and exspec stopped in this folder on every host. "
+          "Then remove the stale file before you start a new run.");
     }
-
-    auto pidfile = open_uncompressed_output_file("artis.pid");
-    std::println(pidfile, "{}", artispid);
-    std::println(pidfile, "{}", std::filesystem::current_path().generic_string());
+    if (error) {
+      fatal_crash("Could not create artis.pid: {}", error.message());
+    }
   }
-
-  // make sure rank 0 checked for a pid file before we proceed
   MPI_Barrier_allranks();
+}
+
+inline void release_run_lock() {
+  // Every rank must finish its output before another job can use the model folder.
+  MPI_Barrier_allranks();
+  if (globals::my_rank == 0) {
+    if (const auto error = get_run_lock().release()) {
+      fatal_crash("Could not release artis.pid: {}", error.message());
+    }
+  }
 }
 
 template <typename T>
