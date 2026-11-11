@@ -16,5 +16,5 @@ a1985dad008dc9995752b7844657e07b  job_from_ts0000/nlte_allranks.out
 d0e6afdf4d60a61b1bcb39789e8e014d  job_from_ts0000/radfield_allranks.out
 a835477e0bd38c8cf14a79d6fa8d9006  packets/packets00_0000.out
 685fac1dc90b6539d0014702fde49bf8  packets/packets00_0001.out
-8a870d08ea4dbdd874eed04b49908ae3  packets/packets00_0002.out
-7f3d18a1a4789e53547c6385cbe9be5e  packets/packets00_0003.out
+020ab25001b2b456e24f4e3505ed4d54  packets/packets00_0002.out
+f66bc2d55c740d8bec9e61ffc1092b8e  packets/packets00_0003.out

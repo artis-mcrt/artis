@@ -14,7 +14,7 @@ a574412af6d2d70c78c8a6e0f5c72b81  light_curve.out
 c0b1f069fc20ec9e98d9ae793b59ba8f  job_from_ts0007/estimators_allranks.out
 6d86a91b28c5b7264979bf548b776eac  job_from_ts0007/nlte_allranks.out
 e507a2bff95f5058214bb4a4ad202302  job_from_ts0007/radfield_allranks.out
-a94c05e2f75f93fb9962c8ef0bb39a9c  packets/packets00_0000.out
-f08c21f5e369846e68c3b3d07a800bd6  packets/packets00_0001.out
+914f25e2ef4eca8dc4ab31713cb86a2f  packets/packets00_0000.out
+a3c9e47f80800ec7c5b7fe772fa1d30a  packets/packets00_0001.out
 3fb2fff1be72ab2ec1010ad7d41bf023  packets/packets00_0002.out
 92b3215cb8329fd83f357c386363e55d  packets/packets00_0003.out
