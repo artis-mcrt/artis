@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cerrno>
 #include <cmath>
 #include <cstdarg>
 #include <cstddef>
@@ -29,36 +30,40 @@
 
 #include "mpi_logging.h"
 #include "outputfilestream.h"
-#include "run_lock.h"
 
+// Create artis.pid exclusively, so that only one sn3d or exspec runs in the model folder, also over several hosts.
 inline void acquire_run_lock() {
   if (globals::my_rank == 0) {
-    const auto lock_path = std::filesystem::absolute("artis.pid");
-    const auto contents = std::format("{}\n{}\n", getpid(), std::filesystem::current_path().generic_string());
-    const auto error = run_lock.acquire(lock_path, contents);
-    if (error == std::errc::file_exists) {
+    const auto lock_path = std::filesystem::absolute("artis.pid").string();
+    std::FILE* lock_file = std::fopen(lock_path.c_str(), "wx");
+    if (lock_file == nullptr) {
+      const auto open_error = std::generic_category().message(errno);
       std::ifstream existing_lock_file(lock_path);
       const std::string existing_contents(std::istreambuf_iterator<char>(existing_lock_file), {});
       fatal_crash(
-          "{} exists with the process id and the folder:\n{}Confirm that sn3d and exspec stopped in this folder on "
-          "every host. Then remove the stale file before you start a new run.",
-          lock_path.string(), existing_contents);
+          "Could not create {}: {}. If the file exists, it holds the process id and the folder:\n{}Confirm that sn3d "
+          "and exspec stopped in this folder on every host. Then remove the stale file before you start a new run.",
+          lock_path, open_error, existing_contents);
     }
-    if (error) {
-      fatal_crash("Could not create {}: {}", lock_path.string(), error.message());
-    }
+    // abort_run() removes the file after a fatal error, also after a failed write
+    globals::owned_run_lock_path = lock_path;
+    std::println(lock_file, "{}\n{}", getpid(), std::filesystem::current_path().generic_string());
+    assert_always(std::fclose(lock_file) == 0);
   }
   MPI_Barrier_allranks();
 }
 
+// Remove artis.pid after every rank finishes its output. A process without the lock removes nothing.
 inline void release_run_lock() {
-  // Every rank must finish its output before another job can use the model folder.
   MPI_Barrier_allranks();
-  if (globals::my_rank == 0) {
+  if (!globals::owned_run_lock_path.empty()) {
+    std::error_code ec;
+    std::filesystem::remove(globals::owned_run_lock_path, ec);
     // The output is complete, and a non-zero exit status would stop the job scripts.
-    if (const auto error = run_lock.release()) {
-      printlnlog("[warning] Could not remove artis.pid: {}", error.message());
+    if (ec) {
+      printlnlog("[warning] Could not remove {}: {}", globals::owned_run_lock_path, ec.message());
     }
+    globals::owned_run_lock_path.clear();
   }
 }
 

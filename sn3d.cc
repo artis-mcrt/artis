@@ -938,17 +938,12 @@ void enter_inputcheck_folder() {
   const auto* const foldername = "inputcheck";
   std::error_code ec;
   if (globals::my_rank == 0) {
-    const auto folder_status = std::filesystem::symlink_status(foldername, ec);
-    if (ec && ec != std::errc::no_such_file_or_directory) {
-      fatal_crash("Could not inspect the folder '{}': {}", foldername, ec.message());
+    std::filesystem::remove_all(foldername, ec);
+    if (!ec) {
+      std::filesystem::create_directory(foldername, ec);
     }
-    if (std::filesystem::is_symlink(folder_status)) {
-      fatal_crash("The folder '{}' must be a directory, not a symbolic link.", foldername);
-    }
-    ec.clear();
-    std::filesystem::create_directory(foldername, ec);
     if (ec) {
-      fatal_crash("Could not create the folder '{}': {}", foldername, ec.message());
+      fatal_crash("could not make an empty folder '{}': {}", foldername, ec.message());
     }
     std::println("input check: sn3d writes into the folder '{}' and changes no other file of the model folder",
                  foldername);
@@ -958,26 +953,6 @@ void enter_inputcheck_folder() {
   if (ec) {
     fatal_crash("could not change to the folder '{}': {}", foldername, ec.message());
   }
-  acquire_run_lock();
-  if (globals::my_rank == 0) {
-    // Keep the lock while we remove the output of an earlier input check.
-    std::vector<std::filesystem::path> paths_to_remove;
-    for (const auto& entry : std::filesystem::directory_iterator(".", ec)) {
-      if (entry.path().filename() != "artis.pid") {
-        paths_to_remove.push_back(entry.path());
-      }
-    }
-    if (ec) {
-      fatal_crash("Could not list the folder '{}': {}", foldername, ec.message());
-    }
-    for (const auto& path : paths_to_remove) {
-      std::filesystem::remove_all(path, ec);
-      if (ec) {
-        fatal_crash("Could not remove '{}' from inputcheck: {}", path.string(), ec.message());
-      }
-    }
-  }
-  MPI_Barrier_allranks();
   globals::path_to_modelfolder = "../";
 }
 
@@ -1283,7 +1258,6 @@ auto main(int argc, char* argv[]) -> int {
     if (globals::my_rank == 0) {
       std::println("input check: complete");
     }
-    release_run_lock();
     MPI_Finalize();
     return 0;
   }

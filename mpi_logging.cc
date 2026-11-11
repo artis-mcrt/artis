@@ -2,6 +2,8 @@
 
 #include "mpi_logging.h"
 
+#include <unistd.h>
+
 #include <chrono>
 #include <cstdarg>
 #include <cstdlib>
@@ -13,7 +15,6 @@
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <tuple>
 
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
@@ -21,7 +22,6 @@
 
 #include "constants.h"
 #include "outputfilestream.h"
-#include "run_lock.h"
 #include "version.h"
 
 namespace {
@@ -50,8 +50,10 @@ OutputFileStream output_file;
     int is_main_thread = 0;
     MPI_Is_thread_main(&is_main_thread);
     if (is_main_thread != 0) {
-      // MPI_Abort() ends every rank, so no rank writes into the model folder after the release.
-      std::ignore = run_lock.release();
+      // MPI_Abort() ends every rank, so no rank writes into the model folder after the removal.
+      if (!globals::owned_run_lock_path.empty()) {
+        unlink(globals::owned_run_lock_path.c_str());
+      }
       MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
   }

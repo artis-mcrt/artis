@@ -643,8 +643,8 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   - the restart files.
   `JobFolderOutputFile` also uses it for a combined file, e.g.
   `estimators_allranks.out`, because each rank compresses its own frame.
-  `fopen_required()` remains for the binary restart files. `run_lock.h` creates
-  `artis.pid` with an exclusive open.
+  `fopen_required()` remains for the binary restart files. `acquire_run_lock()` in
+  `sn3d.h` creates `artis.pid` with an exclusive open.
 - `sn3d` writes the final packet files into `packets/` and the virtual packet
   files into `vpackets/`, `vspecpol/`, and `vpkt_grid/`. `exspec` reads the
   packet files there.

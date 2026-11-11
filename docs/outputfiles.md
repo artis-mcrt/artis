@@ -88,11 +88,10 @@ A run writes these files into the model folder:
       each decay;
     - `bflist.out`: each bound-free continuum, with its ion, its lower level, and its upper level.
 - `artis.pid`: the process id of rank 0 and the path of the model folder. Rank 0 creates this file exclusively, so
-  `sn3d` and `exspec` stop if the file exists, also when a process on another host owns it.
-  Rank 0 removes its own file after all ranks finish their output, and also before it stops the run for its own fatal
-  error. A fatal error on another rank, a signal, the memory limit, or the wall time leaves this file.
-  Confirm that all runs in this model folder stopped on every host. Then remove the stale file before you start a new
-  run.
+  `sn3d` and `exspec` stop if the file exists, also when a process on another host owns it. An input check with
+  `sn3d -c` takes no lock. Rank 0 removes its own file after all ranks finish their output, and also before it stops
+  the run for its own fatal error. A fatal error on another rank, a signal, the memory limit, or the wall time leaves
+  this file. Confirm that all runs in this model folder stopped on every host, and then remove the stale file.
 - `gridsave_ts*.tmp` and `packets_*_ts*.tmp`: restart files that hold the state at the start of a timestep, after its
   grid update. A later job continues from that timestep and propagates its packets. A run with `VPKT_ON` also
   writes `vspecpol_nnnn_ts*.tmp`. The velocity grid map adds `vpkt_grid_nnnn_ts*.tmp`, and `VPKT_WRITE_CONTRIBS`

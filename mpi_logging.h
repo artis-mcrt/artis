@@ -51,6 +51,9 @@ inline int my_rank{-1};
 inline int node_nprocs{-1};
 inline int rank_in_node{-1};
 
+// The artis.pid that this process created. abort_run() removes it after a fatal error.
+inline std::string owned_run_lock_path;
+
 inline int node_count{-1};
 inline int node_id{-1};
 
