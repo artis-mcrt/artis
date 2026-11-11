@@ -97,7 +97,7 @@ collisional excitation, and the collisional ionisation.
   [the binned opacities](#the-binned-opacities-and-the-thermalisation-probability)). A bound-free absorption then
   still activates a macro atom. A k-packet does not: with a value of this option, each k-packet emits an r-packet
   directly from the thermal emission of the cell. The thermal balance has no term for this line thermalisation, so
-  the option needs LTE timesteps only (`num_lte_timesteps` of `input.txt`).
+  a nonzero value needs LTE timesteps only (`num_lte_timesteps` of `input.txt`).
 - References: Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 and Lucy (2003), A&A, 403, 261-275,
   doi:10.1051/0004-6361:20030357.
 
