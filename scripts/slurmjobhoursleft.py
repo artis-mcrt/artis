@@ -23,7 +23,8 @@ def main() -> None:
     """Print the hours between now and the end time that squeue gives for the job."""
     assert len(sys.argv) == 2
     jobid = int(sys.argv[1])
-    cmd = ["squeue", "-j", str(jobid), "--noheader", "--Format", "EndTime"]
+    # the time format of the user, e.g. SLURM_TIME_FORMAT=relative, gives an end time that fromisoformat() cannot read
+    cmd = ["env", "SLURM_TIME_FORMAT=standard", "squeue", "-j", str(jobid), "--noheader", "--Format", "EndTime"]
     try:
         cmdendtime = subprocess.run(cmd, capture_output=True, check=True, text=True)
         print(get_hours_left(cmdendtime.stdout.strip(), dt.datetime.now().astimezone()))

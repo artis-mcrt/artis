@@ -11,7 +11,7 @@ e2f736c8f1ad22d8d9762565e8d4de09  light_curve.out
 8172fc87ae8d377cd4ac5a866e2e2936  light_curve_res.out
 1b25735e8efe816f80773e742c1499e1  linelist.out
 d80043ce6bedca56511b9fd3f7c0a49f  modelgridrankassignments.out
-3ba9a34143f0d945f95ecac5cfe6b185  nuclides.out
+fc16de8f87cf49a5b809bb2036d7c099  nuclides.out
 1ac8d1143ff674ee0156a3e9f5de49ac  spec.out
 e9cad98d2ac76329f015a7eb8df1fe03  spec_res.out
 a351f1711fecd60c023d0ba7332092db  timesteps.out

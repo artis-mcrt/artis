@@ -476,15 +476,10 @@ void filter_unused_nuclides(const std::span<const int> custom_zlist, const std::
     }
 
     const bool in_any_decaypath = std::ranges::any_of(decaypaths, [&nuc](const auto& decaypath) {
-      for (const auto [z, a] : std::views::zip(decaypath.z, decaypath.a)) {
-        if (z == nuc.z && a == nuc.a) {
-          // nuc is in the decay path
-          return true;
-        }
-      }
-
-      // return true if nuc is the final daughter of a decay path
-      return (decaypath.z.back() == nuc.z && decaypath.a.back() == nuc.a);
+      return std::ranges::any_of(std::views::zip(decaypath.z, decaypath.a), [&nuc](const auto& z_and_a) {
+        const auto [z, a] = z_and_a;
+        return z == nuc.z && a == nuc.a;
+      });
     });
 
     return !in_any_decaypath;
@@ -524,8 +519,6 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
     -> double {
   // the two times are the same for every packet, so the decayed fractions come from the cache
   assert_always(!decaypath_fdecayed_tmin.empty());
-  assert_testmodeonly(tdecaymin == get_tdecaymin());
-  assert_testmodeonly(tdecaymax == globals::tmax);
   const double fdecayed_tmin = decaypath_fdecayed_tmin[decaypathindex];
   const double fdecayed_tmax = decaypath_fdecayed_tmax[decaypathindex];
   // the fraction that decays inside the time range. calc_energy_per_massoftopnuc_decaypath() uses the same
@@ -609,6 +602,8 @@ auto write_nuclides_list() {
   for (int nucindex = 0; nucindex < std::ssize(nuclides); nucindex++) {
     std::println(nuclides_file, "{} {} {}", nucindex, get_nuc_z(nucindex), get_nuc_a(nucindex));
   }
+  nuclides_file.close();
+  assert_always(!nuclides_file.fail());  // e.g. a full disk
 }
 
 }  // anonymous namespace
@@ -650,13 +645,32 @@ auto write_nuclides_list() {
 // set average energy per decay in the form of gamma rays [erg]
 void set_nucdecayenergygamma(const int nucindex, const double value) { nuclides[nucindex].endecay_gamma = value; }
 
-// convert something like Ni56 to integer 28
+// convert the name of a nuclide to its atomic number, e.g. Ni56 to 28. The case of the name has no effect.
+// The neutron (Z = 0) is not an element, thus only the mass number 1 separates it from nitrogen: n1 and N1 are the
+// neutron, and each other mass number gives nitrogen, e.g. n14 and N14.
 auto get_nucstring_z(const std::string& strnuc) -> int {
-  std::string elcode = strnuc;
-  std::erase_if(elcode, [](const unsigned char c) { return std::isdigit(c) != 0; });
+  const auto to_lowercase = [](const std::string_view text) {
+    std::string lowercase_text;
+    for (const unsigned char c : text) {
+      lowercase_text.push_back(static_cast<char>(std::tolower(c)));
+    }
+    return lowercase_text;
+  };
 
-  for (int z = 0; z <= Z_MAX; z++) {
-    if (elcode == get_elname(z)) {
+  std::string elsymbol_lowercase = to_lowercase(strnuc);
+  std::erase_if(elsymbol_lowercase, [](const unsigned char c) { return std::isdigit(c) != 0; });
+
+  const int a = get_nucstring_a(strnuc);
+  if (elsymbol_lowercase == "n" && a == 1) {
+    return 0;
+  }
+
+  for (int z = 1; z <= Z_MAX; z++) {
+    if (elsymbol_lowercase == to_lowercase(elsymbols.at(z))) {
+      if (a < z) {
+        fatal_crash("the nuclide string '{}' has the mass number {}, which is below its atomic number {}", strnuc, a,
+                    z);
+      }
       return z;
     }
   }
@@ -1106,9 +1120,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   assert_always(he4_nucindex >= 0 || !decaypaths_produce_he4());
   isotopes_of_z.assign(1 + std::ranges::max(nuclides | std::views::transform(&Nuclide::z)), {});
   for (int nucindex = 0; nucindex < std::ssize(nuclides); nucindex++) {
-    if (nuclides[nucindex].z >= 0) {
-      isotopes_of_z[nuclides[nucindex].z].push_back({.a = nuclides[nucindex].a, .nucindex = nucindex});
-    }
+    isotopes_of_z[nuclides[nucindex].z].push_back({.a = nuclides[nucindex].a, .nucindex = nucindex});
   }
   for (auto& isotopes : isotopes_of_z) {
     std::ranges::sort(isotopes, {}, &ZIsotope::a);

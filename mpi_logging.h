@@ -107,6 +107,9 @@ inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_node); }
 
 void set_log_file(std::string_view filename) noexcept;
 
+// Write the git branch, version, and status of the build and the lines of artisoptions.h to the log file.
+void log_git_metadata_and_artisoptions();
+
 // Write an already-formatted message to the log file, prepending a timestamp at the start of each line. When
 // add_newline is set, a trailing newline is appended and the next write starts a new line.
 void log_write(std::string_view message, bool add_newline) noexcept;
@@ -120,6 +123,9 @@ void log_write(std::string_view message, bool add_newline) noexcept;
 // the run. Host only. Call it through the macro fatal_crash(fmt, args...), which also has a device path.
 [[noreturn]] [[gnu::cold]] void report_fatal_error_and_abort(const char* file, int line, const char* func,
                                                              const char* message) noexcept;
+
+// Make std::terminate(), e.g. for an uncaught exception, write a fatal error and stop the run of every rank
+void set_terminate_handler_to_fatal_error() noexcept;
 
 #define __artis_assert(e)                                                 \
   {                                                                       \

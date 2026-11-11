@@ -447,6 +447,15 @@ void test_planck() {
               "intensity-weighted mean frequency of the full Planck spectrum");
 }
 
+void test_nuclide_names() {
+  std::println("Nuclide names...");
+  check(decay::get_nucstring_z("Ni56") == 28 && decay::get_nucstring_a("Ni56") == 56, "Ni56 has Z=28 and A=56");
+  check(decay::get_nucstring_z("ni56") == 28 && decay::get_nucstring_z("NI56") == 28,
+        "the case of a nuclide name has no effect");
+  check(decay::get_nucstring_z("n1") == 0 && decay::get_nucstring_z("N1") == 0, "n1 and N1 are the neutron");
+  check(decay::get_nucstring_z("n14") == 7 && decay::get_nucstring_z("N14") == 7, "n14 and N14 are nitrogen");
+}
+
 void test_bateman() {
   std::println("Bateman decay chain solutions...");
   const double lambda_a = 1. / (8.80 * DAY);  // Ni56-like
@@ -1470,6 +1479,7 @@ auto main() -> int {
   test_item_replaces_sample();
   test_sample_rpkt_emission();
   test_planck();
+  test_nuclide_names();
   test_bateman();
   test_compton();
   test_rad_deexcitation();

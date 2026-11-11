@@ -3,6 +3,9 @@
 
 set -eo pipefail
 
+# the checksum steps need the same order of the file names in each locale
+export LC_ALL=C
+
 testsdir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 repopath=$(dirname "$testsdir")
 testname=$1
@@ -51,17 +54,18 @@ if [ "$step" != all ] && [ "$step" != setup ] && [ ! -d "$modelpath" ]; then
     exit 1
 fi
 
-# Run the input check of sn3d with $1 ranks. The check must change no file of the model folder outside its own
-# folder inputcheck.
+# Run the input check of sn3d with $1 ranks. The check must change no file and no folder of the model folder outside
+# its own folder inputcheck.
 run_inputcheck() {
-    list_modelfolder_files() { find . -path ./inputcheck -prune -o ! -type d -print | sort; }
-    local files_before files_changed time_before
-    files_before=$(list_modelfolder_files)
+    list_files_and_folders() { find . -path ./inputcheck -prune -o -print | sort; }
+    local files_and_folders_before files_changed time_before
+    files_and_folders_before=$(list_files_and_folders)
     time_before=$(mktemp)
+    sleep 1  # some file systems store the time of a change in whole seconds
     "${mpirun_command[@]}" -np "$1" ./sn3d -c
-    files_changed=$(find . -path ./inputcheck -prune -o ! -type d -newer "$time_before" -print)
+    files_changed=$(find . -path ./inputcheck -prune -o ! -path . -newer "$time_before" -print)
     rm -f "$time_before"
-    if [ "$files_before" != "$(list_modelfolder_files)" ] || [ -n "$files_changed" ]; then
+    if [ "$files_and_folders_before" != "$(list_files_and_folders)" ] || [ -n "$files_changed" ]; then
         echo "[error] The input check changed the model folder: $files_changed" >&2
         exit 1
     fi
@@ -71,7 +75,7 @@ run_inputcheck() {
 case $step in
     all)
         for step_name in setup build inputcheck job0 checksums_job0 resume exspec checksums_final; do
-            if ! "${BASH_SOURCE[0]}" "$testname" "$step_name"; then
+            if ! "$testsdir/runtest.sh" "$testname" "$step_name"; then
                 echo "[error] The step $step_name of the test $testname failed." >&2
                 exit 1
             fi
@@ -88,7 +92,7 @@ case $step in
         cd "$repopath"
         saved_options=artisoptions.h.saved_by_runtest
         if [ -L "$saved_options" ] || [ -e "$saved_options" ]; then
-            echo "[error] An earlier test did not restore $saved_options. Rename it to artisoptions.h." >&2
+            echo "[error] $saved_options exists. Another build step runs now, or an earlier build step did not restore it. If no build step runs, rename it to artisoptions.h." >&2
             exit 1
         fi
         # the build folder of the test options has its own name, so your own build compiles nothing again
@@ -100,7 +104,7 @@ case $step in
         fi
         ln -s "tests/${testname}_testrun/artisoptions.h" artisoptions.h
         make --jobs="$(getconf _NPROCESSORS_ONLN)" REPRODUCIBLE=ON ZSTD=ON TESTMODE="$testmode" \
-            MAX_NODE_SIZE=2 FASTMATH=OFF sn3d exspec
+            MAX_NODE_SIZE=2 FASTMATH=OFF OPENMP=OFF STDPAR=OFF GPU=OFF OPTIMIZE=ON PGO= sn3d exspec
         cp -L sn3d exspec "$modelpath/"
         ;;
 

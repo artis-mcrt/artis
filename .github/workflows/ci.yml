@@ -139,6 +139,7 @@ jobs:
               run: cp -a ${{ matrix.testname }}_testrun ${{ matrix.testname }}_onejob
 
             - name: Check the input
+              id: inputcheck
               run: tests/runtest.sh ${{ matrix.testname }} inputcheck
 
             - name: Run test job0 start
@@ -169,10 +170,10 @@ jobs:
                   tests/runtest.sh ${{ matrix.testname }} checksums_job0 || checksums_status=$?
                   if [ -f tests/${{ matrix.testname }}_testrun/results_md5_job0.txt ]; then
                       cp tests/${{ matrix.testname }}_testrun/results_md5_job0.txt tests/${{ matrix.testname }}_inputfiles/
-                      if [ "${{ steps.run_job0.outcome }}" = "success" ]; then
+                      if [ "${{ steps.inputcheck.outcome }}" = "success" ] && [ "${{ steps.run_job0.outcome }}" = "success" ]; then
                           touch tests/${{ matrix.testname }}_inputfiles/results_md5_job0.txt.complete
                       else
-                          echo "The step writes no marker. The sn3d job0 step did not succeed (${{ steps.run_job0.outcome }})."
+                          echo "The step writes no marker. A step did not succeed (input check: ${{ steps.inputcheck.outcome }}, job0: ${{ steps.run_job0.outcome }})."
                       fi
                   fi
                   exit "$checksums_status"
@@ -218,10 +219,10 @@ jobs:
                   tests/runtest.sh ${{ matrix.testname }} checksums_final || checksums_status=$?
                   if [ -f tests/${{ matrix.testname }}_testrun/results_md5_final.txt ]; then
                       cp tests/${{ matrix.testname }}_testrun/results_md5_final.txt tests/${{ matrix.testname }}_inputfiles/
-                      if [ "${{ steps.run_job0.outcome }}" = "success" ] && [ "${{ steps.run_job1.outcome }}" = "success" ] && [ "${{ steps.run_exspec.outcome }}" = "success" ]; then
+                      if [ "${{ steps.inputcheck.outcome }}" = "success" ] && [ "${{ steps.run_job0.outcome }}" = "success" ] && [ "${{ steps.run_job1.outcome }}" = "success" ] && [ "${{ steps.run_exspec.outcome }}" = "success" ]; then
                           touch tests/${{ matrix.testname }}_inputfiles/results_md5_final.txt.complete
                       else
-                          echo "The step writes no marker. A run step did not succeed (job0: ${{ steps.run_job0.outcome }}, job1: ${{ steps.run_job1.outcome }}, exspec: ${{ steps.run_exspec.outcome }})."
+                          echo "The step writes no marker. A step did not succeed (input check: ${{ steps.inputcheck.outcome }}, job0: ${{ steps.run_job0.outcome }}, job1: ${{ steps.run_job1.outcome }}, exspec: ${{ steps.run_exspec.outcome }})."
                       fi
                   fi
                   exit "$checksums_status"
@@ -234,6 +235,8 @@ jobs:
                   # stored checksums, so it also finds a defect that the stored checksums of the resumed job hold.
                   # The one job runs to the last timestep of input-resume.txt.
                   set -eo pipefail
+                  # a failed comparison removes the final marker, so updatechecksums.yml does not take this artifact
+                  trap 'rm -f ../${{ matrix.testname }}_inputfiles/results_md5_final.txt.complete' EXIT
                   finish=$(awk 'NR == 3 {print $2}' input-resume.txt)
                   sed -E "3s/^([0-9]+) +[0-9]+/\1 ${finish}/" input-newrun.txt > input.txt
                   time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
@@ -266,6 +269,7 @@ jobs:
                       test -s "$RUNNER_TEMP/${basename}_onejob.txt"
                       cmp "$RUNNER_TEMP/${basename}_twojobs.txt" "$RUNNER_TEMP/${basename}_onejob.txt"
                   done
+                  trap - EXIT
 
             - name: Prepare for next steps
               if: always()

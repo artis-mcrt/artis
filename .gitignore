@@ -8,9 +8,12 @@ sn3d
 exspec
 unittests
 # duplicates of the build symlinks that a cloud sync makes
-sn3d ?*
-exspec ?*
-unittests ?*
+sn3d [0-9]
+sn3d [0-9][0-9]
+exspec [0-9]
+exspec [0-9][0-9]
+unittests [0-9]
+unittests [0-9][0-9]
 tags
 browse.VC.db
 *.optrpt
