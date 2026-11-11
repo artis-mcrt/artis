@@ -49,9 +49,10 @@ template <BoundaryType boundarytype, size_t S1>
   }
 
   if (discriminant > 0) {
-    // At a root, the derivative 2 a d + b of |pos + d dir|^2 - R(d)^2 is +sqrt(D) or -sqrt(D). It is positive exactly
-    // when the radial speed of the packet is greater than the shell speed. The packet leaves through an UPPER
-    // boundary at the root with +sqrt(D), and a LOWER boundary overtakes the packet at the root with -sqrt(D).
+    // At a root, the derivative 2 a d + b of |pos + d dir|^2 - R(d)^2 is +sqrt(D) or -sqrt(D), with the discriminant
+    // D = b^2 - 4 a c. The derivative is positive exactly when the radial speed of the packet is greater than the shell
+    // speed. The packet leaves through an UPPER boundary at the root with +sqrt(D), and a LOWER boundary overtakes the
+    // packet at the root with -sqrt(D).
     // Each form avoids the difference of two almost equal numbers. For a = 0, one form gives -c / b and the other an
     // infinite distance.
     const double sqrt_discriminant = std::sqrt(discriminant);
