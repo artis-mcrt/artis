@@ -672,28 +672,30 @@ void test_run_lock() {
   const auto folder = std::filesystem::temp_directory_path() / std::format("artis_lock_test_{}", getpid());
   check(std::filesystem::create_directory(folder), "the lock test creates a separate folder");
   const auto path = folder / "artis.pid";
-  RunLock first_run;
-  RunLock second_run;
-  check(!first_run.acquire(path, "first\n"), "the first run acquires the lock");
-  check(second_run.acquire(path, "second\n") == std::errc::file_exists, "an existing lock rejects another run");
   {
-    std::ifstream input(path);
-    std::string contents;
-    std::getline(input, contents);
-    check(contents == "first", "a rejected run keeps the contents of the existing lock");
-  }
-  check(!first_run.release(), "the owner releases its lock");
-  check(!second_run.acquire(path, "second\n"), "a later run can acquire the released lock");
-  check(!first_run.release() && std::filesystem::exists(path), "a repeated release keeps the lock of a later run");
+    RunLock first_run;
+    RunLock second_run;
+    check(!first_run.acquire(path, "first\n"), "the first run acquires the lock");
+    check(second_run.acquire(path, "second\n") == std::errc::file_exists, "an existing lock rejects another run");
+    {
+      std::ifstream input(path);
+      std::string contents;
+      std::getline(input, contents);
+      check(contents == "first", "a rejected run keeps the contents of the existing lock");
+    }
+    check(!first_run.release(), "the owner releases its lock");
+    check(!second_run.acquire(path, "second\n"), "a later run can acquire the released lock");
+    check(!first_run.release() && std::filesystem::exists(path), "a repeated release keeps the lock of a later run");
 
-  const auto moved_path = folder / "previous.pid";
-  std::filesystem::rename(path, moved_path);
-  {
-    std::ofstream replacement(path);
-    replacement << "replacement\n";
+    const auto moved_path = folder / "previous.pid";
+    std::filesystem::rename(path, moved_path);
+    {
+      std::ofstream replacement(path);
+      replacement << "replacement\n";
+    }
+    check(second_run.release() == std::errc::state_not_recoverable && std::filesystem::exists(path),
+          "the owner keeps a replacement file that it does not own");
   }
-  check(second_run.release() == std::errc::state_not_recoverable && std::filesystem::exists(path),
-        "the owner keeps a replacement file that it does not own");
 
   const auto race_path = folder / "race.pid";
   constexpr int competing_runs = 8;
