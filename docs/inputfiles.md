@@ -470,11 +470,12 @@ The file has one block for each ion that it calibrates. An ion with no block get
 - The number of rows can be 0, and it must not be negative.
 - The second line occurs once for each row. `rrc_low_n` is the rate coefficient to the low-n levels, and `rrc_total`
   is the total rate coefficient, both in cm^3/s.
-- `sn3d` interpolates each rate coefficient between the two rows around `RECOMBCALIBRATION_T_ELEC`. It makes no
-  calibration with a result that is negative. For a rate coefficient that is not available, give a negative value in
-  both of these rows. A negative value in only one row can give a positive result.
-- The rows of an ion that the run uses must include a temperature below and a temperature above
-  `RECOMBCALIBRATION_T_ELEC`.
+- `sn3d` uses the row at `RECOMBCALIBRATION_T_ELEC` when that temperature occurs in the table.
+  Small differences from floating-point rounding count as the same temperature.
+  Otherwise, it interpolates each rate coefficient between the nearest rows on each side of that temperature.
+  A negative result disables that calibration. For an unavailable rate coefficient, give a negative value in each row
+  that supplies the calibration. A negative value in only one of two rows can give a positive interpolated result.
+- The rows of an ion that the run uses must include `RECOMBCALIBRATION_T_ELEC`, or temperatures on both sides of it.
 
 ## autoion.txt
 
