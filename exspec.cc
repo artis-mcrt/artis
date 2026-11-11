@@ -11,7 +11,6 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
-#include <filesystem>
 #include <format>
 #include <functional>
 #include <span>
@@ -37,7 +36,7 @@ auto main(int argc, char* argv[]) -> int {
 
   globals::setup_mpi_vars();
 
-  check_already_running();
+  acquire_run_lock();
 
   // the log lines of the other ranks go nowhere
   if (globals::my_rank == 0) {
@@ -113,9 +112,8 @@ auto main(int argc, char* argv[]) -> int {
   const auto exspec_duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start).count();
   printlnlog("exspec finished (took {:.1f} seconds)", exspec_duration);
 
+  release_run_lock();
   MPI_Finalize();
-
-  std::filesystem::remove("artis.pid");
 
   return 0;
 }

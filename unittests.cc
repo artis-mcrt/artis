@@ -5,8 +5,11 @@
 // their own files and remove them.
 // (Compile-time checks of the constexpr helpers live in static_asserts next to their definitions.)
 
+#include <unistd.h>
+
 #include <algorithm>
 #include <array>
+#include <barrier>
 #include <bit>
 #include <cmath>
 #include <cstddef>
@@ -26,6 +29,8 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <system_error>
+#include <thread>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -58,6 +63,7 @@
 #include "random.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
+#include "run_lock.h"
 #include "sn3d.h"
 #include "spectrum_lightcurve.h"
 #include "toms748.h"
@@ -809,6 +815,57 @@ void test_recombination_rate_rows() {
   std::istringstream nearby_table{std::format("{:.17g} -1 9e-12", log_Te + 1e-10)};
   check(!read_recombination_rate_rows(nearby_table, 1, log_Te),
         "a distinct nearby temperature still needs interpolation");
+}
+
+void test_run_lock() {
+  std::println("exclusive run lock...");
+  const auto folder = std::filesystem::temp_directory_path() / std::format("artis_lock_test_{}", getpid());
+  check(std::filesystem::create_directory(folder), "the lock test creates a separate folder");
+  const auto path = folder / "artis.pid";
+  RunLock first_run;
+  RunLock second_run;
+  check(!first_run.acquire(path, "first\n"), "the first run acquires the lock");
+  check(second_run.acquire(path, "second\n") == std::errc::file_exists, "an existing lock rejects another run");
+  {
+    std::ifstream input(path);
+    std::string contents;
+    std::getline(input, contents);
+    check(contents == "first", "a rejected run keeps the contents of the existing lock");
+  }
+  check(!first_run.release(), "the owner releases its lock");
+  check(!second_run.acquire(path, "second\n"), "a later run can acquire the released lock");
+  check(!first_run.release() && std::filesystem::exists(path), "a repeated release keeps the lock of a later run");
+
+  const auto moved_path = folder / "previous.pid";
+  std::filesystem::rename(path, moved_path);
+  {
+    std::ofstream replacement(path);
+    replacement << "replacement\n";
+  }
+  check(second_run.release() == std::errc::state_not_recoverable && std::filesystem::exists(path),
+        "the owner keeps a replacement file that it does not own");
+
+  const auto race_path = folder / "race.pid";
+  constexpr int competing_runs = 8;
+  std::barrier ready(competing_runs);
+  std::array<bool, competing_runs> acquired{};
+  std::vector<std::jthread> competitors;
+  competitors.reserve(competing_runs);
+  for (int i = 0; i < competing_runs; i++) {
+    competitors.emplace_back([&, i] {
+      RunLock competing_run;
+      ready.arrive_and_wait();
+      acquired[i] = !competing_run.acquire(race_path, "race\n");
+    });
+  }
+  for (auto& competitor : competitors) {
+    competitor.join();
+  }
+  check(std::ranges::count(acquired, true) == 1, "only one simultaneous run acquires the lock");
+  RunLock later_run;
+  check(later_run.acquire(race_path, "later\n") == std::errc::file_exists,
+        "a run that omits release leaves its lock for an explicit check");
+  std::filesystem::remove_all(folder);
 }
 
 void test_input_helpers() {
@@ -1645,6 +1702,7 @@ auto main() -> int {
   test_phixs_table_lookup();
   test_closest_transition_randomised();
   test_recombination_rate_rows();
+  test_run_lock();
   test_input_helpers();
   test_parse_next_token();
   test_seed64_distinct_states();
