@@ -938,6 +938,14 @@ void enter_inputcheck_folder() {
   const auto* const foldername = "inputcheck";
   std::error_code ec;
   if (globals::my_rank == 0) {
+    const auto folder_status = std::filesystem::symlink_status(foldername, ec);
+    if (ec && ec != std::errc::no_such_file_or_directory) {
+      fatal_crash("Could not inspect the folder '{}': {}", foldername, ec.message());
+    }
+    if (std::filesystem::is_symlink(folder_status)) {
+      fatal_crash("The folder '{}' must be a directory, not a symbolic link.", foldername);
+    }
+    ec.clear();
     std::filesystem::create_directory(foldername, ec);
     if (ec) {
       fatal_crash("Could not create the folder '{}': {}", foldername, ec.message());
