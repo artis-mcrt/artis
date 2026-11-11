@@ -107,7 +107,7 @@ struct CTReaction {
 
   int ratetable_index{-1};  // >= 0 selects a tabulated Landau-Zener rate coefficient
 
-  // a reverse (endothermic) entry carries the energy release of its exothermic forward reaction [erg]
+  // a reverse entry carries the energy release of its forward reaction [erg], negative if that reaction needs energy
   bool is_reverse{false};
   double delta_e{0.};
 };
@@ -290,7 +290,7 @@ auto eval_reaction_ratecoeff(const CTReaction& r, const int nonemptymgi, const d
                  : chargetransfer::evaluate_ctfit(r.a, r.b, r.c, r.d, r.eexp, r.tmin, r.tmax, T_e);
   if (r.is_reverse) {
     // detailed balance for the per-ion rates: the products of this entry are the reactants of the
-    // exothermic forward reaction, so the partition functions of the products go over those of the
+    // forward reaction, so the partition functions of the products go over those of the
     // reactants, with the Boltzmann factor of the energy release
     const double partner_partfunc_ratio = get_ion_partfunct(nonemptymgi, r.partner_element, r.partner_ion - step) /
                                           get_ion_partfunct(nonemptymgi, r.partner_element, r.partner_ion);
@@ -352,12 +352,8 @@ auto add_reaction(const int element_acc, const int ion_acc, const int element_do
   }
 
   // energy release of the forward reaction: the captured electron binds more strongly on the
-  // acceptor than it did on the donor. An endothermic file entry gets no detailed balance
-  // reverse, because its listed rate is a floor value and the balance would amplify it.
+  // acceptor than it did on the donor. The value is negative for a forward reaction that needs energy.
   const double delta_e = get_ionpot(element_acc, ion_acc - 1) - get_ionpot(element_don, ion_don);
-  if (delta_e <= 0.) {
-    return false;
-  }
 
   CTReaction rev = params;
   rev.is_reverse = true;

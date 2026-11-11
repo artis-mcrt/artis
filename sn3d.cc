@@ -37,7 +37,6 @@
 #include <ranges>
 #endif
 #include <span>
-#include <sstream>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -66,7 +65,6 @@
 #include "stats.h"
 #include "update_grid.h"
 #include "update_packets.h"
-#include "version.h"
 #include "vpkt.h"
 
 namespace {
@@ -612,41 +610,30 @@ void mpi_reduce_estimators(const int nts) {
     }
   }
 
-  assert_always(std::ssize(globals::dep_estimator_gamma) == nonempty_npts_model);
-  MPI_Allreduce_safe(globals::dep_estimator_gamma, MPI_SUM, MPI_COMM_WORLD);
-  assert_always(std::ssize(globals::dep_estimator_positron) == nonempty_npts_model);
-  MPI_Allreduce_safe(globals::dep_estimator_positron, MPI_SUM, MPI_COMM_WORLD);
-  assert_always(std::ssize(globals::dep_estimator_electron) == nonempty_npts_model);
-  MPI_Allreduce_safe(globals::dep_estimator_electron, MPI_SUM, MPI_COMM_WORLD);
-  assert_always(std::ssize(globals::dep_estimator_alpha) == nonempty_npts_model);
-  MPI_Allreduce_safe(globals::dep_estimator_alpha, MPI_SUM, MPI_COMM_WORLD);
+  for (auto* const dep_estimator : {
+           &globals::dep_estimator_gamma,
+           &globals::dep_estimator_positron,
+           &globals::dep_estimator_electron,
+           &globals::dep_estimator_alpha,
+       }) {
+    assert_always(std::ssize(*dep_estimator) == nonempty_npts_model);
+    MPI_Allreduce_safe(*dep_estimator, MPI_SUM, MPI_COMM_WORLD);
+  }
 
-  MPI_Allreduce_safe(globals::timesteps[nts].gamma_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].gamma_dep_discrete /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].positron_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].positron_dep_discrete /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].positron_emission, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].positron_emission /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].electron_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].electron_dep_discrete /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].electron_emission, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].electron_emission /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].alpha_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].alpha_dep_discrete /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].alpha_emission, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].alpha_emission /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].spfission_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].spfission_dep_discrete /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].gamma_emission, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].gamma_emission /= globals::nprocs;
+  for (const auto timestep_sum : {
+           &globals::TimeStep::gamma_dep_discrete,
+           &globals::TimeStep::positron_dep_discrete,
+           &globals::TimeStep::positron_emission,
+           &globals::TimeStep::electron_dep_discrete,
+           &globals::TimeStep::electron_emission,
+           &globals::TimeStep::alpha_dep_discrete,
+           &globals::TimeStep::alpha_emission,
+           &globals::TimeStep::spfission_dep_discrete,
+           &globals::TimeStep::gamma_emission,
+       }) {
+    MPI_Allreduce_safe(globals::timesteps[nts].*timestep_sum, MPI_SUM, MPI_COMM_WORLD);
+    globals::timesteps[nts].*timestep_sum /= globals::nprocs;
+  }
 
   // The estimators have been summed across all processes and distributed.
   // They will now be normalised independently on all processes.
@@ -878,8 +865,15 @@ void remove_previous_simulation_files() {
       paths_to_remove.push_back(entry.path());
     }
   }
+  if (ec) {
+    fatal_crash("could not list the model folder: {}", ec.message());
+  }
   for (const auto& path : paths_to_remove) {
     std::filesystem::remove_all(path, ec);
+    // a file of the previous simulation that stays, e.g. an open file on NFS, would mix with the new output
+    if (ec) {
+      fatal_crash("could not remove '{}' of the previous simulation: {}", path.string(), ec.message());
+    }
   }
 }
 
@@ -1061,18 +1055,7 @@ void open_log_files_and_log_job_configuration(const CommandLineOptions& options)
 
   printlnlog("The per-rank output files go into the job folder '{}'", globals::jobfolder);
 
-  printlnlog("git branch: {}", GIT_BRANCH);
-
-  printlnlog("git version: {}", GIT_VERSION);
-
-  printlnlog("git status: {}", GIT_STATUS);
-
-  std::istringstream option_lines{std::string{ARTISOPTIONS_LINES}};
-  for (std::string option_line; std::getline(option_lines, option_line);) {
-    if (!option_line.empty()) {
-      printlnlog("artisoptions.h: {}", option_line);
-    }
-  }
+  log_git_metadata_and_artisoptions();
 
   printlnlog("sn3d compiled at {} on {}", __TIME__, __DATE__);
 
@@ -1153,7 +1136,6 @@ void read_input_and_initialise_simulation(std::span<Packet> packets) {
 
   if (!globals::simulation_continued_from_saved) {
     packet_init(packets);
-    zero_estimators();
   }
 
   // log the range of model cells that setup_nstart_ndo() in grid.cc assigned to this rank for update_grid()
@@ -1222,6 +1204,7 @@ auto main(int argc, char* argv[]) -> int {
   real_time_start = std::chrono::steady_clock::now();
 
   MPI_Init(&argc, &argv);
+  set_terminate_handler_to_fatal_error();
 
   globals::setup_mpi_vars();
 

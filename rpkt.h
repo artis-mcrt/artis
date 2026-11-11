@@ -179,7 +179,7 @@ static_assert((get_linedistance(2., 4., 2., -1.) * get_expopac_pathfactor(2., 2.
 [[gnu::pure]] [[nodiscard]] constexpr auto closest_transition(const double nu_cmf, const int next_trans,
                                                               const std::span<const double> linelistnu) -> int {
   const int nlines = static_cast<int>(linelistnu.size());
-  if (next_trans > (nlines - 1)) {
+  if (linelistnu.empty() || next_trans > (nlines - 1)) {
     // packet is tagged as having no more line interactions
     return -1;
   }
@@ -189,8 +189,8 @@ static_assert((get_linedistance(2., 4., 2., -1.) * get_expopac_pathfactor(2., 2.
     return -1;
   }
 
-  if (next_trans > 0) [[likely]] {
-    // next_trans > 0 gives the next line to interact with. The packet nu_cmf can be below
+  if (next_trans >= 0) [[likely]] {
+    // next_trans >= 0 gives the next line to interact with. The packet nu_cmf can be below
     // linelistnu[next_trans] because of propagation errors.
     return next_trans;
   }
@@ -217,6 +217,7 @@ static_assert(closest_transition(8., -1, test_closest_transition_linelist_nu) ==
 static_assert(closest_transition(5., -1, test_closest_transition_linelist_nu) == 2);  // exact frequency match
 static_assert(closest_transition(2., -1, test_closest_transition_linelist_nu) == -1);  // redder than the whole list
 static_assert(closest_transition(8., 2, test_closest_transition_linelist_nu) == 2);  // known next transition
+static_assert(closest_transition(8., 0, test_closest_transition_linelist_nu) == 0);  // the first line is known too
 static_assert(closest_transition(8., 4, test_closest_transition_linelist_nu) == -1);  // no more line interactions
 
 // Whether a bound-free continuum contributes to the opacity of a cell, i.e. whether the cell contains enough

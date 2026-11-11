@@ -418,7 +418,7 @@ constexpr double NU_MIN_R;
 constexpr double NU_MAX_R;
 
 // Sample the electron scattering direction of a real packet from the dipole phase function. False gives
-// isotropic scattering. A virtual packet always uses the dipole function.
+// isotropic scattering. A virtual packet always uses the dipole function, so VPKT_ON needs this option.
 constexpr bool DIPOLE;
 
 // Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out.
@@ -433,6 +433,8 @@ constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 // with the true absorption opacity. That opacity is the sum of P times the binned opacity, the free-free
 // opacity, and the bound-free opacity of each continuum times 1 - nu_edge / nu. The code therefore computes the
 // binned opacities also without RPKT_USE_BINNED_OPACITIES. A thick cell samples a plain Planck function.
+// The thermal balance has no term for this line thermalisation, so a nonzero P needs LTE timesteps only: sn3d
+// stops if num_lte_timesteps of input.txt is below the number of timesteps.
 // No value keeps the macroatom.
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 

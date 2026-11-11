@@ -770,7 +770,7 @@ The frequency limits of the UVOIR spectra and of the blackbody sampling of a k-p
 
 `bool DIPOLE`
 
-Sample the electron scattering direction of a real packet from the dipole phase function. False gives isotropic scattering. A virtual packet always uses the dipole function.
+Sample the electron scattering direction of a real packet from the dipole phase function. False gives isotropic scattering. A virtual packet always uses the dipole function, so VPKT_ON needs this option.
 
 **Preset values:** classic `true`, kilonova_lte `false`, nltenebular `false`, nltephotospheric `false`
 
@@ -794,7 +794,7 @@ Use the full relativistic Doppler factor instead of the first-order 1 - n.v/c. T
 
 `std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY`
 
-Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted with the true absorption opacity. That opacity is the sum of P times the binned opacity, the free-free opacity, and the bound-free opacity of each continuum times 1 - nu_edge / nu. The code therefore computes the binned opacities also without RPKT_USE_BINNED_OPACITIES. A thick cell samples a plain Planck function. No value keeps the macroatom.
+Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted with the true absorption opacity. That opacity is the sum of P times the binned opacity, the free-free opacity, and the bound-free opacity of each continuum times 1 - nu_edge / nu. The code therefore computes the binned opacities also without RPKT_USE_BINNED_OPACITIES. A thick cell samples a plain Planck function. The thermal balance has no term for this line thermalisation, so a nonzero P needs LTE timesteps only: sn3d stops if num_lte_timesteps of input.txt is below the number of timesteps. No value keeps the macroatom.
 
 **Every preset:** `no value`
 

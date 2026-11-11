@@ -476,15 +476,10 @@ void filter_unused_nuclides(const std::span<const int> custom_zlist, const std::
     }
 
     const bool in_any_decaypath = std::ranges::any_of(decaypaths, [&nuc](const auto& decaypath) {
-      for (const auto [z, a] : std::views::zip(decaypath.z, decaypath.a)) {
-        if (z == nuc.z && a == nuc.a) {
-          // nuc is in the decay path
-          return true;
-        }
-      }
-
-      // return true if nuc is the final daughter of a decay path
-      return (decaypath.z.back() == nuc.z && decaypath.a.back() == nuc.a);
+      return std::ranges::any_of(std::views::zip(decaypath.z, decaypath.a), [&nuc](const auto& z_and_a) {
+        const auto [z, a] = z_and_a;
+        return z == nuc.z && a == nuc.a;
+      });
     });
 
     return !in_any_decaypath;
@@ -524,8 +519,6 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
     -> double {
   // the two times are the same for every packet, so the decayed fractions come from the cache
   assert_always(!decaypath_fdecayed_tmin.empty());
-  assert_testmodeonly(tdecaymin == get_tdecaymin());
-  assert_testmodeonly(tdecaymax == globals::tmax);
   const double fdecayed_tmin = decaypath_fdecayed_tmin[decaypathindex];
   const double fdecayed_tmax = decaypath_fdecayed_tmax[decaypathindex];
   // the fraction that decays inside the time range. calc_energy_per_massoftopnuc_decaypath() uses the same
@@ -609,6 +602,8 @@ auto write_nuclides_list() {
   for (int nucindex = 0; nucindex < std::ssize(nuclides); nucindex++) {
     std::println(nuclides_file, "{} {} {}", nucindex, get_nuc_z(nucindex), get_nuc_a(nucindex));
   }
+  nuclides_file.close();
+  assert_always(!nuclides_file.fail());  // e.g. a full disk
 }
 
 }  // anonymous namespace

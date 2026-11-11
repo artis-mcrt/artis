@@ -104,6 +104,9 @@ void read_gamma_spectrum(const int nucindex, const std::string& filename) {
     gamma_spectra[nucindex].push_back({.energy = en_mev * MEV, .probability = prob});
     E_gamma_avg += en_mev * MEV * prob;
   }
+  if (get_noncommentline(gammafile, line)) {
+    fatal_crash("{} holds more gamma-ray lines than its count of {}", filename, nlines);
+  }
 
   decay::set_nucdecayenergygamma(nucindex, E_gamma_avg);
 }
@@ -145,17 +148,19 @@ void read_gamma_tables() {
     gamma_spectra[nucindex].clear();
     const int z = decay::get_nuc_z(nucindex);
     const int a = decay::get_nuc_a(nucindex);
-    if (z < 1) {
-      continue;
-    }
 
     auto strelname = decay::get_elname(z);
     std::ranges::transform(strelname, strelname.begin(), [](unsigned char c) { return std::tolower(c); });
 
     const auto striso = std::format("{}{}", strelname, a);
 
-    // search the folders of datafolders in order
-    const std::array filenames = {std::format("gamma_{}.txt", striso), std::format("{}_lines.txt", striso)};
+    // search the folders of datafolders in order. The third name is the old name of the Ni56 and Co56 tables, which
+    // the input check cannot rename.
+    const std::array filenames = {
+        std::format("gamma_{}.txt", striso),
+        std::format("{}_lines.txt", striso),
+        (a == 56 && (z == 27 || z == 28)) ? std::format("{}_lines.txt", strelname) : std::string{},
+    };
 
     // keep the order of the search: the folder decides first, then the name of the file
     bool tablefound = false;
@@ -317,6 +322,8 @@ void init_gamma_linelist() {
                    decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex), allnuc_gamma_line_list[i].nucgammaindex,
                    gamma_spectra[nucindex][index].energy / MEV, gamma_spectra[nucindex][index].probability);
     }
+    gammalinelist.close();
+    assert_always(!gammalinelist.fail());  // e.g. a full disk
     printlnlog("Wrote combined gamma-ray line list to gammalinelist.out");
   }
 }

@@ -617,13 +617,9 @@ void read_collion_data() {
 
         // shell occupancies of this ion from electron_shell_occupancy.txt
         const auto& shells_q = allions_shell_occupancies[get_uniqueionindex(element, ion)];
-        int electron_count = 0;
         const auto num_shells = std::ssize(shells_q);
         for (int shellindex = 0; shellindex < num_shells; shellindex++) {
           const int electronsinshell = shells_q.at(shellindex);
-
-          electron_count += electronsinshell;
-
           if (electronsinshell <= 0) {
             continue;
           }
@@ -649,9 +645,6 @@ void read_collion_data() {
           collionrow.en_auger_ev = 0.;
 
           colliondata.push_back(collionrow);
-          if (electron_count >= nbound) {
-            break;
-          }
         }
       }
     }
@@ -801,21 +794,36 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
   return 0.;
 }
 
-auto get_xs_ionisation_vector_lotz(std::array<double, SFPTS>& xs_vec, const ShellParams& colliondata_ion) -> int {
-  const int element = get_elementindex(colliondata_ion.Z);
-  const int ion = colliondata_ion.ionstage - get_ionstage(element, 0);
-  const int shellindex = -colliondata_ion.l;
-  const int electronsinshell = allions_shell_occupancies[get_uniqueionindex(element, ion)][shellindex];
-
+// impact ionisation cross section in cm^2
+// energy and ionisation_potential should be in eV
+// fitting formula of Younger (1981), J. Quant. Spectrosc. Radiat. Transfer, 26, 329-337,
+// doi:10.1016/0022-4073(81)90127-8
+// this is the total ionisation cross section that Kozma & Fransson (1992) write as sigma_ic (their equations 5, 10 and
+// 11, and the ionisation term of equation 7)
+constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& colliondata_ion) -> double {
   const double ionpot_ev = colliondata_ion.ionpot_ev;
-  const int startindex = get_energyindex_ev_gteq(ionpot_ev);
-  std::fill_n(xs_vec.begin(), startindex, 0.);
+  const double u = energy_ev / ionpot_ev;
 
-  for (int i = startindex; i < SFPTS; i++) {
-    xs_vec[i] = xs_ionisation_lotz(engrid(i) * EV, colliondata_ion, electronsinshell);
+  if (u <= 1.) {
+    return 0;
+  }
+  const double A = colliondata_ion.A;
+  if (A < 0) {
+    const int element = get_elementindex(colliondata_ion.Z);
+    const int ion = colliondata_ion.ionstage - get_ionstage(element, 0);
+    const int shellindex = -colliondata_ion.l;
+    const int electronsinshell = allions_shell_occupancies[get_uniqueionindex(element, ion)][shellindex];
+    return xs_ionisation_lotz(energy_ev * EV, colliondata_ion, electronsinshell);
   }
 
-  return startindex;
+  const double B = colliondata_ion.B;
+  const double C = colliondata_ion.C;
+  const double D = colliondata_ion.D;
+
+  // the maximum keeps a fit that dips below zero just above the threshold out of the rates
+  return std::max(
+      0., 1e-14 * ((A * (1 - (1 / u))) + (B * pow2((1 - (1 / u)))) + (C * std::log(u)) + (D * std::log(u) / u)) /
+              (u * pow2(ionpot_ev)));
 }
 
 // xs_vec will be set with impact ionisation cross sections [cm2] for E > ionpot_ev (and zeros below this energy)
@@ -824,35 +832,15 @@ auto get_xs_ionisation_vector_lotz(std::array<double, SFPTS>& xs_vec, const Shel
 auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellParams& colliondata_ion) -> int {
   const double ionpot_ev = colliondata_ion.ionpot_ev;
   if (ionpot_ev > SF_EMAX) {
-    // every grid point is below the ionisation threshold, so all cross sections are zero.
-    // Without this, the clamped startindex below would evaluate the Younger fitting formula at
-    // u = E / I < 1, where it goes negative.
+    // every grid point is below the ionisation threshold, so all cross sections are zero
     xs_vec.fill(0.);
     return SFPTS;
   }
-  const double A = colliondata_ion.A;
-  if (A < 0) {
-    return get_xs_ionisation_vector_lotz(xs_vec, colliondata_ion);
-  }
-
   const int startindex = get_energyindex_ev_gteq(ionpot_ev);
-
   std::fill_n(xs_vec.begin(), startindex, 0.);
-
-  const double B = colliondata_ion.B;
-  const double C = colliondata_ion.C;
-  const double D = colliondata_ion.D;
-
   for (int i = startindex; i < SFPTS; i++) {
-    const double u = engrid(i) / ionpot_ev;
-    const double xs_ioniz =
-        1e-14 * ((A * (1 - (1 / u))) + (B * pow2(1 - (1 / u))) + (C * std::log(u)) + (D * std::log(u) / u)) /
-        (u * pow2(ionpot_ev));
-    // a fit with A + C + D < 0 dips below zero just above the threshold, and a negative cross
-    // section must not enter the matrix (the Lotz path has the same guard)
-    xs_vec[i] = std::max(xs_ioniz, 0.);
+    xs_vec[i] = xs_impactionisation(engrid(i), colliondata_ion);
   }
-
   return startindex;
 }
 
@@ -957,38 +945,6 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
   // Hays 1971)", but Schunk & Hays (1971), Planet. Space Sci., 19, 113-117, doi:10.1016/0032-0633(71)90071-7, p. 114,
   // define it by "ln gamma is Euler's constant", i.e. gamma = exp(0.5772) = 1.781 rather than 0.5772 itself.
   return boostfactor * nne * 2 * PI * pow4(QE) / energy * std::log(ME * pow3(v) / (EXP_EULERGAMMA * pow2(QE) * omegap));
-}
-
-// impact ionisation cross section in cm^2
-// energy and ionisation_potential should be in eV
-// fitting formula of Younger (1981), J. Quant. Spectrosc. Radiat. Transfer, 26, 329-337,
-// doi:10.1016/0022-4073(81)90127-8
-// this is the total ionisation cross section that Kozma & Fransson (1992) write as sigma_ic (their equations 5, 10 and
-// 11, and the ionisation term of equation 7)
-constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& colliondata_ion) -> double {
-  const double ionpot_ev = colliondata_ion.ionpot_ev;
-  const double u = energy_ev / ionpot_ev;
-
-  if (u <= 1.) {
-    return 0;
-  }
-  const double A = colliondata_ion.A;
-  if (A < 0) {
-    const int element = get_elementindex(colliondata_ion.Z);
-    const int ion = colliondata_ion.ionstage - get_ionstage(element, 0);
-    const int shellindex = -colliondata_ion.l;
-    const int electronsinshell = allions_shell_occupancies[get_uniqueionindex(element, ion)][shellindex];
-    return xs_ionisation_lotz(energy_ev * EV, colliondata_ion, electronsinshell);
-  }
-
-  const double B = colliondata_ion.B;
-  const double C = colliondata_ion.C;
-  const double D = colliondata_ion.D;
-
-  // the maximum keeps a fit that dips below zero just above the threshold out of the rates
-  return std::max(
-      0., 1e-14 * ((A * (1 - (1 / u))) + (B * pow2((1 - (1 / u)))) + (C * std::log(u)) + (D * std::log(u) / u)) /
-              (u * pow2(ionpot_ev)));
 }
 
 // N(E) of equation 11 of Kozma & Fransson (1992): the rate at which electrons appear at an energy E below the solved
@@ -1760,11 +1716,14 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       frac_excitation_of_stored_list += ntexcitation.frac_deposition;
     }
     // A bad solution can give more than the deposition energy to ionisation and excitation. The packets then
-    // reach only the fraction 1 - frac_ionisation, so each stored transition gets its part of that fraction.
+    // reach only the fraction 1 - frac_ionisation, so each stored transition gets its part of that fraction. The
+    // rate coefficients of the NLTE matrix get the same factor.
     const double frac_not_ionisation = std::max(0., 1. - frac_ionisation_total);
     if (frac_excitation_of_stored_list > frac_not_ionisation) {
+      const double stored_excitation_scale = frac_not_ionisation / frac_excitation_of_stored_list;
       for (auto& ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
-        ntexcitation.frac_deposition *= frac_not_ionisation / frac_excitation_of_stored_list;
+        ntexcitation.frac_deposition *= stored_excitation_scale;
+        ntexcitation.ratecoeffperdeposition *= stored_excitation_scale;
       }
       frac_excitation_of_stored_list = frac_not_ionisation;
     }
@@ -2021,27 +1980,25 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
       // shells with no Auger data have en_auger_ev == 0 (and prob_num_auger[0] == 1, which would make the
       // energy boost factor below infinite) and inject no Auger electrons
       const int augerstopindex = get_auger_rowstopindex(collionrow);
-      if (augerstopindex > 0) {
-        for (int i = 0; i < augerstopindex; i++) {
-          const int rowoffset = uppertriangular(i, 0);
-          const double en = engrid(i);
-          const int jstart = std::max(i, xsstartindex);
-          for (int j = jstart; j < SFPTS; j++) {
-            // the Auger electron source is an integral of the ionisation rate over E', so each column
-            // carries a DELTA_E integration weight like the other ionisation integrals above
-            const double xs = vec_xs_ionisation[j];
-            if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
-              const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
-              for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-                if (en < (en_auger_ev * en_boost / a)) {
-                  sfmatrixuppertri[rowoffset + j] -= nnion * xs * collionrow.prob_num_auger[a] * a * DELTA_E;
-                }
+      for (int i = 0; i < augerstopindex; i++) {
+        const int rowoffset = uppertriangular(i, 0);
+        const double en = engrid(i);
+        const int jstart = std::max(i, xsstartindex);
+        for (int j = jstart; j < SFPTS; j++) {
+          // the Auger electron source is an integral of the ionisation rate over E', so each column
+          // carries a DELTA_E integration weight like the other ionisation integrals above
+          const double xs = vec_xs_ionisation[j];
+          if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
+            const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
+            for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++) {
+              if (en < (en_auger_ev * en_boost / a)) {
+                sfmatrixuppertri[rowoffset + j] -= nnion * xs * collionrow.prob_num_auger[a] * a * DELTA_E;
               }
-            } else {
-              // inject a single electron per ionisation carrying the mean total Auger energy
-              assert_always(en < en_auger_ev);
-              sfmatrixuppertri[rowoffset + j] -= nnion * xs * DELTA_E;
             }
+          } else {
+            // inject a single electron per ionisation carrying the mean total Auger energy
+            assert_always(en < en_auger_ev);
+            sfmatrixuppertri[rowoffset + j] -= nnion * xs * DELTA_E;
           }
         }
       }

@@ -17,9 +17,9 @@
 
 // Packet state in the indivisible energy packet scheme of Lucy (2002), A&A, 384, 725-735,
 // doi:10.1051/0004-6361:20011756.
-// do_packet() dispatches on this. Every packet starts as TYPE_RADIOACTIVE_PELLET; those that reach the grid
-// surface end as TYPE_ESCAPE, while packets still in flight when the run ends keep whatever type they held,
-// which is why exspec filters on TYPE_ESCAPE:
+// do_packet() selects the next step from this type. Each packet starts as TYPE_RADIOACTIVE_PELLET. A packet that
+// reaches the surface of the grid ends as TYPE_ESCAPE. A packet that did not escape before the end of the run keeps
+// its last type. For this reason, exspec uses only the packets of TYPE_ESCAPE:
 //
 //   RADIOACTIVE_PELLET --(decay to gamma rays)--> GAMMA
 //                      --(decay to a lepton/alpha)--> NONTHERMAL_PREDEPOSIT_{BETAMINUS,BETAPLUS,ALPHA}

@@ -14,6 +14,7 @@ The script gives the status 0 when each check passes, and 1 otherwise.
 """
 
 import re
+import subprocess  # ruff: ignore[suspicious-subprocess-import]
 import sys
 from pathlib import Path
 
@@ -41,10 +42,15 @@ def find_make_option_differences() -> list[str]:
 
 
 def read_source_with_joined_literals() -> str:
-    """Give the text of the C++ source, with adjacent string literals joined."""
-    source = "\n".join(
-        path.read_text(encoding="utf-8") for pattern in ("*.cc", "*.h") for path in sorted(REPO_ROOT.glob(pattern))
+    """Give the text of the tracked C++ source of the repository root, with adjacent string literals joined."""
+    # git lists no untracked copy, e.g. "sn3d 2.cc" of a cloud sync. ":(glob)" keeps out the files of the subfolders
+    listing = subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true]
+        ["git", "-C", str(REPO_ROOT), "ls-files", ":(glob)*.cc", ":(glob)*.h"],  # ruff: ignore[start-process-with-partial-path]
+        capture_output=True,
+        text=True,
+        check=True,
     )
+    source = "\n".join((REPO_ROOT / name).read_text(encoding="utf-8") for name in listing.stdout.split())
     return re.sub(r'"\s*\n\s*"', "", source)
 
 

@@ -234,7 +234,8 @@ the second argument.
   point to the build of the test.
 - `inputcheck` removes `input.txt` and runs `sn3d -c`, which reads the input
   from `input-newrun.txt` and runs no timestep. The step fails if the check
-  changes a file of the model folder outside the folder `inputcheck`.
+  changes a file or a folder of the model folder outside the folder
+  `inputcheck`.
 - `job0` removes `input.txt` and starts a new simulation. `sn3d` then restores
   `input.txt` from `input-newrun.txt`. After a run, `input.txt` holds the
   values that continue that run.
@@ -518,7 +519,8 @@ are the only defence.
 - Two numeric helpers are an exception. `toms748.h` throws `std::domain_error`
   on the host, inside a guard that returns a NaN for a GPU build.
   `gausskronrod.h` throws without a guard, because a GPU build uses the Simpson
-  integrator and does not compile it. No code catches these exceptions. Keep
+  integrator and does not compile it. No code catches these exceptions, so the
+  terminate handler of `mpi_logging.cc` reports them as a fatal error. Keep
   the guards, because device code permits no exception. Both files are bit-exact extractions of Boost.Math. Do
   not change their floating-point expressions or their table literals.
 

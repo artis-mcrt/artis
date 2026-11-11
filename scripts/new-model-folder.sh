@@ -59,6 +59,6 @@ cat << EOF
 The model folder '$model_folder' is ready. The next steps:
 $build_step
   2. Put model.txt, abundances.txt, and an atomic database into '$model_folder'.
-  3. Set lines 1 to 3, 18, and 19 of '$model_folder/input.txt' for your model.
+  3. In '$model_folder/input.txt', set the lines with the labels 1 to 3, 18, and 19 for your model.
      They hold the timesteps, the times, and the LTE and grey timesteps.
 EOF
