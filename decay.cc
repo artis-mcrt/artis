@@ -515,11 +515,10 @@ auto calc_decaypath_unitfactor(const int decaypathindex, const double time, cons
 // the first time at which a packet can decay. Initial packets can decay from the model snapshot time.
 [[nodiscard]] auto get_tdecaymin() -> double { return INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin; }
 
-auto sample_decaytime(const int decaypathindex, rngstate_type& rngstate) -> double {
+auto sample_decaytime(const int decaypathindex, const double tdecaymin, const double tdecaymax, rngstate_type& rngstate)
+    -> double {
   // the two times are the same for every packet, so the decayed fractions come from the cache
   assert_always(!decaypath_fdecayed_tmin.empty());
-  const double tdecaymin = get_tdecaymin();
-  const double tdecaymax = globals::tmax;
   const double fdecayed_tmin = decaypath_fdecayed_tmin[decaypathindex];
   const double fdecayed_tmax = decaypath_fdecayed_tmax[decaypathindex];
   // the fraction that decays inside the time range. calc_energy_per_massoftopnuc_decaypath() uses the same
@@ -1519,7 +1518,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
   const double tdecaymin = get_tdecaymin();
 
   if constexpr (UNIFORM_PELLET_ENERGIES) {
-    pkt.tdecay = sample_decaytime(decaypathindex, get_rngstate(pkt));
+    pkt.tdecay = sample_decaytime(decaypathindex, tdecaymin, globals::tmax, get_rngstate(pkt));
     pkt.e_cmf = e_cmf_per_packet;
   } else {
     // use uniform decay time distribution and scale the packet energies instead.

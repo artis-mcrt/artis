@@ -2830,40 +2830,71 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
         }
       }
     }
-  }
 
-  // The z axis of a 2D grid and the three axes of a 3D grid are Cartesian. For x, the packet trajectory is
-  // x = x0 + (dir.x) * c * (t - tstart)
-  // the boundaries follow
-  // x+/- = x+/-(tmin) * (t/tmin)
-  // so the crossing occurs when
-  // t - tstart = (x0 - x+/-(tmin)/tmin * tstart) / (x+/-(tmin)/tmin - (dir.x)*c)
-  // distance = c * (t - tstart)
-  for (int d = (prop_gridtype == GridType::CARTESIAN3D) ? 0 : 1; d < get_ndim(prop_gridtype); d++) {
+    // Z boundaries are Cartesian
+    constexpr int d = 1;
     if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {
-      const double d_coordmaxboundary =
+      const double d_coordmaxboundary_z =
           is_boundary_overshoot_within_tolerance<BoundaryType::UPPER>(pktposgridcoord[d], pktvelgridcoord[d],
                                                                       cellcoordmax[d], tstart)
               ? 0.
-              : distance_cartesian_boundary(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmax[d], tstart);
+              : distance_cartesian_boundary(pktposgridcoord[1], pktvelgridcoord[d], cellcoordmax[d], tstart);
 
-      if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
-        distance = d_coordmaxboundary;
+      if ((d_coordmaxboundary_z >= 0.) && (d_coordmaxboundary_z < distance)) {
+        distance = d_coordmaxboundary_z;
         next_cellindex = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexstride(d);
       }
     } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
-      const double d_coordminboundary =
+      const double d_coordminboundary_z =
           is_boundary_overshoot_within_tolerance<BoundaryType::LOWER>(pktposgridcoord[d], pktvelgridcoord[d],
                                                                       cellcoordmin[d], tstart)
               ? 0.
               : distance_cartesian_boundary(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmin[d], tstart);
 
-      // lower d coordinate of the current cell
-      if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
-        distance = d_coordminboundary;
+      if ((d_coordminboundary_z >= 0.) && (d_coordminboundary_z < distance)) {
+        distance = d_coordminboundary_z;
         next_cellindex = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexstride(d);
       }
     }
+
+  } else if (prop_gridtype == GridType::CARTESIAN3D) {
+    // There are six possible boundary crossings. Each of the three
+    // cartesian coordinates may be taken in turn. For x, the packet trajectory is
+    // x = x0 + (dir.x) * c * (t - tstart)
+    // the boundaries follow
+    // x+/- = x+/-(tmin) * (t/tmin)
+    // so the crossing occurs when
+    // t - tstart = (x0 - x+/-(tmin)/tmin * tstart) / (x+/-(tmin)/tmin - (dir.x)*c)
+    // distance = c * (t - tstart)
+
+    for (int d = 0; d < 3; d++) {
+      if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {
+        const double d_coordmaxboundary =
+            is_boundary_overshoot_within_tolerance<BoundaryType::UPPER>(pktposgridcoord[d], pktvelgridcoord[d],
+                                                                        cellcoordmax[d], tstart)
+                ? 0.
+                : distance_cartesian_boundary(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmax[d], tstart);
+
+        if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
+          distance = d_coordmaxboundary;
+          next_cellindex = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexstride(d);
+        }
+      } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
+        const double d_coordminboundary =
+            is_boundary_overshoot_within_tolerance<BoundaryType::LOWER>(pktposgridcoord[d], pktvelgridcoord[d],
+                                                                        cellcoordmin[d], tstart)
+                ? 0.
+                : distance_cartesian_boundary(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmin[d], tstart);
+
+        // lower d coordinate of the current cell
+        if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
+          distance = d_coordminboundary;
+          next_cellindex = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexstride(d);
+        }
+      }
+    }
+  } else {
+    assert_always(false);
   }
 
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
