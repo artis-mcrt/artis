@@ -501,39 +501,34 @@ auto read_recombination_rate_rows(std::istream& recombrate_file, const int table
     double rrc_total;
   };
 
-  std::string line;
-  RRCRow row_at_or_below_Te = {.log_Te = -1, .rrc_low_n = 0, .rrc_total = 0};
-  RRCRow row_at_or_above_Te = {.log_Te = -1, .rrc_low_n = 0, .rrc_total = 0};
+  // A row within a few ulps of log_Te_estimate is at the calibration temperature.
   const double log_Te_tolerance = 4. * std::numeric_limits<double>::epsilon() * std::max(1., std::abs(log_Te_estimate));
+  std::string line;
+  std::optional<RRCRow> row_at_or_below_Te;
+  std::optional<RRCRow> row_above_Te;
   for (int i = 0; i < tablerows; i++) {
     RRCRow row{};
     // Each declared row must supply a temperature and both rates.
     assert_always(get_noncommentline(recombrate_file, line));
     assert_always(std::stringstream(line) >> row.log_Te >> row.rrc_low_n >> row.rrc_total);
 
-    // Allow small rounding differences in the logarithm and its decimal representation.
-    if (std::abs(row.log_Te - log_Te_estimate) <= log_Te_tolerance) {
-      row.log_Te = log_Te_estimate;
-    }
-
-    if (row.log_Te <= log_Te_estimate && row.log_Te > row_at_or_below_Te.log_Te) {
-      row_at_or_below_Te = row;
-    }
-
-    if (row.log_Te >= log_Te_estimate && (row.log_Te < row_at_or_above_Te.log_Te || row_at_or_above_Te.log_Te < 0)) {
-      row_at_or_above_Te = row;
+    if (row.log_Te <= log_Te_estimate + log_Te_tolerance) {
+      if (!row_at_or_below_Te || row.log_Te > row_at_or_below_Te->log_Te) {
+        row_at_or_below_Te = row;
+      }
+    } else if (!row_above_Te || row.log_Te < row_above_Te->log_Te) {
+      row_above_Te = row;
     }
   }
-  if (row_at_or_below_Te.log_Te < 0. || row_at_or_above_Te.log_Te < 0.) {
+  if (row_at_or_below_Te && row_at_or_below_Te->log_Te >= log_Te_estimate - log_Te_tolerance) {
+    return std::pair{row_at_or_below_Te->rrc_low_n, row_at_or_below_Te->rrc_total};
+  }
+  if (!row_at_or_below_Te || !row_above_Te) {
     return std::nullopt;
   }
-  if (row_at_or_below_Te.log_Te == row_at_or_above_Te.log_Te) {
-    return std::pair{row_at_or_below_Te.rrc_low_n, row_at_or_below_Te.rrc_total};
-  }
-  const double x =
-      (log_Te_estimate - row_at_or_below_Te.log_Te) / (row_at_or_above_Te.log_Te - row_at_or_below_Te.log_Te);
-  return std::pair{std::lerp(row_at_or_below_Te.rrc_low_n, row_at_or_above_Te.rrc_low_n, x),
-                   std::lerp(row_at_or_below_Te.rrc_total, row_at_or_above_Te.rrc_total, x)};
+  const double x = (log_Te_estimate - row_at_or_below_Te->log_Te) / (row_above_Te->log_Te - row_at_or_below_Te->log_Te);
+  return std::pair{std::lerp(row_at_or_below_Te->rrc_low_n, row_above_Te->rrc_low_n, x),
+                   std::lerp(row_at_or_below_Te->rrc_total, row_above_Te->rrc_total, x)};
 }
 
 // The ratio n_upper * nne * Phi(T_e) / n_lower of a photoionisation continuum, where Phi is the Saha factor without
