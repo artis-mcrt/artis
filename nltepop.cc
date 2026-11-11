@@ -1665,11 +1665,9 @@ auto elem_has_nlte_solution(const int nonemptymgi, const int element) -> bool {
     return false;
   }
   for (int ion = 0; ion < get_nions(element); ion++) {
+    // an ion with a superlevel also has an excited NLTE level (see setup_nlte_levels())
     if (get_nlevels_excited_nlte(element, ion) > 0) {
       return get_nlte_levelpop_over_rho(nonemptymgi, element, ion, 1) >= 0.;
-    }
-    if (ion_has_superlevel(element, ion)) {
-      return get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion) >= 0.;
     }
   }
   return false;
