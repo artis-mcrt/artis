@@ -421,10 +421,11 @@ constexpr double NU_MIN_R;
 constexpr double NU_MAX_R;
 
 // Sample the electron scattering direction of a real packet from the dipole phase function. False gives
-// isotropic scattering. A virtual packet always uses the dipole function, so VPKT_ON needs this option.
+// isotropic scattering. A virtual packet always uses the dipole function, so VPKT_ON needs this option. The new
+// Stokes parameters of an electron scattering also come from the dipole function, so POL_ON needs this option too.
 constexpr bool DIPOLE;
 
-// Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out.
+// Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out. This needs DIPOLE.
 constexpr bool POL_ON;
 
 // Use the full relativistic Doppler factor instead of the first-order 1 - n.v/c. The line resonance distance

@@ -44,6 +44,10 @@ static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
 
 static_assert(!RPKT_USE_BINNED_OPACITIES || !VPKT_ON, "RPKT_USE_BINNED_OPACITIES is not compatible with VPKT_ON");
 
+static_assert(!POL_ON || DIPOLE,
+              "DIPOLE must be true if POL_ON is true, because the Stokes parameters of an electron scattering use the "
+              "dipole phase function");
+
 static_assert(BINNED_OPACITY_LINE_WEIGHT == BinnedOpacityLineWeight::EXPANSION || expopac_linebinned_weights_permitted,
               "LINEBINNEDCAPPED and LINEBINNED with a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY need "
               "RPKT_USE_BINNED_OPACITIES");

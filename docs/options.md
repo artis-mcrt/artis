@@ -770,7 +770,7 @@ The frequency limits of the UVOIR spectra and of the blackbody sampling of a k-p
 
 `bool DIPOLE`
 
-Sample the electron scattering direction of a real packet from the dipole phase function. False gives isotropic scattering. A virtual packet always uses the dipole function, so VPKT_ON needs this option.
+Sample the electron scattering direction of a real packet from the dipole phase function. False gives isotropic scattering. A virtual packet always uses the dipole function, so VPKT_ON needs this option. The new Stokes parameters of an electron scattering also come from the dipole function, so POL_ON needs this option too.
 
 **Preset values:** classic `true`, kilonova_lte `false`, nltenebular `false`, nltephotospheric `false`
 
@@ -778,7 +778,7 @@ Sample the electron scattering direction of a real packet from the dipole phase 
 
 `bool POL_ON`
 
-Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out.
+Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out. This needs DIPOLE.
 
 **Preset values:** classic `true`, kilonova_lte `false`, nltenebular `false`, nltephotospheric `false`
 
