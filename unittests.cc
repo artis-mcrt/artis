@@ -353,6 +353,22 @@ void test_frame_transform() {
   check(roundtrip_ok, "frame_transform with -v inverts frame_transform with +v");
 }
 
+void test_zero_polarisation_intensity() {
+  std::println("zero polarisation intensity...");
+  const auto old_dir_cmf = Vec3d{0., 0., 1.};
+  const auto new_dir_cmf = Vec3d{1., 0., 0.};
+  for (const auto& velocity : {Vec3d{0., 0., 0.}, Vec3d{0., 0., 0.1 * CLIGHT}}) {
+    const auto [direction, q, u, probability] = scatter_polarisation_to_rf(old_dir_cmf, new_dir_cmf, 1., 0., velocity);
+    const auto expected_direction = angle_ab(new_dir_cmf, vec_scale(velocity, -1.));
+    check(direction == expected_direction, "zero intensity keeps the correct direction in the rest frame");
+    check(probability == 0. && probability * q == 0. && probability * u == 0.,
+          "zero intensity gives finite zero contributions to all Stokes parameters");
+  }
+  [[maybe_unused]] const auto [direction, q, u, probability] =
+      scatter_polarisation_to_rf(old_dir_cmf, new_dir_cmf, std::nextafter(1., 0.), 0., Vec3d{0., 0., 0.});
+  check(probability > 0. && std::isfinite(q) && std::isfinite(u), "a small positive intensity keeps its contribution");
+}
+
 void test_meridian() {
   std::println("meridian frames...");
   rngstate_type rngstate{99002};
@@ -803,6 +819,13 @@ void test_input_helpers() {
   check(lineiscommentonly("   # indented comment"), "indented hash line is comment-only");
   check(!lineiscommentonly("1 2 3"), "data line is not comment-only");
   check(!lineiscommentonly("1 2 3 # trailing comment"), "data line with trailing comment is not comment-only");
+  for (const auto* text : {"# header\n\n1 2 3", "# header\n\n1 2 3\n"}) {
+    std::istringstream input(text);
+    std::string line;
+    check(get_noncommentline(input, line) && line == "1 2 3", "the last data row needs no final newline");
+    check(!get_noncommentline(input, line) && line.empty(), "a failed read clears the previous row");
+    check(!get_noncommentline(input, line) && line.empty(), "a repeated failed read keeps the row empty");
+  }
 }
 
 void test_parse_next_token() {
@@ -1609,6 +1632,7 @@ auto main() -> int {
   test_expanding_shell_intersection();
   test_escapedirectionbin();
   test_frame_transform();
+  test_zero_polarisation_intensity();
   test_meridian();
   test_random_sampling();
   test_item_replaces_sample();

@@ -347,6 +347,11 @@ constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d&
   const double musquared = pow2(mu);
 
   const double I_new = 0.75 * ((musquared + 1.) + (q_old * (musquared - 1.)));
+  if (I_new <= 0.) {
+    // This direction carries no flux. Its normalised Stokes parameters are undefined.
+    const auto new_dir_rf = angle_ab(new_dir_cmf, vec_scale(vel_vec, -1.));
+    return {new_dir_rf, 0., 0., 0.};
+  }
   const double q_new = (0.75 * ((musquared - 1.) + (q_old * (musquared + 1.)))) / I_new;
   const double u_new = (1.5 * mu * u_old) / I_new;
 

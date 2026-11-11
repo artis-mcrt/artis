@@ -632,11 +632,16 @@ void read_vspecpol(const int my_rank, const int nts) {
   std::string line;
 
   for (int ind_comb = 0; ind_comb < (nobsdirections * nspectraperobsdir); ind_comb++) {
-    get_noncommentline(vspecpol_file, line);  // first line is the header of times
+    // first line is the header of times
+    if (!get_noncommentline(vspecpol_file, line)) {
+      fatal_crash("{} ends before the header of spectrum {}", filename, ind_comb);
+    }
 
     // Initialise I,Q,U fluxes from temporary files
     for (int j = 0; j < VSPEC_NUBINS; j++) {
-      get_noncommentline(vspecpol_file, line);
+      if (!get_noncommentline(vspecpol_file, line)) {
+        fatal_crash("{} ends before frequency bin {} of spectrum {}", filename, j, ind_comb);
+      }
       auto ssline = std::stringstream(line);
 
       float c{};

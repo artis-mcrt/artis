@@ -1489,7 +1489,10 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
           energyoffset_ev += ionpot_ev;
         }
         for (int i = 0; i < nlevels_in_file; i++) {
-          get_noncommentline(adata, line);
+          if (!get_noncommentline(adata, line)) {
+            fatal_crash("adata.txt ends after {} of the {} levels of Z={} ionstage {}", i, nlevels_in_file, adata_Z_in,
+                        adata_ionstage_in);
+          }
         }
 
         if (!get_noncommentline(adata, line)) {

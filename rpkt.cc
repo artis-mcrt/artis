@@ -326,7 +326,7 @@ void electron_scatter_rpkt(Packet& pkt) {
   if constexpr (DIPOLE) {
     // Assume dipole function: sample the scattering direction cosine M and azimuth angle phisc by
     // rejection (see Code & Whitney 1995, ApJ, 441, 400-407, doi:10.1086/175363). p is the phase function value for
-    // the trial angles and x is a uniform draw from [0, 2] (an upper bound on p); the trial is accepted when x <= p.
+    // the trial angles and x is a uniform draw from (0, 2) (an upper bound on p); the trial is accepted when x <= p.
     double p = 0.;
     double x = 1.;
     while (x > p) {
@@ -344,8 +344,8 @@ void electron_scatter_rpkt(Packet& pkt) {
       // (2015)
       p = (musquared + 1) + ((musquared - 1) * ((cos(2 * phisc) * q_i_cmf) + (sin(2 * phisc) * u_i_cmf)));
 
-      // generate a number between 0 and the maximum of the previous function (2)
-      x = 2. * rng_uniform(get_rngstate(pkt));
+      // x is in (0, 2), so the loop also rejects a direction with p <= 0
+      x = 2. * rng_uniform_pos(get_rngstate(pkt));
     }
   } else {
     // Assume isotropic scattering

@@ -589,6 +589,8 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
     // collisional deactivation to a k-packet: no photon was emitted, so there is no thermal emission
     // to record. The k-packet's eventual radiative emission will set the true emission fields.
     pkt.trueemissiontype = EMTYPE_NOTSET;
+    pkt.trueem_pos = {NAN, NAN, NAN};
+    pkt.trueem_time = -1.;
   }
 }
 
