@@ -27,7 +27,7 @@ enum class BoundaryType : std::uint8_t { LOWER, UPPER };
 // Get the path length d from pos along dir to the point where a packet crosses an expanding shell. The shell is a
 // sphere around the origin for a cell boundary of a 1D grid and for the spherical escape surface. For the cylindrical
 // radius of a 2D grid, the shell is a circle in the xy plane. Then pos and dir are the projections into that plane,
-// and packet_speed is the speed of the packet in that plane.
+// and packet_speed is the speed of the packet in that plane. In each case, dir must be a unit vector.
 //
 // The shell radius increases homologously with the time of flight d / packet_speed:
 //   R(d) = R_0 * (t_0 + d / packet_speed) / t_0, with R_0 = shell_radius_at_tstart and t_0 = tstart.
@@ -42,11 +42,11 @@ template <BoundaryType boundarytype, size_t VECDIM>
                                                                         const double tstart) -> double {
   static_assert(VECDIM == 2 || VECDIM == 3);
   assert_testmodeonly(shell_radius_at_tstart > 0);
+  assert_testmodeonly(std::fabs(dot(dir, dir) - 1.) < 1e-6);
 
   // The packet is at pos + d * dir. The crossing condition |pos + d * dir|^2 = R(d)^2 gives the quadratic equation
   // a * d^2 + b * d + c = 0. With the shell speed v_shell = R_0 / t_0, the coefficients are:
-  //   a = |dir|^2 - (v_shell / packet_speed)^2, which for a unit vector dir is positive when the packet is faster
-  //       than the shell;
+  //   a = |dir|^2 - (v_shell / packet_speed)^2, which is positive when the packet is faster than the shell;
   //   b = 2 * (pos . dir - R_0 * v_shell / packet_speed);
   //   c = |pos|^2 - R_0^2, which is negative for a packet inside the shell and positive for a packet outside it.
   const double a = dot(dir, dir) - pow2(shell_radius_at_tstart / tstart / packet_speed);

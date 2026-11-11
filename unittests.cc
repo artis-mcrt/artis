@@ -245,6 +245,9 @@ void test_expanding_shell_intersection() {
   check(
       grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(pos_between_shells, outward_dir, 0.5, 2., 1.) < 0.,
       "a packet cannot leave an outer shell that is faster than the packet");
+  // A packet at (0, 2) with speed 2 along x passes outside the inner shell: a = 0.75, b = -1, c = 3, discriminant -8.
+  check(grid::expanding_shell_intersection<grid::BoundaryType::LOWER>(std::array{0., 2.}, outward_dir, 2., 1., 1.) < 0.,
+        "a packet that passes outside the inner shell has no crossing");
 
   // Compare random paths with a reference that calculates both roots of the quadratic equation. The reference selects
   // the nearest root ahead of the packet where the radial speed of the packet agrees with the boundary type: greater
