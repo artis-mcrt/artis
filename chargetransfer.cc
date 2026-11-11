@@ -107,7 +107,7 @@ struct CTReaction {
 
   int ratetable_index{-1};  // >= 0 selects a tabulated Landau-Zener rate coefficient
 
-  // a reverse (endothermic) entry carries the energy release of its exothermic forward reaction [erg]
+  // a reverse entry carries the energy release of its forward reaction [erg], negative if that reaction needs energy
   bool is_reverse{false};
   double delta_e{0.};
 };

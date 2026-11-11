@@ -2125,8 +2125,9 @@ void read_parameterfile(std::span<Packet> packets) {
     }
   }
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
-    // the thermal balance of a later timestep has no term for the line thermalisation of this option
-    if (globals::num_lte_timesteps < globals::ntimesteps) {
+    // the thermal balance of a later timestep has no term for the line thermalisation of this option.
+    // exspec gives no packets and solves no thermal balance
+    if (!packets.empty() && globals::num_lte_timesteps < globals::ntimesteps) {
       fatal_crash(
           "input.txt gives num_lte_timesteps {} and ntimesteps {}, but RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY "
           "needs num_lte_timesteps >= ntimesteps",

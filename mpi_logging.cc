@@ -114,6 +114,8 @@ void report_fatal_error_and_abort(const char* file, const int line, const char* 
 
 void set_terminate_handler_to_fatal_error() noexcept {
   std::set_terminate([] {
+    // a failure inside this handler must end the run and not call the handler again
+    std::set_terminate(abort_run);
     std::string message = "std::terminate() stopped the run";
     try {
       if (const auto exception = std::current_exception()) {

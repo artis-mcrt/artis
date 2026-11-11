@@ -832,9 +832,7 @@ constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& co
 auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellParams& colliondata_ion) -> int {
   const double ionpot_ev = colliondata_ion.ionpot_ev;
   if (ionpot_ev > SF_EMAX) {
-    // every grid point is below the ionisation threshold, so all cross sections are zero.
-    // Without this, the clamped startindex below would evaluate the Younger fitting formula at
-    // u = E / I < 1, where it goes negative.
+    // every grid point is below the ionisation threshold, so all cross sections are zero
     xs_vec.fill(0.);
     return SFPTS;
   }
