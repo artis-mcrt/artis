@@ -4,7 +4,7 @@
 #define RATECOEFF_H
 
 #include <cstdint>
-#include <istream>
+#include <iosfwd>
 #include <optional>
 #include <utility>
 

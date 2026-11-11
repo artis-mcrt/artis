@@ -297,14 +297,18 @@ void read_recombrate_file() {
   std::string line;
   while (get_noncommentline(recombrate_file, line)) {
     assert_always(std::stringstream(line) >> atomicnumber >> upperionstage >> tablerows);
-    assert_always(tablerows >= 0);
     const auto tabulated_rates = read_recombination_rate_rows(recombrate_file, tablerows, log_Te_estimate);
     const int element = get_elementindex(atomicnumber);
     if (element >= 0) {
       const int ion = upperionstage - get_ionstage(element, 0);  // the index of the upper ion
       if (ion > 0 && ion < get_nions(element)) {
         printlnlog("Z={} ionstage {}->{}", atomicnumber, upperionstage, upperionstage - 1);
-        assert_always(tabulated_rates.has_value());
+        if (!tabulated_rates.has_value()) {
+          fatal_crash(
+              "recombrates.txt needs a row at RECOMBCALIBRATION_T_ELEC = {} K, or rows on both sides of it, for Z={} "
+              "upper ionstage {}",
+              RECOMBCALIBRATION_T_ELEC, atomicnumber, upperionstage);
+        }
         const auto [input_rrc_low_n, input_rrc_total] = *tabulated_rates;
 
         const int nlevels = get_nlevels_ionising(element, ion - 1);
@@ -498,8 +502,8 @@ auto read_recombination_rate_rows(std::istream& recombrate_file, const int table
   };
 
   std::string line;
-  RRCRow T_highestbelow = {.log_Te = -1, .rrc_low_n = 0, .rrc_total = 0};
-  RRCRow T_lowestabove = {.log_Te = -1, .rrc_low_n = 0, .rrc_total = 0};
+  RRCRow row_at_or_below_Te = {.log_Te = -1, .rrc_low_n = 0, .rrc_total = 0};
+  RRCRow row_at_or_above_Te = {.log_Te = -1, .rrc_low_n = 0, .rrc_total = 0};
   const double log_Te_tolerance = 4. * std::numeric_limits<double>::epsilon() * std::max(1., std::abs(log_Te_estimate));
   for (int i = 0; i < tablerows; i++) {
     RRCRow row{};
@@ -512,23 +516,24 @@ auto read_recombination_rate_rows(std::istream& recombrate_file, const int table
       row.log_Te = log_Te_estimate;
     }
 
-    if (row.log_Te <= log_Te_estimate && row.log_Te > T_highestbelow.log_Te) {
-      T_highestbelow = row;
+    if (row.log_Te <= log_Te_estimate && row.log_Te > row_at_or_below_Te.log_Te) {
+      row_at_or_below_Te = row;
     }
 
-    if (row.log_Te >= log_Te_estimate && (row.log_Te < T_lowestabove.log_Te || T_lowestabove.log_Te < 0)) {
-      T_lowestabove = row;
+    if (row.log_Te >= log_Te_estimate && (row.log_Te < row_at_or_above_Te.log_Te || row_at_or_above_Te.log_Te < 0)) {
+      row_at_or_above_Te = row;
     }
   }
-  if (T_highestbelow.log_Te < 0. || T_lowestabove.log_Te < 0.) {
+  if (row_at_or_below_Te.log_Te < 0. || row_at_or_above_Te.log_Te < 0.) {
     return std::nullopt;
   }
-  if (T_highestbelow.log_Te == T_lowestabove.log_Te) {
-    return std::pair{T_highestbelow.rrc_low_n, T_highestbelow.rrc_total};
+  if (row_at_or_below_Te.log_Te == row_at_or_above_Te.log_Te) {
+    return std::pair{row_at_or_below_Te.rrc_low_n, row_at_or_below_Te.rrc_total};
   }
-  const double x = (log_Te_estimate - T_highestbelow.log_Te) / (T_lowestabove.log_Te - T_highestbelow.log_Te);
-  return std::pair{std::lerp(T_highestbelow.rrc_low_n, T_lowestabove.rrc_low_n, x),
-                   std::lerp(T_highestbelow.rrc_total, T_lowestabove.rrc_total, x)};
+  const double x =
+      (log_Te_estimate - row_at_or_below_Te.log_Te) / (row_at_or_above_Te.log_Te - row_at_or_below_Te.log_Te);
+  return std::pair{std::lerp(row_at_or_below_Te.rrc_low_n, row_at_or_above_Te.rrc_low_n, x),
+                   std::lerp(row_at_or_below_Te.rrc_total, row_at_or_above_Te.rrc_total, x)};
 }
 
 // The ratio n_upper * nne * Phi(T_e) / n_lower of a photoionisation continuum, where Phi is the Saha factor without
