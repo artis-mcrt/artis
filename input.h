@@ -205,10 +205,11 @@ static_assert(count_groundterm_levels(std::array{0., 0.0254, 0.1091, 0.1652, 0.2
 }
 
 // read the next line, skipping any comment lines beginning with '#'
-inline auto get_noncommentline(std::istream& input, std::string& line) -> bool {
+[[nodiscard]] inline auto get_noncommentline(std::istream& input, std::string& line) -> bool {
   while (true) {
     const bool linefound = !(!std::getline(input, line));
     if (!linefound) {
+      line.clear();
       return false;
     }
     if (!lineiscommentonly(line)) {
