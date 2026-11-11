@@ -559,7 +559,9 @@ void read_collion_data() {
 
   auto cifile = istream_required("collion.txt");
   std::string line;
-  get_noncommentline(cifile, line);
+  if (!get_noncommentline(cifile, line)) {
+    fatal_crash("collion.txt has no line with the row count");
+  }
   std::istringstream ssline(line);
   int colliondatacount = 0;
   assert_always(ssline >> colliondatacount);
@@ -569,7 +571,9 @@ void read_collion_data() {
   for (int i = 0; i < colliondatacount; i++) {
     ShellParams collionrow{};
     int nelec = -1;
-    get_noncommentline(cifile, line);
+    if (!get_noncommentline(cifile, line)) {
+      fatal_crash("collion.txt declares {} rows but ends after {} rows", colliondatacount, i);
+    }
     assert_always(std::istringstream{line} >> collionrow.Z >> nelec >> collionrow.n >> collionrow.l >>
                   collionrow.ionpot_ev >> collionrow.A >> collionrow.B >> collionrow.C >> collionrow.D);
 
@@ -1570,8 +1574,11 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
           assert_always(std::isfinite(ratecoeffperdeposition));
           // Fe V is excluded. Its small atomic data set depletes the ground multiplet and stops the
-          // recombination.
-          if (above_minionfraction && ratecoeffperdeposition > 0 && (Z != 26 || ionstage != 5)) {
+          // recombination. With COLLISIONAL_HEATING_FROM_LEVELPOPS, an element without NLTE levels is also excluded:
+          // its level populations do not follow the excitation, so the thermal balance would lose the part of this
+          // energy that the macro atom gives to the gas in collisions.
+          if (above_minionfraction && ratecoeffperdeposition > 0 && (Z != 26 || ionstage != 5) &&
+              (elem_has_nlte_levels(element) || !COLLISIONAL_HEATING_FROM_LEVELPOPS)) {
             tmp_excitation_list.push_back({
                 .frac_deposition = frac_excitation_thistrans,
                 .ratecoeffperdeposition = ratecoeffperdeposition,

@@ -1023,7 +1023,19 @@ void update_grid(JobFolderOutputFile& estimators_file, const int nts, const int 
   decay::update_abundances(nstart_nonempty, ndo_nonempty, nuc_massfrac_coeffs);
   for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
     const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    grid::set_rho(nonemptymgi, static_cast<float>(grid::get_rho_tmin(mgi) / pow3(tratmid)));
+    const auto rho = static_cast<float>(grid::get_rho_tmin(mgi) / pow3(tratmid));
+    // nne and the ground level populations are number densities of the last grid update, so they follow the expansion
+    // to the new density. The other NLTE level populations are per unit of mass density. The first grid update of a
+    // job has no previous density.
+    if (const float rho_prev = grid::get_rho(nonemptymgi); rho_prev > 0.) {
+      const float density_ratio = rho / rho_prev;
+      grid::set_nne(nonemptymgi, grid::get_nne(nonemptymgi) * density_ratio);
+      for (auto& groundlevelpop : grid::ion_groundlevelpops_allcells.subspan(
+               static_cast<ptrdiff_t>(nonemptymgi) * get_includedions(), get_includedions())) {
+        groundlevelpop *= density_ratio;
+      }
+    }
+    grid::set_rho(nonemptymgi, rho);
     grid::set_nnetot(nonemptymgi);
   }
 

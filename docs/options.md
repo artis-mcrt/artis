@@ -463,7 +463,7 @@ The reverse rates come from detailed balance. The rates enter the NLTE rate matr
 
 `bool COLLISIONAL_HEATING_FROM_LEVELPOPS`
 
-Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator. The estimator also holds the collisional recombination heating. The sum does not.
+Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator. The estimator also holds the collisional recombination heating. The sum does not. The level populations of an element without NLTE levels do not follow a non-thermal excitation, so the sum would lose the heat of its collisional de-excitation. With this option, the non-thermal excitation energy of such an element therefore goes to the heating, and its packets become k-packets.
 
 **Preset values:** classic `false`, kilonova_lte `true`, nltenebular `true`, nltephotospheric `true`
 

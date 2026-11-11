@@ -171,10 +171,11 @@ struct Packet {
   double absorptionfreq{};
   double stokes_q{0.};  // normalised Stokes q = Q/I
   double stokes_u{0.};  // normalised Stokes u = U/I
-  // The last emission out of the THERMAL POOL. A k-packet emission sets it. Scatterings and macro-atom
+  // The last emission out of the THERMAL POOL. A k-packet emission sets it. Scatterings and radiative macro-atom
   // deactivations keep it, so it gives the escaped energy to the place of thermalisation, not to the last
   // scattering. Each site that hands the packet from the thermal pool to a macro-atom sets it to EMTYPE_NOTSET,
-  // so the next radiative emission starts a fresh record.
+  // so the next radiative emission starts a fresh record. A collisional macro-atom deactivation to a k-packet
+  // does the same. Each such site also sets trueem_pos to NAN and trueem_time to -1.
   int trueemissiontype = EMTYPE_NOTSET;
   Vec3d trueem_pos{NAN, NAN, NAN};
   float trueem_time{-1.};  // last thermal emission time [s]

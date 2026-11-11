@@ -1021,7 +1021,7 @@ struct ModelFileReader {
   InputFileStream file;
   std::deque<std::string> lines_read_ahead;
 
-  auto getline(std::string& line) -> bool {
+  [[nodiscard]] auto getline(std::string& line) -> bool {
     if (!lines_read_ahead.empty()) {
       line = std::move(lines_read_ahead.front());
       lines_read_ahead.pop_front();
@@ -1085,7 +1085,9 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
   std::vector<std::string> colnames;
 
   std::string line;
-  fmodel.getline(line);
+  if (!fmodel.getline(line)) {
+    fatal_crash("model.txt ends before the column header or the first cell");
+  }
 
   std::string headerline;
 
@@ -1094,7 +1096,9 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
   if (header_specified) {
     // line is the header
     headerline = line;
-    fmodel.getline(line);
+    if (!fmodel.getline(line)) {
+      fatal_crash("model.txt ends after the column header, before the first cell");
+    }
   } else {
     // line is not a comment, so it must be the first line of data
     // add a default header for unlabelled columns
@@ -1119,7 +1123,9 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
 
   std::string secondline;
   if (!one_line_per_cell) {  // add columns from the second line
-    fmodel.getline(secondline);
+    if (!fmodel.getline(secondline)) {
+      fatal_crash("model.txt ends before the second line of the first cell");
+    }
     colcount += get_token_count(secondline);
   }
 
@@ -2210,7 +2216,9 @@ void read_ejecta_model() {
 
   // if the next line is a single float, it is the vmax (so 2D or 3D)
   // otherwise, it is the first line of the model or a header comment (so 1D)
-  fmodel.getline(line);
+  if (!fmodel.getline(line)) {
+    fatal_crash("model.txt ends after the snapshot time, before the vmax line or the first cell");
+  }
   if (!line.starts_with('#')) {
     double num_after_vmax{NAN};
     auto sslinevmax = std::istringstream{line};

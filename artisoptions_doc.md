@@ -254,6 +254,9 @@ constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
 
 // Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator.
 // The estimator also holds the collisional recombination heating. The sum does not.
+// The level populations of an element without NLTE levels do not follow a non-thermal excitation, so the sum would
+// lose the heat of its collisional de-excitation. With this option, the non-thermal excitation energy of such an
+// element therefore goes to the heating, and its packets become k-packets.
 constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
 
 // The bound-free cooling coefficient of each (level, target) continuum is per population of the target level of
