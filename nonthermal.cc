@@ -2327,8 +2327,7 @@ DEVICE_FUNC auto nt_ionisation_ratecoeff(const int nonemptymgi, const int elemen
   if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
     const double Y_nt = nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion);
     if (!std::isfinite(Y_nt)) {
-      // eff_ionpot is 0 before the first solution, when the cross sections are zero on the whole energy grid, or
-      // when the ion had no population at each solution
+      // eff_ionpot is 0 before the first solution, or when the cross sections are zero on the whole energy grid
       return nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion);
     }
     assert_always(Y_nt >= 0.);
