@@ -2144,6 +2144,15 @@ void read_parameterfile(std::span<Packet> packets) {
           globals::num_lte_timesteps, *MULTIBIN_RADFIELD_FIRST_TIMESTEP);
     }
   }
+  if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
+    // the thermal balance of a later timestep has no term for the line thermalisation of this option
+    if (globals::num_lte_timesteps < globals::ntimesteps) {
+      fatal_crash(
+          "input.txt gives num_lte_timesteps {} and ntimesteps {}, but RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY "
+          "needs num_lte_timesteps >= ntimesteps",
+          globals::num_lte_timesteps, globals::ntimesteps);
+    }
+  }
   printlnlog("input: doing the first {} timesteps in LTE", globals::num_lte_timesteps);
 
   if constexpr (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
