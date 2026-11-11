@@ -2512,6 +2512,8 @@ void init_grid() {
     assert_always(false);
   }
 
+  allocate_nonemptymodelcells();
+
   if (globals::my_rank == 0) {
     auto grid_file = open_output_file("grid.out");
     for (int cellindex = 0; cellindex < ngrid; cellindex++) {
@@ -2578,6 +2580,11 @@ void init_grid() {
           }
           set_modelinitnucmassfrac(mgi, nucindex, static_cast<float>(std::min(new_massfrac, 1.)));
         }
+      } else {
+        fatal_crash(
+            "init_grid: the mapping to the propagation grid gives no cell with Z={} A={}, which has mass in the "
+            "model. Use a finer grid.",
+            decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex));
       }
     }
   }

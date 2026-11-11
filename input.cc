@@ -537,7 +537,8 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
       if (levelenergy_ev < prev_levelenergy_ev) {
         printlnlog(
             "[warning] adata.txt: Z={} ionstage {}: level {} has energy {:g} eV, below the previous level energy {:g} "
-            "eV. The count of ionising levels needs energies that increase with the level index",
+            "eV. The count of ionising levels needs energies that increase with the level index. The code ignores "
+            "each transition whose upper level has an energy equal to or below the energy of its lower level",
             get_atomicnumber(element), get_ionstage(element, ion), level, levelenergy_ev, prev_levelenergy_ev);
       }
       prev_levelenergy_ev = levelenergy_ev;
@@ -2055,7 +2056,8 @@ void read_parameterfile(std::span<Packet> packets) {
         "(found {})",
         pre_zseed);
 #endif
-    pre_zseed = get_rng_random_seed();
+    // half of the range keeps the sum with the rank offset below inside the 32-bit range of the seed
+    pre_zseed = get_rng_random_seed() / 2;
     // broadcast randomly-generated seed from rank 0 to all ranks
     MPI_Bcast_safe(pre_zseed, 0, MPI_COMM_WORLD);
     printlnlog("randomly-generated random number seed is {}", pre_zseed);

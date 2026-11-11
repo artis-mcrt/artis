@@ -162,7 +162,7 @@ static_assert(select_bin(RADFIELDBINS_T_E_SUPERBIN_NU_MAX) == -1);  // at and ab
 void add_detailed_line(const int lineindex) {
   detailed_linecount++;
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    prev_Jb_lu_normed[nonemptymgi].push_back({.value = 0, .contribcount = 0});
+    prev_Jb_lu_normed[nonemptymgi].push_back({.value = 0, .contribcount = -1});
     assert_always(detailed_linecount == std::ssize(prev_Jb_lu_normed[nonemptymgi]));
 
     // zero_estimators() only clears the entries, so the slot must exist first

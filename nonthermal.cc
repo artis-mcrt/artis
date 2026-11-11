@@ -1760,11 +1760,14 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       frac_excitation_of_stored_list += ntexcitation.frac_deposition;
     }
     // A bad solution can give more than the deposition energy to ionisation and excitation. The packets then
-    // reach only the fraction 1 - frac_ionisation, so each stored transition gets its part of that fraction.
+    // reach only the fraction 1 - frac_ionisation, so each stored transition gets its part of that fraction. The
+    // rate coefficients of the NLTE matrix get the same factor.
     const double frac_not_ionisation = std::max(0., 1. - frac_ionisation_total);
     if (frac_excitation_of_stored_list > frac_not_ionisation) {
+      const double stored_excitation_scale = frac_not_ionisation / frac_excitation_of_stored_list;
       for (auto& ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
-        ntexcitation.frac_deposition *= frac_not_ionisation / frac_excitation_of_stored_list;
+        ntexcitation.frac_deposition *= stored_excitation_scale;
+        ntexcitation.ratecoeffperdeposition *= stored_excitation_scale;
       }
       frac_excitation_of_stored_list = frac_not_ionisation;
     }
@@ -2368,7 +2371,8 @@ DEVICE_FUNC auto nt_ionisation_ratecoeff(const int nonemptymgi, const int elemen
   if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
     const double Y_nt = nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion);
     if (!std::isfinite(Y_nt)) {
-      // eff_ionpot is 0 before the first solution, or when the cross sections are zero on the whole energy grid
+      // eff_ionpot is 0 before the first solution, when the cross sections are zero on the whole energy grid, or
+      // when the ion had no population at each solution
       return nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion);
     }
     assert_always(Y_nt >= 0.);

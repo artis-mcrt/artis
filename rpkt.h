@@ -179,7 +179,7 @@ static_assert((get_linedistance(2., 4., 2., -1.) * get_expopac_pathfactor(2., 2.
 [[gnu::pure]] [[nodiscard]] constexpr auto closest_transition(const double nu_cmf, const int next_trans,
                                                               const std::span<const double> linelistnu) -> int {
   const int nlines = static_cast<int>(linelistnu.size());
-  if (next_trans > (nlines - 1)) {
+  if (linelistnu.empty() || next_trans > (nlines - 1)) {
     // packet is tagged as having no more line interactions
     return -1;
   }

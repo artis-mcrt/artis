@@ -505,7 +505,7 @@ $(BUILD_DIR)/sn3d: $(sn3d_objects)
 sn3d: $(BUILD_DIR)/sn3d compile_commands.json
 	rm -f sn3d && ln -s $(BUILD_DIR)/sn3d sn3d
 
-$(BUILD_DIR)/sn3dwhole: $(sn3d_files) $(VERSION_CC) $(wildcard *.h) Makefile
+$(BUILD_DIR)/sn3dwhole: $(sn3d_files) $(VERSION_CC) $(wildcard $(filter %.h,$(wildcard *.h))) Makefile
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(VERSION_CC) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
 
 sn3dwhole: $(BUILD_DIR)/sn3dwhole compile_commands.json

@@ -65,6 +65,9 @@ variable. Export it in your `.bashrc`.
 On Cosma8, Kelvin2, Leonardo, and Virgo, `artis/scripts/submit.sh` finds the cluster from the host name and submits
 the applicable job script. Run it in the model folder in place of `sbatch`.
 
+Keep the default name `slurm-<job ID>.out` for the output file of the job, or put that file outside the model
+folder. A new simulation removes each other file of the model folder that has a name with the ending `.out`.
+
 ## What the job scripts do
 
 The job scripts resubmit themselves until the simulation is finished. They then queue a post-processing job

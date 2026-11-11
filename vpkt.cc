@@ -754,7 +754,7 @@ void remove_temp_vpkt_file(const int nts, const int my_rank) {
 }
 
 // read the virtual packet configuration from vpkt.txt: the observer directions, wavelength
-// ranges, emission-time window, and the optical-depth and cell-selection limits
+// ranges, arrival-time window, and the optical-depth and cell-selection limits
 void read_vpktparameterfile() {
   auto input_file = istream_required("vpkt.txt");
 
@@ -857,7 +857,7 @@ void read_vpktparameterfile() {
     }
   }
 
-  // Emission time window: a leading 1 restricts vpkts to the [tmin, tmax] (in days) that follow on the same
+  // Arrival time window: a leading 1 restricts vpkts to the [tmin, tmax] (in days) that follow on the same
   // line, otherwise the compile-time VSPEC_TIMEMIN/VSPEC_TIMEMAX are used and the two values are ignored.
   int override_tminmax = 0;
   double vspec_tmin_in_days = 0.;
@@ -883,14 +883,14 @@ void read_vpktparameterfile() {
   const std::string_view vspec_time_window_source =
       (override_tminmax == 1) ? "vpkt.txt" : "VSPEC_TIMEMIN and VSPEC_TIMEMAX";
   if (!(vspec_timemin_input < vspec_timemax_input)) {
-    fatal_crash("the emission time window [{:g}, {:g}] [d] of {} is empty", vspec_timemin_input / DAY,
+    fatal_crash("the arrival time window [{:g}, {:g}] [d] of {} is empty", vspec_timemin_input / DAY,
                 vspec_timemax_input / DAY, vspec_time_window_source);
   }
   const double vspec_timemin_allowed = std::max(VSPEC_TIMEMIN, globals::tmin);
   const double vspec_timemax_allowed = std::min(VSPEC_TIMEMAX, globals::tmax);
   if (vspec_timemin_input < vspec_timemin_allowed || vspec_timemax_input > vspec_timemax_allowed) {
     fatal_crash(
-        "the emission time window [{:g}, {:g}] [d] of {} must be inside [max(VSPEC_TIMEMIN, tmin), min(VSPEC_TIMEMAX, "
+        "the arrival time window [{:g}, {:g}] [d] of {} must be inside [max(VSPEC_TIMEMIN, tmin), min(VSPEC_TIMEMAX, "
         "tmax)] = [{:g}, {:g}] [d]",
         vspec_timemin_input / DAY, vspec_timemax_input / DAY, vspec_time_window_source, vspec_timemin_allowed / DAY,
         vspec_timemax_allowed / DAY);
