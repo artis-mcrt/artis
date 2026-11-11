@@ -865,8 +865,15 @@ void remove_previous_simulation_files() {
       paths_to_remove.push_back(entry.path());
     }
   }
+  if (ec) {
+    fatal_crash("could not list the model folder: {}", ec.message());
+  }
   for (const auto& path : paths_to_remove) {
     std::filesystem::remove_all(path, ec);
+    // a file of the previous simulation that stays, e.g. an open file on NFS, would mix with the new output
+    if (ec) {
+      fatal_crash("could not remove '{}' of the previous simulation: {}", path.string(), ec.message());
+    }
   }
 }
 

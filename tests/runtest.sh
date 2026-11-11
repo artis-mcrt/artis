@@ -61,6 +61,7 @@ run_inputcheck() {
     local files_before files_changed time_before
     files_before=$(list_modelfolder_files)
     time_before=$(mktemp)
+    sleep 1  # some file systems store the time of a change in whole seconds
     "${mpirun_command[@]}" -np "$1" ./sn3d -c
     files_changed=$(find . -path ./inputcheck -prune -o ! -type d -newer "$time_before" -print)
     rm -f "$time_before"

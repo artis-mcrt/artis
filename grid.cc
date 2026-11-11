@@ -1363,6 +1363,8 @@ void setup_nstart_ndo() {
       assert_always(ranks_ndo_nonempty[r] <= ranks_ndo[r]);
       fileout << r << ' ' << ranks_nstart[r] << ' ' << ranks_ndo[r] << ' ' << ranks_ndo_nonempty[r] << '\n';
     }
+    fileout.close();
+    assert_always(!fileout.fail());  // e.g. a full disk
   }
 }
 
@@ -2512,6 +2514,8 @@ void init_grid() {
         std::println(grid_file, "{} {}", cellindex, mgi);  // write only non-empty cells to grid file
       }
     }
+    grid_file.close();
+    assert_always(!grid_file.fail());  // e.g. a full disk
   }
 
   // the rank ranges need the count of the non-empty cells

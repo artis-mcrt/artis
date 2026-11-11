@@ -322,6 +322,8 @@ void init_gamma_linelist() {
                    decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex), allnuc_gamma_line_list[i].nucgammaindex,
                    gamma_spectra[nucindex][index].energy / MEV, gamma_spectra[nucindex][index].probability);
     }
+    gammalinelist.close();
+    assert_always(!gammalinelist.fail());  // e.g. a full disk
     printlnlog("Wrote combined gamma-ray line list to gammalinelist.out");
   }
 }

@@ -1898,6 +1898,8 @@ void write_bflist_file() {
       const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
       std::println(bflist_file, "{} {} {} {} {}", i, element, ion, level, upperionlevel);
     }
+    bflist_file.close();
+    assert_always(!bflist_file.fail());  // e.g. a full disk
   }
 }
 

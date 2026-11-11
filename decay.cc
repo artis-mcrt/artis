@@ -603,6 +603,8 @@ auto write_nuclides_list() {
   for (int nucindex = 0; nucindex < std::ssize(nuclides); nucindex++) {
     std::println(nuclides_file, "{} {} {}", nucindex, get_nuc_z(nucindex), get_nuc_a(nucindex));
   }
+  nuclides_file.close();
+  assert_always(!nuclides_file.fail());  // e.g. a full disk
 }
 
 }  // anonymous namespace
