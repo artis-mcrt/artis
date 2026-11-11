@@ -12,10 +12,13 @@
 #include <cstdlib>
 #include <cstring>
 #include <format>
+#include <istream>
 #include <limits>
+#include <optional>
 #include <span>
 #include <sstream>
 #include <string>
+#include <utility>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -287,12 +290,6 @@ void read_recombrate_file() {
 
   printlnlog("Calibrating recombination rates for a temperature of {:.1f} [K]", Te_estimate);
 
-  struct RRCRow {
-    double log_Te;
-    double rrc_low_n;
-    double rrc_total;
-  };
-
   int atomicnumber = 0;
   int upperionstage = 0;
   int tablerows = 0;
@@ -300,35 +297,19 @@ void read_recombrate_file() {
   std::string line;
   while (get_noncommentline(recombrate_file, line)) {
     assert_always(std::stringstream(line) >> atomicnumber >> upperionstage >> tablerows);
-    assert_always(tablerows >= 0);
-    RRCRow T_highestbelow = {.log_Te = -1, .rrc_low_n = 0, .rrc_total = 0};
-    RRCRow T_lowestabove = {.log_Te = -1, .rrc_low_n = 0, .rrc_total = 0};
-    for (int i = 0; i < tablerows; i++) {
-      RRCRow row{};
-      // without these checks a truncated or malformed table would leave the previous line's values
-      // in place and silently calibrate the wrong ion
-      assert_always(get_noncommentline(recombrate_file, line));
-      assert_always(std::stringstream(line) >> row.log_Te >> row.rrc_low_n >> row.rrc_total);
-
-      if (row.log_Te < log_Te_estimate && row.log_Te > T_highestbelow.log_Te) {
-        T_highestbelow.log_Te = row.log_Te;
-        T_highestbelow.rrc_low_n = row.rrc_low_n;
-        T_highestbelow.rrc_total = row.rrc_total;
-      }
-
-      if (row.log_Te > log_Te_estimate && (row.log_Te < T_lowestabove.log_Te || T_lowestabove.log_Te < 0)) {
-        T_lowestabove.log_Te = row.log_Te;
-        T_lowestabove.rrc_low_n = row.rrc_low_n;
-        T_lowestabove.rrc_total = row.rrc_total;
-      }
-    }
+    const auto tabulated_rates = read_recombination_rate_rows(recombrate_file, tablerows, log_Te_estimate);
     const int element = get_elementindex(atomicnumber);
     if (element >= 0) {
       const int ion = upperionstage - get_ionstage(element, 0);  // the index of the upper ion
       if (ion > 0 && ion < get_nions(element)) {
         printlnlog("Z={} ionstage {}->{}", atomicnumber, upperionstage, upperionstage - 1);
-        assert_always(T_highestbelow.log_Te > 0);
-        assert_always(T_lowestabove.log_Te > 0);
+        if (!tabulated_rates.has_value()) {
+          fatal_crash(
+              "recombrates.txt needs a row at RECOMBCALIBRATION_T_ELEC = {} K, or rows on both sides of it, for Z={} "
+              "upper ionstage {}",
+              RECOMBCALIBRATION_T_ELEC, atomicnumber, upperionstage);
+        }
+        const auto [input_rrc_low_n, input_rrc_total] = *tabulated_rates;
 
         const int nlevels = get_nlevels_ionising(element, ion - 1);
 
@@ -344,10 +325,6 @@ void read_recombrate_file() {
           }
           MPI_Barrier_node();
         };
-
-        const double x = (log_Te_estimate - T_highestbelow.log_Te) / (T_lowestabove.log_Te - T_highestbelow.log_Te);
-        const double input_rrc_low_n = std::lerp(T_highestbelow.rrc_low_n, T_lowestabove.rrc_low_n, x);
-        const double input_rrc_total = std::lerp(T_highestbelow.rrc_total, T_lowestabove.rrc_total, x);
 
         const auto rrc_options = IonRecombCoeffOptions{.assume_lte = true, .norm = get_solver_ionrecombnorm(element)};
 
@@ -514,6 +491,45 @@ template <typename T, typename U>
 }
 
 }  // anonymous namespace
+
+auto read_recombination_rate_rows(std::istream& recombrate_file, const int tablerows, const double log_Te_estimate)
+    -> std::optional<std::pair<double, double>> {
+  assert_always(tablerows >= 0);
+  struct RRCRow {
+    double log_Te;
+    double rrc_low_n;
+    double rrc_total;
+  };
+
+  // A row within a few ulps of log_Te_estimate is at the calibration temperature.
+  const double log_Te_tolerance = 4. * std::numeric_limits<double>::epsilon() * std::max(1., std::abs(log_Te_estimate));
+  std::string line;
+  std::optional<RRCRow> row_at_or_below_Te;
+  std::optional<RRCRow> row_above_Te;
+  for (int i = 0; i < tablerows; i++) {
+    RRCRow row{};
+    // Each declared row must supply a temperature and both rates.
+    assert_always(get_noncommentline(recombrate_file, line));
+    assert_always(std::stringstream(line) >> row.log_Te >> row.rrc_low_n >> row.rrc_total);
+
+    if (row.log_Te <= log_Te_estimate + log_Te_tolerance) {
+      if (!row_at_or_below_Te || row.log_Te > row_at_or_below_Te->log_Te) {
+        row_at_or_below_Te = row;
+      }
+    } else if (!row_above_Te || row.log_Te < row_above_Te->log_Te) {
+      row_above_Te = row;
+    }
+  }
+  if (row_at_or_below_Te && row_at_or_below_Te->log_Te >= log_Te_estimate - log_Te_tolerance) {
+    return std::pair{row_at_or_below_Te->rrc_low_n, row_at_or_below_Te->rrc_total};
+  }
+  if (!row_at_or_below_Te || !row_above_Te) {
+    return std::nullopt;
+  }
+  const double x = (log_Te_estimate - row_at_or_below_Te->log_Te) / (row_above_Te->log_Te - row_at_or_below_Te->log_Te);
+  return std::pair{std::lerp(row_at_or_below_Te->rrc_low_n, row_above_Te->rrc_low_n, x),
+                   std::lerp(row_at_or_below_Te->rrc_total, row_above_Te->rrc_total, x)};
+}
 
 // The ratio n_upper * nne * Phi(T_e) / n_lower of a photoionisation continuum, where Phi is the Saha factor without
 // its exponential. The stimulated recombination factor of the continuum is then
