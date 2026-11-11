@@ -1570,8 +1570,11 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
           assert_always(std::isfinite(ratecoeffperdeposition));
           // Fe V is excluded. Its small atomic data set depletes the ground multiplet and stops the
-          // recombination.
-          if (above_minionfraction && ratecoeffperdeposition > 0 && (Z != 26 || ionstage != 5)) {
+          // recombination. With COLLISIONAL_HEATING_FROM_LEVELPOPS, an element without NLTE levels is also excluded:
+          // its level populations do not follow the excitation, so the thermal balance would lose the part of this
+          // energy that the macro atom gives to the gas in collisions.
+          if (above_minionfraction && ratecoeffperdeposition > 0 && (Z != 26 || ionstage != 5) &&
+              (elem_has_nlte_levels(element) || !COLLISIONAL_HEATING_FROM_LEVELPOPS)) {
             tmp_excitation_list.push_back({
                 .frac_deposition = frac_excitation_thistrans,
                 .ratecoeffperdeposition = ratecoeffperdeposition,
