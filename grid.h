@@ -3,7 +3,11 @@
 #ifndef GRID_H
 #define GRID_H
 
+#include <algorithm>
+#include <array>
+#include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <tuple>
 
 #include "artisoptions.h"
@@ -13,8 +17,114 @@
 #include "packet.h"
 #include "random.h"
 #include "stats.h"
+#include "vectors.h"
 
 namespace grid {
+
+enum class BoundaryType : std::uint8_t { LOWER, UPPER };
+
+// Find the first forward crossing of an expanding circle or sphere.
+// Return -1 when the ray has no crossing in the requested radial direction.
+template <BoundaryType boundarytype, size_t S1>
+[[gnu::pure]] [[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, S1>& pos,
+                                                                        const std::array<double, S1>& dir,
+                                                                        const double speed,
+                                                                        const double shellradiuststart,
+                                                                        const double tstart) -> double {
+  static_assert(S1 == 2 || S1 == 3);
+  assert_testmodeonly(shellradiuststart > 0);
+
+  // quadratic equation for intersection of ray with sphere
+  // a*d^2 + b*d + c = 0
+  const double a = dot(dir, dir) - pow2(shellradiuststart / tstart / speed);
+  const double b = 2 * (dot(dir, pos) - (pow2(shellradiuststart) / tstart / speed));
+  const double c = dot(pos, pos) - pow2(shellradiuststart);
+
+  // Equal transverse speeds give a linear equation. The sign of b gives the crossing direction.
+  if (a == 0.) {
+    const bool crosses_boundary = (boundarytype == BoundaryType::LOWER) ? b < 0. : b > 0.;
+    if (!crosses_boundary) {
+      return -1.;
+    }
+    const double distance = -c / b;
+    return distance >= 0. ? distance : -1.;
+  }
+
+  const double discriminant = pow2(b) - (4 * a * c);
+
+  if (discriminant < 0) {
+    // no intersection
+    assert_testmodeonly(boundarytype == BoundaryType::LOWER);
+    assert_testmodeonly(shellradiuststart < vec_len(pos));
+    return -1;
+  }
+
+  if (discriminant > 0) {
+    // two intersections
+    // Use addition for one root and the product of the roots for the other.
+    // Subtraction loses precision when the transverse packet speed is close to the shell speed.
+    const double distance_numerator = (-b - std::copysign(std::sqrt(discriminant), b)) / 2.;
+    double dist1 = distance_numerator / a;
+    double dist2 = c / distance_numerator;
+
+    std::array<double, S1> posfinal1{};
+    std::array<double, S1> posfinal2{};
+    for (auto d = 0ZU; d < S1; d++) {
+      posfinal1[d] = pos[d] + (dist1 * dir[d]);
+      posfinal2[d] = pos[d] + (dist2 * dir[d]);
+    }
+
+    const double v_rad_shell = shellradiuststart / tstart;
+    const double v_rad_final1 = dot(dir, posfinal1) * speed / vec_len(posfinal1);
+    const double v_rad_final2 = dot(dir, posfinal2) * speed / vec_len(posfinal2);
+
+    // Keep only a crossing in the requested radial direction.
+    if constexpr (boundarytype == BoundaryType::LOWER) {
+      // The packet must enter through the inner shell, so the shell must overtake it.
+      if (v_rad_final1 > v_rad_shell) {
+        dist1 = -1;
+      }
+      if (v_rad_final2 > v_rad_shell) {
+        dist2 = -1;
+      }
+    } else {
+      // The packet must leave through the outer shell, so it must overtake the shell.
+      if (v_rad_final1 < v_rad_shell) {
+        dist1 = -1;
+      }
+      if (v_rad_final2 < v_rad_shell) {
+        dist2 = -1;
+      }
+    }
+
+#if (TESTMODE)
+    if (dist1 >= 0) {
+      const double shellradiusfinal1 = shellradiuststart / tstart * (tstart + (dist1 / speed));
+      assert_testmodeonly(fabs((vec_len(posfinal1) / shellradiusfinal1) - 1.) < 1e-3);
+    }
+    if (dist2 >= 0) {
+      const double shellradiusfinal2 = shellradiuststart / tstart * (tstart + (dist2 / speed));
+      assert_testmodeonly(fabs((vec_len(posfinal2) / shellradiusfinal2) - 1.) < 1e-3);
+    }
+#endif
+
+    // A negative distance lies behind the packet. Keep the first forward crossing.
+    if (dist1 < 0 && dist2 < 0) {
+      return -1;
+    }
+    if (dist2 < 0) {
+      return dist1;
+    }
+    if (dist1 < 0) {
+      return dist2;
+    }
+    return std::min(dist1, dist2);
+  }
+
+  // A tangent touches the shell and keeps the packet in its current cell.
+  assert_testmodeonly(shellradiuststart <= vec_len(pos));
+  return -1.;
+}
 
 // these arrays are indexed by nonemptymgi
 inline MPI_shared_array<float> rho_allcells;

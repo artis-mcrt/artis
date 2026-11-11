@@ -43,6 +43,7 @@
 #include "decay.h"
 #include "gammapkt.h"
 #include "globals.h"
+#include "grid.h"
 #include "input.h"
 #include "inputfilestream.h"
 #include "integrator.h"
@@ -196,6 +197,30 @@ void test_vector_geometry() {
   double e_cmf = e_rf * dopplerfactor;
   move_pkt_withtime(pos, dir_rf, t_current, nu_rf, nu_cmf, e_rf, e_cmf, 3.0e13);
   check_close(e_cmf / nu_cmf, e_rf / nu_rf, 1e-12, "move_pkt_withtime preserves e_cmf / nu_cmf = e_rf / nu_rf");
+}
+
+void test_expanding_shell_intersection() {
+  std::println("expanding shell intersections...");
+  const auto pos = std::array{1.01, 0.};
+  const auto inward_dir = std::array{-1., 0.};
+  const auto outward_dir = std::array{1., 0.};
+  for (const double speed_offset : {0., -1e-14, 1e-14, -1e-12, 1e-12, -1e-10, 1e-10, -1e-7, 1e-7, -0.5, 1.}) {
+    const double speed = 1. + speed_offset;
+    const double distance =
+        grid::expanding_shell_intersection<grid::BoundaryType::LOWER>(pos, inward_dir, speed, 1., 1.);
+    const double expected_distance = (pos[0] - 1.) / (1. + (1. / speed));
+    check_close(distance, expected_distance, 1e-12, "the inward ray reaches the inner shell at the analytic distance");
+  }
+  check(
+      grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(std::array{0.99, 0.}, outward_dir, 1., 1., 1.) < 0.,
+      "an outward ray cannot catch an outer shell with the same speed");
+  check(grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(std::array{1., 0.}, outward_dir, 1., 1., 1.) < 0.,
+        "a ray that stays on the shell has no crossing");
+  check_close(grid::expanding_shell_intersection<grid::BoundaryType::LOWER>(pos, outward_dir, 0.5, 1., 1.), pos[0] - 1.,
+              1e-12, "a faster inner shell catches an outward ray");
+  check_close(
+      grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(Vec3d{0., 0., 0.}, Vec3d{1., 0., 0.}, 2., 1., 1.),
+      2., 1e-12, "a ray from the centre reaches the outer sphere at the analytic distance");
 }
 
 void test_escapedirectionbin() {
@@ -1472,6 +1497,7 @@ auto main() -> int {
   test_binindex_helpers();
   test_range_chunks();
   test_vector_geometry();
+  test_expanding_shell_intersection();
   test_escapedirectionbin();
   test_frame_transform();
   test_meridian();

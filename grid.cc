@@ -131,8 +131,6 @@ struct ModelGridCellInput {
 };
 MPI_shared_array<ModelGridCellInput> modelgrid_input{};
 
-enum class BoundaryType : std::uint8_t { LOWER, UPPER };
-
 // Get number of dimensions
 constexpr auto get_ndim(const GridType gridtype) -> int {
   switch (gridtype) {
@@ -1536,102 +1534,6 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
     }
   }
   fatal_crash("Unknown grid type {}", static_cast<int>(gridtype));
-}
-
-// Find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
-// 2-vectors or 3-vectors) or expanding circle (2D vectors).
-// Return -1 if there are no forward intersections (or if the intersection
-// is tangential to the shell)
-template <BoundaryType boundarytype, size_t S1>
-[[gnu::pure]] [[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, S1>& pos,
-                                                                        const std::array<double, S1>& dir,
-                                                                        const double speed,
-                                                                        const double shellradiuststart,
-                                                                        const double tstart) -> double {
-  static_assert(S1 == 2 || S1 == 3);
-  assert_testmodeonly(shellradiuststart > 0);
-
-  // quadratic equation for intersection of ray with sphere
-  // a*d^2 + b*d + c = 0
-  const double a = dot(dir, dir) - pow2(shellradiuststart / tstart / speed);
-  const double b = 2 * (dot(dir, pos) - (pow2(shellradiuststart) / tstart / speed));
-  const double c = dot(pos, pos) - pow2(shellradiuststart);
-
-  const double discriminant = pow2(b) - (4 * a * c);
-
-  if (discriminant < 0) {
-    // no intersection
-    assert_testmodeonly(boundarytype == BoundaryType::LOWER);
-    assert_testmodeonly(shellradiuststart < vec_len(pos));
-    return -1;
-  }
-
-  if (discriminant > 0) {
-    // two intersections
-    double dist1 = (-b + sqrt(discriminant)) / 2 / a;
-    double dist2 = (-b - sqrt(discriminant)) / 2 / a;
-
-    std::array<double, S1> posfinal1{};
-    std::array<double, S1> posfinal2{};
-    for (auto d = 0ZU; d < S1; d++) {
-      posfinal1[d] = pos[d] + (dist1 * dir[d]);
-      posfinal2[d] = pos[d] + (dist2 * dir[d]);
-    }
-
-    const double v_rad_shell = shellradiuststart / tstart;
-    const double v_rad_final1 = dot(dir, posfinal1) * speed / vec_len(posfinal1);
-    const double v_rad_final2 = dot(dir, posfinal2) * speed / vec_len(posfinal2);
-
-    // invalidate any solutions that require entering the boundary from the wrong radial direction
-    if constexpr (boundarytype == BoundaryType::LOWER) {
-      // if the packet's radial velocity at intersection is greater than the inner shell's radial velocity,
-      // then it is catching up from below the inner shell and should pass through it
-      if (v_rad_final1 > v_rad_shell) {
-        dist1 = -1;
-      }
-      if (v_rad_final2 > v_rad_shell) {
-        dist2 = -1;
-      }
-    } else {
-      // if the packet's radial velocity at intersection is less than the outer shell's radial velocity,
-      // then it is coming from above the outer shell and should pass through it
-      if (v_rad_final1 < v_rad_shell) {
-        dist1 = -1;
-      }
-      if (v_rad_final2 < v_rad_shell) {
-        dist2 = -1;
-      }
-    }
-
-#if (TESTMODE)
-    if (dist1 >= 0) {
-      const double shellradiusfinal1 = shellradiuststart / tstart * (tstart + (dist1 / speed));
-      assert_testmodeonly(fabs((vec_len(posfinal1) / shellradiusfinal1) - 1.) < 1e-3);
-    }
-    if (dist2 >= 0) {
-      const double shellradiusfinal2 = shellradiuststart / tstart * (tstart + (dist2 / speed));
-      assert_testmodeonly(fabs((vec_len(posfinal2) / shellradiusfinal2) - 1.) < 1e-3);
-    }
-#endif
-
-    // negative d means in the reverse direction along the ray
-    // ignore negative d values, and if two are positive then return the smaller one
-    if (dist1 < 0 && dist2 < 0) {
-      return -1;
-    }
-    if (dist2 < 0) {
-      return dist1;
-    }
-    if (dist1 < 0) {
-      return dist2;
-    }
-    return std::min(dist1, dist2);
-  }
-
-  // one intersection
-  // ignore this and don't change which cell the packet is in
-  assert_testmodeonly(shellradiuststart <= vec_len(pos));
-  return -1.;
 }
 
 // get element mean weight in grams
