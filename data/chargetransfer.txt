@@ -9,8 +9,8 @@
 # The rate coefficient is k = a * 1e-9 * t4^b * (1 + c * exp(d * t4)) * exp(-eexp/T) [cm3/s].
 # t4 is T/1e4 K with T clamped into [tmin, tmax]; the factor exp(-eexp/T) uses the true T, and eexp is in K.
 # For a flat entry (b = c = eexp = 0) the clamp has no effect.
-# autoreverse 1 lets the code add the reverse reaction from detailed balance when the forward
-# reaction releases energy. It is 0 when this file holds a fit for the reverse reaction.
+# autoreverse 1 lets the code add the reverse reaction from detailed balance.
+# It is 0 when this file holds a fit for the reverse reaction.
 # A comment follows the columns. It starts with the tag of the source, then gives the values that
 # are specific to the reaction. The four Z and ionstage columns identify the reaction, so the
 # comment does not repeat it. SOURCES below gives the text that all lines of a source share.
