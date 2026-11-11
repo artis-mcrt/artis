@@ -31,22 +31,21 @@
 #include "outputfilestream.h"
 #include "run_lock.h"
 
-inline auto get_run_lock() -> RunLock& {
-  static RunLock run_lock;
-  return run_lock;
-}
-
 inline void acquire_run_lock() {
   if (globals::my_rank == 0) {
+    const auto lock_path = std::filesystem::absolute("artis.pid");
     const auto contents = std::format("{}\n{}\n", getpid(), std::filesystem::current_path().generic_string());
-    const auto error = get_run_lock().acquire("artis.pid", contents);
+    const auto error = run_lock.acquire(lock_path, contents);
     if (error == std::errc::file_exists) {
+      std::ifstream existing_lock_file(lock_path);
+      const std::string existing_contents(std::istreambuf_iterator<char>(existing_lock_file), {});
       fatal_crash(
-          "artis.pid exists. Confirm that sn3d and exspec stopped in this folder on every host. "
-          "Then remove the stale file before you start a new run.");
+          "{} exists with the process id and the folder:\n{}Confirm that sn3d and exspec stopped in this folder on "
+          "every host. Then remove the stale file before you start a new run.",
+          lock_path.string(), existing_contents);
     }
     if (error) {
-      fatal_crash("Could not create artis.pid: {}", error.message());
+      fatal_crash("Could not create {}: {}", lock_path.string(), error.message());
     }
   }
   MPI_Barrier_allranks();
@@ -56,8 +55,9 @@ inline void release_run_lock() {
   // Every rank must finish its output before another job can use the model folder.
   MPI_Barrier_allranks();
   if (globals::my_rank == 0) {
-    if (const auto error = get_run_lock().release()) {
-      fatal_crash("Could not release artis.pid: {}", error.message());
+    // The output is complete, and a non-zero exit status would stop the job scripts.
+    if (const auto error = run_lock.release()) {
+      printlnlog("[warning] Could not remove artis.pid: {}", error.message());
     }
   }
 }

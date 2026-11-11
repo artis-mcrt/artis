@@ -60,7 +60,7 @@ class RunLock {
     return {};
   }
 
-  [[nodiscard]] auto release() -> std::error_code {
+  [[nodiscard]] auto release() noexcept -> std::error_code {
     if (file_descriptor < 0) {
       return {};
     }
@@ -87,5 +87,8 @@ class RunLock {
     return {};
   }
 };
+
+// The lock of artis.pid that this process owns. The fatal error path of mpi_logging.cc also releases it.
+inline RunLock run_lock;
 
 #endif  // RUN_LOCK_H

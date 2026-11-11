@@ -961,12 +961,19 @@ void enter_inputcheck_folder() {
   acquire_run_lock();
   if (globals::my_rank == 0) {
     // Keep the lock while we remove the output of an earlier input check.
-    for (const auto& entry : std::filesystem::directory_iterator(".")) {
+    std::vector<std::filesystem::path> paths_to_remove;
+    for (const auto& entry : std::filesystem::directory_iterator(".", ec)) {
       if (entry.path().filename() != "artis.pid") {
-        std::filesystem::remove_all(entry.path(), ec);
-        if (ec) {
-          fatal_crash("Could not remove '{}' from inputcheck: {}", entry.path().string(), ec.message());
-        }
+        paths_to_remove.push_back(entry.path());
+      }
+    }
+    if (ec) {
+      fatal_crash("Could not list the folder '{}': {}", foldername, ec.message());
+    }
+    for (const auto& path : paths_to_remove) {
+      std::filesystem::remove_all(path, ec);
+      if (ec) {
+        fatal_crash("Could not remove '{}' from inputcheck: {}", path.string(), ec.message());
       }
     }
   }
