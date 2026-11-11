@@ -63,7 +63,7 @@ run_inputcheck() {
     time_before=$(mktemp)
     sleep 1  # some file systems store the time of a change in whole seconds
     "${mpirun_command[@]}" -np "$1" ./sn3d -c
-    files_changed=$(find . -path ./inputcheck -prune -o ! -type d -newer "$time_before" -print)
+    files_changed=$(find . -path ./inputcheck -prune -o ! -path . -newer "$time_before" -print)
     rm -f "$time_before"
     if [ "$files_and_folders_before" != "$(list_files_and_folders)" ] || [ -n "$files_changed" ]; then
         echo "[error] The input check changed the model folder: $files_changed" >&2
