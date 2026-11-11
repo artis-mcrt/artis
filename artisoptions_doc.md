@@ -420,11 +420,16 @@ constexpr bool KEEP_ESCAPED_GAMMAS;
 constexpr double NU_MIN_R;
 constexpr double NU_MAX_R;
 
-// Sample the electron scattering direction of a real packet from the dipole phase function. False gives
-// isotropic scattering. A virtual packet always uses the dipole function, so VPKT_ON needs this option.
+// Sample the electron scattering direction of a real packet from the dipole phase function of Thomson scattering,
+// 1 + cos^2(theta) for unpolarised light. False gives isotropic scattering. The option does not change a line
+// scattering or a k-packet emission. Both functions give a mean cos(theta) of zero, so the transport and the
+// spectra and light curves averaged over all directions agree within the Monte Carlo noise. The option changes the
+// polarisation, and the spectra for each viewing angle of an aspherical model with much electron scattering. A
+// virtual packet and the new Stokes parameters of POL_ON use the dipole function, so VPKT_ON and POL_ON need this
+// option.
 constexpr bool DIPOLE;
 
-// Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out.
+// Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out. This needs DIPOLE.
 constexpr bool POL_ON;
 
 // Use the full relativistic Doppler factor instead of the first-order 1 - n.v/c. The line resonance distance
