@@ -632,11 +632,11 @@ void read_vspecpol(const int my_rank, const int nts) {
   std::string line;
 
   for (int ind_comb = 0; ind_comb < (nobsdirections * nspectraperobsdir); ind_comb++) {
-    get_noncommentline(vspecpol_file, line);  // first line is the header of times
+    assert_always(get_noncommentline(vspecpol_file, line));  // first line is the header of times
 
     // Initialise I,Q,U fluxes from temporary files
     for (int j = 0; j < VSPEC_NUBINS; j++) {
-      get_noncommentline(vspecpol_file, line);
+      assert_always(get_noncommentline(vspecpol_file, line));
       auto ssline = std::stringstream(line);
 
       float c{};

@@ -23,6 +23,7 @@
 #include <optional>
 #include <print>
 #include <span>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -669,6 +670,13 @@ void test_input_helpers() {
   check(lineiscommentonly("   # indented comment"), "indented hash line is comment-only");
   check(!lineiscommentonly("1 2 3"), "data line is not comment-only");
   check(!lineiscommentonly("1 2 3 # trailing comment"), "data line with trailing comment is not comment-only");
+  for (const auto* text : {"# header\n\n1 2 3", "# header\n\n1 2 3\n"}) {
+    std::istringstream input(text);
+    std::string line;
+    check(get_noncommentline(input, line) && line == "1 2 3", "the last data row needs no final newline");
+    check(!get_noncommentline(input, line) && line.empty(), "a failed read clears the previous row");
+    check(!get_noncommentline(input, line) && line.empty(), "a repeated failed read keeps the row empty");
+  }
 }
 
 void test_parse_next_token() {

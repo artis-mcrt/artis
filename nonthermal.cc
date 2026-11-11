@@ -559,7 +559,7 @@ void read_collion_data() {
 
   auto cifile = istream_required("collion.txt");
   std::string line;
-  get_noncommentline(cifile, line);
+  assert_always(get_noncommentline(cifile, line));
   std::istringstream ssline(line);
   int colliondatacount = 0;
   assert_always(ssline >> colliondatacount);
@@ -569,7 +569,7 @@ void read_collion_data() {
   for (int i = 0; i < colliondatacount; i++) {
     ShellParams collionrow{};
     int nelec = -1;
-    get_noncommentline(cifile, line);
+    assert_always(get_noncommentline(cifile, line));
     assert_always(std::istringstream{line} >> collionrow.Z >> nelec >> collionrow.n >> collionrow.l >>
                   collionrow.ionpot_ev >> collionrow.A >> collionrow.B >> collionrow.C >> collionrow.D);
 

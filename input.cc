@@ -1489,7 +1489,7 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
           energyoffset_ev += ionpot_ev;
         }
         for (int i = 0; i < nlevels_in_file; i++) {
-          get_noncommentline(adata, line);
+          assert_always(get_noncommentline(adata, line));
         }
 
         if (!get_noncommentline(adata, line)) {
