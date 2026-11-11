@@ -45,6 +45,9 @@ namespace {
 static_assert(!VPKT_ON || POL_ON,
               "POL_ON must be true if VPKT_ON is true because vpkt needs stokes parameters to be tracked");
 
+static_assert(!VPKT_ON || DIPOLE,
+              "DIPOLE must be true if VPKT_ON is true, because a virtual packet uses the dipole phase function");
+
 static_assert(!VPKT_WRITE_CONTRIBS || VPKT_ON, "VPKT_WRITE_CONTRIBS does nothing without VPKT_ON");
 
 static_assert(!VPKT_USE_BINNED_OPACITIES || VPKT_ON, "VPKT_USE_BINNED_OPACITIES does nothing without VPKT_ON");

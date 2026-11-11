@@ -770,7 +770,7 @@ The frequency limits of the UVOIR spectra and of the blackbody sampling of a k-p
 
 `bool DIPOLE`
 
-Sample the electron scattering direction of a real packet from the dipole phase function. False gives isotropic scattering. A virtual packet always uses the dipole function.
+Sample the electron scattering direction of a real packet from the dipole phase function. False gives isotropic scattering. A virtual packet always uses the dipole function, so VPKT_ON needs this option.
 
 **Preset values:** classic `true`, kilonova_lte `false`, nltenebular `false`, nltephotospheric `false`
 
