@@ -500,11 +500,17 @@ auto read_recombination_rate_rows(std::istream& recombrate_file, const int table
   std::string line;
   RRCRow T_highestbelow = {.log_Te = -1, .rrc_low_n = 0, .rrc_total = 0};
   RRCRow T_lowestabove = {.log_Te = -1, .rrc_low_n = 0, .rrc_total = 0};
+  const double log_Te_tolerance = 4. * std::numeric_limits<double>::epsilon() * std::max(1., std::abs(log_Te_estimate));
   for (int i = 0; i < tablerows; i++) {
     RRCRow row{};
     // Each declared row must supply a temperature and both rates.
     assert_always(get_noncommentline(recombrate_file, line));
     assert_always(std::stringstream(line) >> row.log_Te >> row.rrc_low_n >> row.rrc_total);
+
+    // Allow small rounding differences in the logarithm and its decimal representation.
+    if (std::abs(row.log_Te - log_Te_estimate) <= log_Te_tolerance) {
+      row.log_Te = log_Te_estimate;
+    }
 
     if (row.log_Te <= log_Te_estimate && row.log_Te > T_highestbelow.log_Te) {
       T_highestbelow = row;

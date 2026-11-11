@@ -687,6 +687,16 @@ void test_recombination_rate_rows() {
     std::istringstream table{"3 2 4\n5 6 8\n"};
     check(!read_recombination_rate_rows(table, 2, log_Te), "a temperature outside the table has no rates");
   }
+  const double log_Te = std::log10(6000.);
+  for (const double log_Te_row : {std::nextafter(log_Te, 0.), std::nextafter(log_Te, 10.), 3.778151250383644}) {
+    std::istringstream table{std::format("{:.17g} -1 9e-12", log_Te_row)};
+    const auto rates = read_recombination_rate_rows(table, 1, log_Te);
+    check(rates && rates->first == -1. && rates->second == 9e-12,
+          "small rounding differences in the temperature keep an exact match");
+  }
+  std::istringstream nearby_table{std::format("{:.17g} -1 9e-12", log_Te + 1e-10)};
+  check(!read_recombination_rate_rows(nearby_table, 1, log_Te),
+        "a distinct nearby temperature still needs interpolation");
 }
 
 void test_input_helpers() {
