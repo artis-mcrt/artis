@@ -610,41 +610,30 @@ void mpi_reduce_estimators(const int nts) {
     }
   }
 
-  assert_always(std::ssize(globals::dep_estimator_gamma) == nonempty_npts_model);
-  MPI_Allreduce_safe(globals::dep_estimator_gamma, MPI_SUM, MPI_COMM_WORLD);
-  assert_always(std::ssize(globals::dep_estimator_positron) == nonempty_npts_model);
-  MPI_Allreduce_safe(globals::dep_estimator_positron, MPI_SUM, MPI_COMM_WORLD);
-  assert_always(std::ssize(globals::dep_estimator_electron) == nonempty_npts_model);
-  MPI_Allreduce_safe(globals::dep_estimator_electron, MPI_SUM, MPI_COMM_WORLD);
-  assert_always(std::ssize(globals::dep_estimator_alpha) == nonempty_npts_model);
-  MPI_Allreduce_safe(globals::dep_estimator_alpha, MPI_SUM, MPI_COMM_WORLD);
+  for (auto* const dep_estimator : {
+           &globals::dep_estimator_gamma,
+           &globals::dep_estimator_positron,
+           &globals::dep_estimator_electron,
+           &globals::dep_estimator_alpha,
+       }) {
+    assert_always(std::ssize(*dep_estimator) == nonempty_npts_model);
+    MPI_Allreduce_safe(*dep_estimator, MPI_SUM, MPI_COMM_WORLD);
+  }
 
-  MPI_Allreduce_safe(globals::timesteps[nts].gamma_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].gamma_dep_discrete /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].positron_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].positron_dep_discrete /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].positron_emission, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].positron_emission /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].electron_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].electron_dep_discrete /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].electron_emission, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].electron_emission /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].alpha_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].alpha_dep_discrete /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].alpha_emission, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].alpha_emission /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].spfission_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].spfission_dep_discrete /= globals::nprocs;
-
-  MPI_Allreduce_safe(globals::timesteps[nts].gamma_emission, MPI_SUM, MPI_COMM_WORLD);
-  globals::timesteps[nts].gamma_emission /= globals::nprocs;
+  for (const auto timestep_sum : {
+           &globals::TimeStep::gamma_dep_discrete,
+           &globals::TimeStep::positron_dep_discrete,
+           &globals::TimeStep::positron_emission,
+           &globals::TimeStep::electron_dep_discrete,
+           &globals::TimeStep::electron_emission,
+           &globals::TimeStep::alpha_dep_discrete,
+           &globals::TimeStep::alpha_emission,
+           &globals::TimeStep::spfission_dep_discrete,
+           &globals::TimeStep::gamma_emission,
+       }) {
+    MPI_Allreduce_safe(globals::timesteps[nts].*timestep_sum, MPI_SUM, MPI_COMM_WORLD);
+    globals::timesteps[nts].*timestep_sum /= globals::nprocs;
+  }
 
   // The estimators have been summed across all processes and distributed.
   // They will now be normalised independently on all processes.

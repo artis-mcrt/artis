@@ -30,12 +30,17 @@ constexpr double MINNNE = std::max(MINPOP, static_cast<double>(std::numeric_limi
 [[gnu::pure]] [[nodiscard]] auto calculate_levelpop_boltzmann(int nonemptymgi, int element, int ion, int level)
     -> double;
 
-// Highest ion stage worth following in this cell, as an ion index, or -1 if the element has no ions. Higher
-// stages are treated as unpopulated. Truncation happens twice: at the first ion the radiation field cannot
-// reach (skipped under Saha, and defeated while non-thermal energy is being deposited, since that can still
-// populate the ions above), and then where the running product of nne_hi * phi overflows, nne_hi being an
-// assumed maximum electron density. force_saha selects Saha even for elements with NLTE levels (which
-// otherwise return all ions untruncated); pass it when the populations that follow will also be LTE.
+// Return the highest ion stage that this cell must include, as an ion index, or -1 if the element has no ions.
+// The populations of the higher ion stages are zero. The function truncates the list of ions at two points:
+// 1. At the first ion that the radiation field cannot reach: the ionisation rate estimator of the ion is zero.
+//    This truncation does not apply if the cell uses the Saha ion balance. It also does not apply if non-thermal
+//    ionisation is on and the cell has a non-thermal deposition, because this deposition can populate the higher
+//    ions.
+// 2. At the ion where the cumulative product of nne_hi * phi becomes infinite. nne_hi is an assumed maximum
+//    electron density.
+// With force_saha, the function uses the Saha ion balance also for an element with NLTE levels. Without it, the
+// function returns all ions of such an element with no truncation. Set force_saha when the populations that follow
+// are also LTE.
 [[nodiscard]] auto find_uppermost_ion(int nonemptymgi, int element, double nne_hi, bool force_saha) -> int;
 
 // Solve for the free electron density self-consistently (the ion balance depends on nne, which is itself the

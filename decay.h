@@ -43,10 +43,10 @@ struct NucMassFracCoeffs {
   std::vector<double> nuc_survivingfrac;  // [nucindex] surviving fraction of the nuclide's own initial abundance
 };
 
-// calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
-// the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
-// are assumed to start with zero abundance)
-// with num_nuclides == 1 the result is the simple decay formula
+// Calculate the number abundance at the end of a decay chain, for example Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] ->
+// nuc[2]). The caller gives the initial abundance of the top nuclide, and the function returns the abundance of the
+// last nuclide of the chain. The function assumes that each intermediate nuclide starts with zero abundance.
+// With num_nuclides == 1, the result is the simple decay formula.
 //
 // timediff:           time elapsed for decays [seconds]
 // lambdas:            array of 1/(mean lifetime) for nuc[0]..nuc[num_nuclides-1]  [seconds^-1]
