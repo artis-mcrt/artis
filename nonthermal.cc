@@ -559,7 +559,9 @@ void read_collion_data() {
 
   auto cifile = istream_required("collion.txt");
   std::string line;
-  get_noncommentline(cifile, line);
+  if (!get_noncommentline(cifile, line)) {
+    fatal_crash("collion.txt has no line with the row count");
+  }
   std::istringstream ssline(line);
   int colliondatacount = 0;
   assert_always(ssline >> colliondatacount);
@@ -569,7 +571,9 @@ void read_collion_data() {
   for (int i = 0; i < colliondatacount; i++) {
     ShellParams collionrow{};
     int nelec = -1;
-    get_noncommentline(cifile, line);
+    if (!get_noncommentline(cifile, line)) {
+      fatal_crash("collion.txt declares {} rows but ends after {} rows", colliondatacount, i);
+    }
     assert_always(std::istringstream{line} >> collionrow.Z >> nelec >> collionrow.n >> collionrow.l >>
                   collionrow.ionpot_ev >> collionrow.A >> collionrow.B >> collionrow.C >> collionrow.D);
 
