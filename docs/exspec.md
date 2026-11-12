@@ -7,7 +7,7 @@ post-processing.
 
 `make` builds `exspec` together with `sn3d`. It combines the packet files of all {term}`ranks <rank>` into spectra and light curves,
 with the same code that `sn3d` uses, so it gives the same files for a simulation that ran to the last timestep of the
-model. `exspec` writes all timesteps of the model, and a timestep after the last requested timestep holds zeros. It reads the packet files of `packets/`, which `sn3d`
+model. `exspec` writes all timesteps of the model. It reads the packet files of `packets/`, which `sn3d`
 writes at the last requested {term}`timestep`. A simulation that stopped earlier has no packet files, and `exspec` then stops
 with an error. Two situations need `exspec`:
 
@@ -15,6 +15,14 @@ with an error. Two situations need `exspec`:
   again and run `exspec`, and you need no new simulation.
 - The {term}`model folder` holds the packet files but no spectra, e.g. from a run of an older version of ARTIS.
   `scripts/run-exspec-if-needed.sh` runs `exspec` when `emission.out` is absent.
+
+The requested timestep range limits the escape time of the packets. The spectra and the observer light curve use
+the arrival time, which includes the light travel time. A far-side packet can escape before the requested end
+and arrive after it. For example, an escape at 9.5 days can contribute to an arrival bin at 10.5 days.
+
+After a partial run, later arrival bins can therefore hold nonzero flux. These bins are incomplete because
+the packet files contain no packets that escape after the requested end. A nonzero flux does not establish
+complete time coverage. Extend the simulation to obtain the contributions of those later escapes.
 
 Run it in the model folder with any number of ranks from one up to the number of packet files:
 
