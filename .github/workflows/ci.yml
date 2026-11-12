@@ -359,72 +359,29 @@ jobs:
                   path: tests/*.pdf
                   retention-days: 7
 
-    # Runs one small model with OpenMP threading to exercise the mutex/atomic code paths that the
-    # single-threaded checksum tests never enter. No checksum comparison: multithreaded runs are not
-    # reproducible (worker threads have independently seeded generators and race on shared estimators).
-    openmp_smoke:
+    # Threaded runs use independent random generators. Check physical bounds instead of exact checksums.
+    threaded_models:
+        strategy:
+            fail-fast: false
+            matrix:
+                parallel: [OPENMP, STDPAR]
+                testname: [kilonova_1d, nebular_1d_3dgrid, classicmode_3d]
+                include:
+                    - testname: kilonova_1d
+                      packets: 1.6e5
+                      atomicdata: feconi
+                    - testname: nebular_1d_3dgrid
+                      packets: 2e5
+                      atomicdata: feconi
+                    - testname: classicmode_3d
+                      packets: 3e4
+                      atomicdata: classic
         runs-on: ubuntu-26.04-arm
         timeout-minutes: ${{ inputs.testmode == 'ON' && 360 || 40 }}
-        name: kilonova_1d_openmp_nochecksums
+        name: ${{ matrix.testname }}_${{ matrix.parallel }}_physical_bounds
         env:
             OMPI_MCA_memory: ${{ inputs.testmode == 'ON' && '^patcher' || '' }}
-        steps:
-            - uses: actions/checkout@v7
-              with:
-                  fetch-depth: 0
-
-            - name: Install Open MPI and set compiler to g++-16
-              run: |
-                  echo "CXX=g++-16" >> $GITHUB_ENV
-                  echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
-                  sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libzstd-dev zstd
-
-            - name: Cache test atomic data
-              uses: actions/cache@v6
-              id: cache-testatomicdata
-              with:
-                  path: tests/atomicdata_feconi.tar.xz
-                  key: atomicdata_feconi-${{ hashFiles('tests/atomic_data_release.txt') }}
-
-            - name: Download/extract test data
-              working-directory: tests/
-              run: |
-                  source ./setup_kilonova_1d.sh
-                  # this job has 2 ranks and the checksum jobs have 4, so this keeps the packets of each rank
-                  cd kilonova_1d_testrun
-                  setoption NUM_PACKETS '1.6e5'
-
-            - name: Compile
-              run: |
-                  cp tests/kilonova_1d_testrun/artisoptions.h .
-                  make OPENMP=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j$(nproc) sn3d
-                  cp sn3d tests/kilonova_1d_testrun/
-
-            - name: Run test job0 with OpenMP threads
-              working-directory: tests/kilonova_1d_testrun/
-              env:
-                  OMP_NUM_THREADS: 2
-              run: |
-                  rm -f input.txt
-                  time mpirun -np 2 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
-
-            - name: cat output log
-              if: always()
-              working-directory: tests/kilonova_1d_testrun/
-              run: cat job_from_ts0000/output_0-0.txt
-
-    # Runs the same small model with C++ standard parallelism on multicore CPUs (no GPU offload), which
-    # reaches the same shared-state code paths as the OpenMP job but through std::execution::par_unseq and
-    # std::atomic_ref instead of OpenMP pragmas. As for the OpenMP job, there is no checksum comparison
-    # because multithreaded runs are not reproducible. The thread count is whatever libtbb picks from the
-    # runner's hardware concurrency: unlike OpenMP there is no environment variable to cap it.
-    stdpar_smoke:
-        runs-on: ubuntu-26.04-arm
-        timeout-minutes: ${{ inputs.testmode == 'ON' && 360 || 40 }}
-        name: kilonova_1d_stdpar_nochecksums
-        env:
-            OMPI_MCA_memory: ${{ inputs.testmode == 'ON' && '^patcher' || '' }}
+            OMP_NUM_THREADS: 2
         steps:
             - uses: actions/checkout@v7
               with:
@@ -435,38 +392,39 @@ jobs:
                   echo "CXX=g++-16" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libtbb-dev libzstd-dev
+                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libtbb-dev libzstd-dev zstd python3.14
 
             - name: Cache test atomic data
               uses: actions/cache@v6
-              id: cache-testatomicdata
               with:
-                  path: tests/atomicdata_feconi.tar.xz
-                  key: atomicdata_feconi-${{ hashFiles('tests/atomic_data_release.txt') }}
+                  path: tests/atomicdata_${{ matrix.atomicdata }}.tar.xz
+                  key: atomicdata_${{ matrix.atomicdata }}-${{ hashFiles('tests/atomic_data_release.txt') }}
 
             - name: Download/extract test data
               working-directory: tests/
               run: |
-                  source ./setup_kilonova_1d.sh
-                  # this job has 2 ranks and the checksum jobs have 4, so this keeps the packets of each rank
-                  cd kilonova_1d_testrun
-                  setoption NUM_PACKETS '1.6e5'
+                  source ./setup_${{ matrix.testname }}.sh
+                  cd ${{ matrix.testname }}_testrun
+                  setoption NUM_PACKETS '${{ matrix.packets }}'
 
             - name: Compile
               run: |
-                  cp tests/kilonova_1d_testrun/artisoptions.h .
-                  make STDPAR=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j$(nproc) sn3d
-                  cp sn3d tests/kilonova_1d_testrun/
+                  cp tests/${{ matrix.testname }}_testrun/artisoptions.h .
+                  make ${{ matrix.parallel }}=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j$(nproc) sn3d
+                  cp -L sn3d tests/${{ matrix.testname }}_testrun/
 
-            - name: Run test job0 with stdpar threads
-              working-directory: tests/kilonova_1d_testrun/
+            - name: Run test job0 with threads
+              working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   rm -f input.txt
                   time mpirun -np 2 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
 
-            - name: cat output log
+            - name: Check the numerical results
+              run: python3.14 scripts/check_threaded_outputs.py tests/${{ matrix.testname }}_testrun
+
+            - name: Show the output log
               if: always()
-              working-directory: tests/kilonova_1d_testrun/
+              working-directory: tests/${{ matrix.testname }}_testrun/
               run: cat job_from_ts0000/output_0-0.txt
 
     combine_checksums:
