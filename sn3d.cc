@@ -997,6 +997,8 @@ void install_newrun_files(const std::string& foldername) {
     if (error) {
       fatal_crash("Could not remove the empty new-run folder '{}': {}", foldername, error.message());
     }
+    std::println("job folder: {}", globals::jobfolder);
+    std::fflush(stdout);
   }
   // Open output streams keep their files when rank 0 moves those files to the model folder.
   MPI_Barrier_allranks();
