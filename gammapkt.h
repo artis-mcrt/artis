@@ -12,6 +12,37 @@
 #include "random.h"
 
 namespace gammapkt {
+constexpr double pair_rest_mass_energy = 1.022 * MEV;
+constexpr double pair_production_threshold_nu = pair_rest_mass_energy / H;
+
+// Below the threshold, pair production transfers no energy to kinetic energy.
+[[nodiscard]] constexpr auto get_pair_annihilation_probability(const double nu_cmf) -> double {
+  return nu_cmf <= pair_production_threshold_nu ? 1. : pair_production_threshold_nu / nu_cmf;
+}
+
+// energy-dependent factor of the pair-production cross section, from equation 2 of Ambwani & Sutherland (1988),
+// ApJ, 325, 820-827, doi:10.1086/166052, after Hubbell (1969), NSRDS-NBS 29, National Bureau of Standards,
+// doi:10.6028/NBS.NSRDS.29. Multiply by Z^2 * 1e-27 for a cross section in cm^2. Only valid above the 1.022 MeV
+// threshold.
+[[nodiscard]] constexpr auto get_sigma_pair_prod_factor(const double nu_cmf) -> double {
+  if (nu_cmf <= pair_production_threshold_nu) {
+    return 0.;
+  }
+  const double hnu_over_1MeV = nu_cmf * H / MEV;
+  if (nu_cmf > (1.5 * MEV / H)) {
+    return 0.0481 + (0.301 * (hnu_over_1MeV - 1.5));
+  }
+  // the coefficient below 1.5 MeV is 0.10063, not the 1.0063 printed in the paper: the latter makes
+  // the fit jump by a factor of ten at the junction between the two branches
+  return 0.10063 * (hnu_over_1MeV - 1.022);
+}
+
+// The branches agree at 1.5 MeV to the precision of the fit coefficients.
+static_assert((get_sigma_pair_prod_factor((1.5 * MEV / H) * (1. + 1e-12)) -
+               get_sigma_pair_prod_factor((1.5 * MEV / H))) < 2e-6);
+static_assert((get_sigma_pair_prod_factor((1.5 * MEV / H)) -
+               get_sigma_pair_prod_factor((1.5 * MEV / H) * (1. + 1e-12))) < 2e-6);
+
 void init_gamma_data();
 DEVICE_FUNC void pellet_gamma_decay(Packet& pkt);
 DEVICE_FUNC void do_gamma(Packet& pkt, int nts, double t2);
