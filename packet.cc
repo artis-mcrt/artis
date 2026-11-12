@@ -31,6 +31,7 @@
 #include "mpi_logging.h"
 #include "outputfilestream.h"
 #include "random.h"
+#include "restart_input.h"
 #include "sn3d.h"
 #include "vectors.h"
 
@@ -332,6 +333,9 @@ void read_packet_restart_file(const int timestep, std::vector<Packet>& packets) 
 
   printlnlog("Reading {}", filename);
   const auto packets_file = fopen_required_uniqueptr(filename, "rb");
+  std::uint64_t saved_input_hash = 0;
+  read_restart_values(packets_file.get(), saved_input_hash);
+  restart_input::check(saved_input_hash, filename);
   std::int64_t packet_count_in_file = 0;
   read_restart_values(packets_file.get(), packet_count_in_file);
   assert_always(packet_count_in_file >= 0);
@@ -371,8 +375,9 @@ void write_packet_restart_file(const int timestep, const std::span<const Packet>
       printlnlog("[error] Could not open file '{}' for mode 'wb'.", filename);
     } else {
       auto packet_count = static_cast<std::int64_t>(std::ssize(packets));
-      // write number of packets as header
-      write_success = (std::fwrite(&packet_count, sizeof(std::int64_t), 1, packets_file) == 1);
+      write_success =
+          (std::fwrite(&restart_input::input_hash, sizeof(restart_input::input_hash), 1, packets_file) == 1);
+      write_success = write_success && (std::fwrite(&packet_count, sizeof(std::int64_t), 1, packets_file) == 1);
       write_success = write_success &&
                       (std::fwrite(packets.data(), sizeof(Packet), packets.size(), packets_file) == packets.size());
 #ifndef GPU_ON

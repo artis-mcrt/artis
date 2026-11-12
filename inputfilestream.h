@@ -28,6 +28,7 @@
 
 #include "constants.h"
 #include "mpi_logging.h"
+#include "restart_input.h"
 
 #ifdef USE_ZSTD
 // A stream buffer that decompresses a zstd file while it reads. It supports no seek, so a reader
@@ -118,7 +119,8 @@ class InputFileStream : public std::istream {
 
 // Open an input file. The search covers the folders of datafolders in order. In each folder, the
 // plain name comes before the compressed name, e.g. model.txt before model.txt.zst.
-[[nodiscard]] inline auto istream_required(const std::string_view filename) -> InputFileStream {
+[[nodiscard]] inline auto istream_required(const std::string_view filename,
+                                           const std::string_view restart_input_name = {}) -> InputFileStream {
   if (filename.empty()) {
     fatal_crash("Cannot open file with empty filename.");
   }
@@ -127,6 +129,7 @@ class InputFileStream : public std::istream {
     const auto datafolderfilename = std::format("{}{}{}", globals::path_to_modelfolder, datadir, filename);
     auto filebuf = std::make_unique<std::filebuf>();
     if (filebuf->open(datafolderfilename, std::ios::in) != nullptr) {
+      restart_input::record_file(restart_input_name.empty() ? filename : restart_input_name, datafolderfilename);
       return InputFileStream(std::move(filebuf));
     }
 
@@ -134,6 +137,7 @@ class InputFileStream : public std::istream {
 #ifdef USE_ZSTD
     auto compressedfile = std::ifstream(zstfilename, std::ios::in | std::ios::binary);
     if (compressedfile.is_open()) {
+      restart_input::record_file(restart_input_name.empty() ? filename : restart_input_name, zstfilename);
       return InputFileStream(std::make_unique<ZstdInputBuffer>(zstfilename, std::move(compressedfile)));
     }
 #else

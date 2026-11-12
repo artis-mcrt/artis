@@ -81,9 +81,9 @@ constexpr double nu_1mev = 2.41326e+20;
 constexpr double nu_1p022mev = 2.46636e+20;  // electron-positron pair rest mass energy (pair production threshold)
 constexpr double nu_1p5mev = 3.61990e+20;
 
-void read_gamma_spectrum(const int nucindex, const std::string& filename) {
+void read_gamma_spectrum(const int nucindex, const std::string& filename, const std::string& restart_input_name) {
   // read the gamma ray lines and store the average energy in gamma rays per nuclear decay
-  auto gammafile = istream_required(filename);
+  auto gammafile = istream_required(filename, restart_input_name);
   std::string line;
   assert_always(get_noncommentline(gammafile, line));
   std::istringstream ssline(line);
@@ -169,7 +169,8 @@ void read_gamma_tables() {
         if (folderfiles[folderindex].contains(filename)) {
           tablefound = true;
           tables_found++;
-          read_gamma_spectrum(nucindex, std::format("{}{}", datafolders[folderindex], filename));
+          read_gamma_spectrum(nucindex, std::format("{}{}", datafolders[folderindex], filename),
+                              std::format("{}gamma_{}.txt", datafolders[folderindex], striso));
           break;
         }
       }

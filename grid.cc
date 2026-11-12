@@ -51,6 +51,7 @@
 #include "outputfilestream.h"
 #include "radfield.h"
 #include "random.h"
+#include "restart_input.h"
 #include "rpkt.h"
 #include "sn3d.h"
 #include "vectors.h"
@@ -1147,6 +1148,10 @@ void read_grid_restart_data(const int timestep) {
 
   printlnlog("reading grid restart snapshot from {}", filename);
   FILE* gridsave_file = fopen_required(filename, "rb");
+
+  std::uint64_t saved_input_hash = 0;
+  read_restart_values(gridsave_file, saved_input_hash);
+  restart_input::check(saved_input_hash, filename);
 
   int ntimesteps_in = -1;
   int nprocs_in = -1;
@@ -2285,6 +2290,7 @@ void write_grid_restart_data(const int timestep) {
 
   FILE* gridsave_file = fopen_required(filename, "wb");
 
+  write_restart_values(gridsave_file, restart_input::input_hash);
   write_restart_values(gridsave_file, globals::ntimesteps, globals::nprocs, globals::tmin, globals::tmax, timestep,
                        get_nonempty_npts_model(), get_nelements(), get_includedions(), globals::nbfcontinua_ground);
   write_restart_array(gridsave_file, mgi_of_nonemptymgi);
@@ -2499,6 +2505,7 @@ void init_grid() {
 
   radfield::init();
   nonthermal::init();
+  restart_input::finish();
 
   // and assign a temperature to the cells
   if (globals::simulation_continued_from_saved) {

@@ -46,6 +46,7 @@
 #include "packet.h"
 #include "random.h"
 #include "ratecoeff.h"
+#include "restart_input.h"
 #include "sn3d.h"
 
 namespace {
@@ -2023,6 +2024,11 @@ void read_parameterfile(std::span<Packet> packets) {
 
   const auto filename = get_parameterfile_name();
   auto file = istream_required(filename);
+  if (globals::my_rank == 0) {
+    auto parameters = istream_required(filename);
+    restart_input::file_hashes["input.txt"] = restart_input::hash_parameters(
+        parameters, {inputline_timestep_range, inputline_continue_from_saved, inputline_nprocs_exspec});
+  }
   int noncomment_linenum = 0;
 
   std::int64_t pre_zseed = -1;

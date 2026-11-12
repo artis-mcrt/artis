@@ -60,6 +60,7 @@
 #include "packet.h"
 #include "radfield.h"
 #include "ratecoeff.h"
+#include "restart_input.h"
 #include "rpkt.h"
 #include "spectrum_lightcurve.h"
 #include "stats.h"
@@ -1077,6 +1078,7 @@ void open_log_files_and_log_job_configuration(const CommandLineOptions& options)
 }
 
 void read_input_and_initialise_simulation(std::span<Packet> packets) {
+  restart_input::begin();
   // Read in parameters from input.txt
   read_parameterfile(packets);
 

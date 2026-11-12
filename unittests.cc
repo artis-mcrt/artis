@@ -57,6 +57,7 @@
 #include "radfield.h"
 #include "random.h"
 #include "ratecoeff.h"
+#include "restart_input.h"
 #include "rpkt.h"
 #include "sn3d.h"
 #include "spectrum_lightcurve.h"
@@ -809,6 +810,21 @@ void test_recombination_rate_rows() {
   std::istringstream nearby_table{std::format("{:.17g} -1 9e-12", log_Te + 1e-10)};
   check(!read_recombination_rate_rows(nearby_table, 1, log_Te),
         "a distinct nearby temperature still needs interpolation");
+}
+
+void test_restart_input_hash() {
+  std::println("restart input identity...");
+  check(restart_input::hash_text("1 2 3") != restart_input::hash_text("1 2 4"),
+        "a changed physical value changes the input hash");
+  const std::array mutable_rows{1, 2, 3};
+  std::istringstream original{"10 20 # physical values\n0 2\n0\n1\n30\n"};
+  std::istringstream resumed{"# comment\n 10   20\n2 4\n1\n8\n30 # comment\n"};
+  std::istringstream changed{"10 21\n2 4\n1\n8\n30\n"};
+  const auto original_hash = restart_input::hash_parameters(original, mutable_rows);
+  check(original_hash == restart_input::hash_parameters(resumed, mutable_rows),
+        "restart controls and comments keep the physical input hash");
+  check(original_hash != restart_input::hash_parameters(changed, mutable_rows),
+        "a changed physical parameter changes the input hash");
 }
 
 void test_input_helpers() {
@@ -1645,6 +1661,7 @@ auto main() -> int {
   test_phixs_table_lookup();
   test_closest_transition_randomised();
   test_recombination_rate_rows();
+  test_restart_input_hash();
   test_input_helpers();
   test_parse_next_token();
   test_seed64_distinct_states();

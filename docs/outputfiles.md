@@ -427,6 +427,11 @@ whose virtual packet escaped in one direction or more:
 
 ## A new simulation removes the files of the previous one
 
+The grid and packet restart files hold a hash of the input files that the simulation reads. A resume run stops if
+these files change. Keep their contents and compression unchanged. Comments and white space in `input.txt` can
+change. Its restart flag, requested timestep range, and `nprocs_exspec` can also change. The existing rank checks
+still apply. Restart files require the same binary as the initial run.
+
 A new simulation first removes the output files, the restart files, and the `job_from_ts*` folders of the previous
 simulation. `scripts/clean.sh` removes the same files, and also the Slurm output files and the core files.
 
