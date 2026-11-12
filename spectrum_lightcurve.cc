@@ -190,20 +190,34 @@ class BufferedTextFile {
   void append_row(const std::span<const double> values) {
     // a value in the format {:g} has at most 13 characters, e.g. -1.23457e+308
     assert_always(used + (std::ssize(values) * 14) + 1 <= std::ssize(buffer));
-    for (auto i = 0Z; i < std::ssize(values); i++) {
-      if (i > 0) {
-        buffer[used++] = ' ';
+    if (!values.empty() &&
+        std::ranges::all_of(values, [](const double value) { return value == 0. && !std::signbit(value); })) {
+      // most rows of the emission and absorption files hold only zeros
+      if (std::ssize(zero_row_text) != 2 * std::ssize(values)) {
+        zero_row_text.assign(2 * values.size(), ' ');
+        for (auto i = 0UZ; i < zero_row_text.size(); i += 2) {
+          zero_row_text[i] = '0';
+        }
+        zero_row_text.back() = '\n';
       }
-      if (values[i] == 0. && !std::signbit(values[i])) {
-        buffer[used++] = '0';  // the arrays can be mostly zero, and this path is much faster
-      } else {
-        const auto [textend, ec] = std::to_chars(std::to_address(buffer.begin() + used), std::to_address(buffer.end()),
-                                                 values[i], std::chars_format::general, 6);
-        assert_always(ec == std::errc{});
-        used = textend - buffer.data();
+      used = std::ranges::copy(zero_row_text, buffer.begin() + used).out - buffer.begin();
+    } else {
+      for (auto i = 0Z; i < std::ssize(values); i++) {
+        if (i > 0) {
+          buffer[used++] = ' ';
+        }
+        if (values[i] == 0. && !std::signbit(values[i])) {
+          buffer[used++] = '0';  // the arrays can be mostly zero, and this path is much faster
+        } else {
+          const auto [textend, ec] =
+              std::to_chars(std::to_address(buffer.begin() + used), std::to_address(buffer.end()), values[i],
+                            std::chars_format::general, 6);
+          assert_always(ec == std::errc{});
+          used = textend - buffer.data();
+        }
       }
+      buffer[used++] = '\n';
     }
-    buffer[used++] = '\n';
     if (used >= flushsize) {
       file.write(buffer.data(), used);
       used = 0;
@@ -216,6 +230,8 @@ class BufferedTextFile {
   std::vector<char> buffer;
   // the number of characters of buffer that wait for the next write
   std::streamsize used = 0;
+  // the text of the last row of zeros, e.g. "0 0 0\n"
+  std::string zero_row_text;
 };
 
 // Write emission-type spectra (emission or true emission) with a line for each frequency bin of
