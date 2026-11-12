@@ -6,8 +6,7 @@ post-processing.
 :::
 
 `make` builds `exspec` together with `sn3d`. It combines the packet files of all {term}`ranks <rank>` into spectra and light curves,
-with the same code that `sn3d` uses, so it gives the same files for a simulation that ran to the last timestep of the
-model. `exspec` writes all timesteps of the model, and a timestep after the last requested timestep holds zeros. It reads the packet files of `packets/`, which `sn3d`
+with the same code that `sn3d` uses. `exspec` writes all timesteps of the model, and a timestep after the last requested timestep holds zeros. It reads the packet files of `packets/`, which `sn3d`
 writes at the last requested {term}`timestep`. A simulation that stopped earlier has no packet files, and `exspec` then stops
 with an error. Two situations need `exspec`:
 
@@ -15,6 +14,13 @@ with an error. Two situations need `exspec`:
   again and run `exspec`, and you need no new simulation.
 - The {term}`model folder` holds the packet files but no spectra, e.g. from a run of an older version of ARTIS.
   `scripts/run-exspec-if-needed.sh` runs `exspec` when `emission.out` is absent.
+
+The text packet files store most floating-point values with six significant digits. `sn3d` uses the values in memory
+for its spectra. `exspec` uses the rounded values from the files. A packet near a frequency, arrival-time, or direction
+boundary can therefore move to another bin. Packet energies also have this small rounding error. The relative flux
+error in a bin can be large when that bin holds few packets. Do not expect identical checksums from the two programs.
+The unit tests measure these effects with packet files and known boundary cases. This precision limit is separate
+from incomplete time coverage after a partial run.
 
 Run it in the model folder with any number of ranks from one up to the number of packet files:
 

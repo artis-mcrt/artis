@@ -296,6 +296,48 @@ void test_expanding_shell_intersection() {
   check(roots_agree, "the selected root agrees with the reference for random paths");
 }
 
+void test_packet_text_precision() {
+  std::println("packet text precision...");
+  constexpr auto filename = "unittest_packet_precision.out";
+  auto original = std::array<Packet, 3>{};
+  for (auto& pkt : original) {
+    pkt.type = TYPE_ESCAPE;
+    pkt.escape_type = TYPE_RPKT;
+    pkt.escape_time = 1000000.25F;
+    pkt.dir = Vec3d{std::sqrt(1. - (0.20000005 * 0.20000005)), 0., 0.20000005};
+    pkt.nu_rf = 1.e15 - 1.e7;
+    pkt.nu_cmf = pkt.nu_rf;
+    pkt.e_rf = 1.23456789e40;
+    pkt.e_cmf = pkt.e_rf;
+  }
+  original[1].e_rf *= 2.;
+  original[2].e_rf *= 3.;
+  write_text_packets(filename, original);
+  const auto saved_nprocs_exspec = globals::nprocs_exspec;
+  globals::nprocs_exspec = NUM_PACKETS;
+  const auto restored = read_text_packets(filename);
+  globals::nprocs_exspec = saved_nprocs_exspec;
+  check(restored.size() == original.size(), "packet text preserves the packet count");
+  if (restored.size() == original.size()) {
+    check(original[0].nu_rf < 1.e15 && restored[0].nu_rf >= 1.e15,
+          "text precision can move a packet across a frequency boundary");
+    check(original[0].escape_time > 1000000.125 && restored[0].escape_time < 1000000.125,
+          "text precision can move a packet across an arrival-time boundary at zero position");
+    check(get_escapedirectionbin(original[0].dir) != get_escapedirectionbin(restored[0].dir),
+          "text precision can move a packet across a direction boundary");
+    double energy_original = 0.;
+    double energy_restored = 0.;
+    for (size_t pktindex = 0; pktindex < original.size(); pktindex++) {
+      energy_original += original[pktindex].e_rf;
+      energy_restored += restored[pktindex].e_rf;
+    }
+    check_close(energy_restored, energy_original, 5.e-6,
+                "text packet energy sum stays within the six-digit precision limit");
+  }
+  std::filesystem::remove(filename);
+  std::filesystem::remove(std::string(filename) + ".zst");
+}
+
 void test_escapedirectionbin() {
   std::println("get_escapedirectionbin...");
   rngstate_type rngstate{5501};
@@ -1631,6 +1673,7 @@ auto main() -> int {
   test_vector_geometry();
   test_expanding_shell_intersection();
   test_escapedirectionbin();
+  test_packet_text_precision();
   test_frame_transform();
   test_zero_polarisation_intensity();
   test_meridian();
