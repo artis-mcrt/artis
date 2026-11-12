@@ -14,7 +14,7 @@ with an error. Two situations need `exspec`:
 - You need the files again with other settings, e.g. after a change of the frequency range. You then build the code
   again and run `exspec`, and you need no new simulation.
 - The {term}`model folder` holds the packet files but no spectra, e.g. from a run of an older version of ARTIS.
-  `scripts/run-exspec-if-needed.sh` runs `exspec` when `emission.out` is absent.
+  `scripts/run-exspec-if-needed.sh` skips `exspec` only when the completion record matches every required spectrum, packet file, and `input.txt`.
 
 Run it in the model folder with any number of ranks from one up to the number of packet files:
 

@@ -839,6 +839,7 @@ auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime
       write_text_packets(filename, packets);
 
       vpkt::write_timestep(nts, true);
+      write_spectra_completion_record();
 
       const auto after_final_packets_write =
           std::chrono::duration<double>(std::chrono::steady_clock::now() - real_time_start).count();
@@ -880,6 +881,7 @@ void remove_previous_simulation_files() {
 // Create the job folder, which gets its name from the start timestep of the job. Make an output_0-0.txt symlink in
 // the model folder that points to the rank-0 log of the current job. Then tail -f output_0-0.txt works.
 void setup_jobfolder() {
+  remove_spectra_completion_record();
   const auto* const linkname = "output_0-0.txt";
 
   const auto [timestep_initial, simulation_continued_from_saved] = read_start_timestep_and_continue_flag();

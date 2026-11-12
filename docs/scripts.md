@@ -9,7 +9,7 @@ The `scripts` folder holds the job scripts of the clusters that we use and some 
 - `submit.sh`: it finds the cluster from the host name and submits the `sn3d` job script of that cluster.
 - `exspec-zip-<cluster>.sh`: the post-processing job. It runs `run-exspec-if-needed.sh` and then `exspec-after.sh`. On
   Leonardo and Virgo, `exspec-zip-<cluster>-submit.sh` submits `exspec-zip-<cluster>-slurmjob.sh`.
-- `run-exspec-if-needed.sh`: it runs `exspec` if `emission.out` is absent.
+- `run-exspec-if-needed.sh`: it runs `exspec` if the spectrum completion record is absent or its file checks fail.
 - `exspec-after.sh`: after the last {term}`timestep` of the model, the script does these steps:
     - It removes the {term}`restart files <restart file>`.
     - It merges the direction-resolved files with `mergeangleres.py`.

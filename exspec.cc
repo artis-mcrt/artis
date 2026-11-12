@@ -109,6 +109,7 @@ auto main(int argc, char* argv[]) -> int {
   // the index of the last timestep also selects the emission, absorption, and direction bin files
   const std::vector<std::span<const Packet>> packet_spans_by_file(packets_by_file.begin(), packets_by_file.end());
   write_light_curves_and_spectra(globals::ntimesteps - 1, packet_spans_by_file);
+  write_spectra_completion_record();
 
   const auto exspec_duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start).count();
   printlnlog("exspec finished (took {:.1f} seconds)", exspec_duration);

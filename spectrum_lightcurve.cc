@@ -3,6 +3,8 @@
 
 #include "spectrum_lightcurve.h"
 
+#include <sys/stat.h>
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -671,6 +673,8 @@ void write_light_curves_and_spectra_for_dirbin(const int nts, std::span<const st
 }  // anonymous namespace
 
 void write_light_curves_and_spectra(const int nts, std::span<const std::span<const Packet>> packets_by_rank) {
+  remove_spectra_completion_record();
+
   const bool is_last_requested_timestep = (nts >= globals::timestep_finish - 1);
 
   // the emission resolved spectra are slow to generate, and require a lot of memory. The code
@@ -716,4 +720,67 @@ void write_light_curves_and_spectra(const int nts, std::span<const std::span<con
       std::chrono::duration<double>(std::chrono::steady_clock::now() - write_start_time).count();
   printlnlog("timestep {}: Saving light curves and {}spectra took {:.1f}s", nts,
              do_emission_absorption ? "emission/absorption " : "", write_duration_seconds);
+}
+
+void remove_spectra_completion_record() {
+  if (globals::my_rank == 0) {
+    std::error_code ec;
+    std::filesystem::remove(".artis-spectra-complete", ec);
+    if (ec) {
+      fatal_crash("Could not remove the spectrum completion record: {}", ec.message());
+    }
+  }
+  MPI_Barrier_allranks();
+}
+
+void write_spectra_completion_record() {
+  MPI_Barrier_allranks();
+  if (globals::my_rank != 0) {
+    return;
+  }
+
+  std::vector<std::string> filenames{"input.txt"};
+  for (int rank = 0; rank < globals::nprocs_exspec; rank++) {
+    auto filename = std::format("packets/packets00_{:04d}.out", rank);
+    if (!std::filesystem::is_regular_file(filename)) {
+      filename += ".zst";
+    }
+    filenames.push_back(filename);
+  }
+  const int ndirbins = grid::get_modelgridtype() != GridType::SPHERICAL1D ? MABINS : 0;
+  for (int dirbin = -1; dirbin < ndirbins; dirbin++) {
+    std::vector<std::string_view> prefixes{"light_curve", "spec", "emission", "emissiontrue", "absorption"};
+    if constexpr (POL_ON) {
+      prefixes.insert(prefixes.end(), {"specpol", "emissionpol", "absorptionpol"});
+    }
+    if (KEEP_ESCAPED_GAMMAS && dirbin == -1) {
+      prefixes.insert(prefixes.end(), {"gamma_light_curve", "gamma_spec"});
+    }
+    for (const auto prefix : prefixes) {
+      filenames.push_back(output_filepath(dirbin < 0
+                                              ? std::format("{}.out", prefix)
+                                              : std::format("{}{}_res_{:02d}.out", outdir_resfiles, prefix, dirbin)));
+    }
+  }
+
+  auto record = open_uncompressed_output_file(".artis-spectra-complete.tmp");
+  std::println(record, "ARTIS spectra 1");
+  for (const auto& filename : filenames) {
+    const auto size = std::filesystem::file_size(filename);
+    assert_always(size > 0);
+    // Some standard libraries return only whole seconds from last_write_time(). Keep the filesystem precision.
+    struct stat file_stat{};
+    assert_always(stat(filename.c_str(), &file_stat) == 0);
+#ifdef __APPLE__
+    const auto timestamp = file_stat.st_mtimespec;
+#else
+    const auto timestamp = file_stat.st_mtim;
+#endif
+    const auto nanoseconds = (static_cast<std::int64_t>(timestamp.tv_sec) * 1000000000) + timestamp.tv_nsec;
+    std::println(record, "{} {} {}", size, nanoseconds, filename);
+  }
+  std::println(record, "complete");
+  record.close();
+  assert_always(!record.fail());
+  std::filesystem::rename(".artis-spectra-complete.tmp", ".artis-spectra-complete");
 }
