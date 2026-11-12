@@ -739,7 +739,7 @@ void write_spectra_completion_record() {
     return;
   }
 
-  std::vector<std::string> filenames{"input.txt"};
+  std::vector<std::string> filenames{std::filesystem::is_regular_file("input.txt") ? "input.txt" : "input.txt.zst"};
   for (int rank = 0; rank < globals::nprocs_exspec; rank++) {
     auto filename = std::format("packets/packets00_{:04d}.out", rank);
     if (!std::filesystem::is_regular_file(filename)) {

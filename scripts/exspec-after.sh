@@ -18,6 +18,12 @@ if grep -qs "No need for restart" output_0-0.txt && grep -qs "sn3d finished" out
   # same output as -T0.
   ncpus=$(nproc)
 
+  # Convert recorded files first. A failed conversion must leave no valid completion record.
+  if ! python3 ./artis/scripts/check-spectra-complete.py --compress "$ncpus"; then
+    echo "The spectrum completion check or compression failed, so the job stops"
+    exit 1
+  fi
+
   # 3D kilonova model.txt and abundances.txt can be huge, so compress txt files
   # do maxdepth 1 first in case Slurm stops the job while zstd compresses the model folder
   echo "$(date): zstd compresses the .txt files of the model folder"

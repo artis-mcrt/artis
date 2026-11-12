@@ -13,7 +13,7 @@ The `scripts` folder holds the job scripts of the clusters that we use and some 
 - `exspec-after.sh`: after the last {term}`timestep` of the model, the script does these steps:
     - It removes the {term}`restart files <restart file>`.
     - It merges the direction-resolved files with `mergeangleres.py`.
-    - It compresses the large text files with zstd.
+    - It compresses the large text files with zstd. It updates a valid spectrum completion record after the expected conversions succeed.
     - It archives the logs with `tar_rm_logs.sh`.
     - It makes the parquet caches of artistools with `artistools cache make`, e.g. of the {term}`estimators <estimator>` and the packets.
 - `corehours-before.sh` and `corehours-after.sh`: the job scripts source these files to log the CPU allocation, the
