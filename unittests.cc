@@ -695,6 +695,18 @@ void test_rad_deexcitation() {
         "radiative deexcitation is the Einstein A coefficient for inverted populations");
 }
 
+void test_cold_continuum_median() {
+  std::println("cold free-bound continuum median...");
+  globals::NPHIXSPOINTS = 100;
+  globals::NPHIXSNUINCREMENT = 0.03;
+  last_phixs_nuovernuedge = 3.97;
+  const std::vector<float> photoion_xs(globals::NPHIXSPOINTS, 1e-18F);
+  const double nu_threshold = 13.6 * EV / H;
+  const double nu_median = get_continuum_nu_from_cumulative_probability(nu_threshold, 1000.F, photoion_xs, 0.5);
+  check_close(H * (nu_median - nu_threshold) / EV, 0.0608780526, 2e-6,
+              "the median excess energy resolves the thermal width at 1000 K");
+}
+
 void test_phixs_table_lookup() {
   std::println("photoionisation cross-section table lookup...");
   globals::NPHIXSPOINTS = 10;
@@ -1643,6 +1655,7 @@ auto main() -> int {
   test_compton();
   test_rad_deexcitation();
   test_phixs_table_lookup();
+  test_cold_continuum_median();
   test_closest_transition_randomised();
   test_recombination_rate_rows();
   test_input_helpers();
