@@ -177,7 +177,7 @@ class BufferedTextFile {
  public:
   explicit BufferedTextFile(const std::string& filename) : file(open_output_file(filename)), buffer(2 * flushsize) {}
   ~BufferedTextFile() {
-    file.write(buffer.data(), used);
+    file.write(buffer.data(), nchars_to_write);
     file.close();
     assert_always(!file.fail());  // e.g. a full disk
   }
@@ -189,7 +189,7 @@ class BufferedTextFile {
   // append a line with the values in the format {:g} and a space between them
   void append_row(const std::span<const double> values) {
     // a value in the format {:g} has at most 13 characters, e.g. -1.23457e+308
-    assert_always(used + (std::ssize(values) * 14) + 1 <= std::ssize(buffer));
+    assert_always(nchars_to_write + (std::ssize(values) * 14) + 1 <= std::ssize(buffer));
     if (!values.empty() &&
         std::ranges::all_of(values, [](const double value) { return value == 0. && !std::signbit(value); })) {
       // most rows of the emission and absorption files hold only zeros
@@ -200,27 +200,27 @@ class BufferedTextFile {
         }
         zero_row_text.back() = '\n';
       }
-      used = std::ranges::copy(zero_row_text, buffer.begin() + used).out - buffer.begin();
+      nchars_to_write = std::ranges::copy(zero_row_text, buffer.begin() + nchars_to_write).out - buffer.begin();
     } else {
       for (auto i = 0Z; i < std::ssize(values); i++) {
         if (i > 0) {
-          buffer[used++] = ' ';
+          buffer[nchars_to_write++] = ' ';
         }
         if (values[i] == 0. && !std::signbit(values[i])) {
-          buffer[used++] = '0';  // the arrays can be mostly zero, and this path is much faster
+          buffer[nchars_to_write++] = '0';  // the arrays can be mostly zero, and this path is much faster
         } else {
           const auto [textend, ec] =
-              std::to_chars(std::to_address(buffer.begin() + used), std::to_address(buffer.end()), values[i],
+              std::to_chars(std::to_address(buffer.begin() + nchars_to_write), std::to_address(buffer.end()), values[i],
                             std::chars_format::general, 6);
           assert_always(ec == std::errc{});
-          used = textend - buffer.data();
+          nchars_to_write = textend - buffer.data();
         }
       }
-      buffer[used++] = '\n';
+      buffer[nchars_to_write++] = '\n';
     }
-    if (used >= flushsize) {
-      file.write(buffer.data(), used);
-      used = 0;
+    if (nchars_to_write >= flushsize) {
+      file.write(buffer.data(), nchars_to_write);
+      nchars_to_write = 0;
     }
   }
 
@@ -228,8 +228,7 @@ class BufferedTextFile {
   static constexpr std::streamsize flushsize = 4 * 1024 * 1024;
   OutputFileStream file;
   std::vector<char> buffer;
-  // the number of characters of buffer that wait for the next write
-  std::streamsize used = 0;
+  std::streamsize nchars_to_write = 0;
   // the text of the last row of zeros, e.g. "0 0 0\n"
   std::string zero_row_text;
 };
