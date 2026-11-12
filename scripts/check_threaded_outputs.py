@@ -42,16 +42,18 @@ def check_light_curve(modelpath: Path) -> None:
 def check_nlte(modelpath: Path) -> None:
     """Check NLTE populations and the sum of the level fractions in each ion."""
     ion_fractions: defaultdict[tuple[float, ...], float] = defaultdict(float)
+    has_positive_nlte_population = False
     for path in modelpath.glob("job_from_ts0000/nlte_*.out*"):
         for row in read_rows(path, header=True):
             require(len(row) == 8, f"{path}: an NLTE row has the wrong number of columns")
             require(min(row[5:]) >= 0 and row[7] <= 1.00001, f"{path}: an NLTE population is outside its bounds")
             ion_fractions[tuple(row[:4])] += row[7]
+            has_positive_nlte_population |= row[6] > 0
     require(bool(ion_fractions), "The run has no NLTE populations")
-    # The output has six significant digits. Permit the sum of the rounded level fractions to differ from one.
-    require(
-        all(abs(total - 1) < 5e-4 for total in ion_fractions.values()), "The NLTE level fractions do not sum to one"
-    )
+    require(has_positive_nlte_population, "The run has no positive NLTE population")
+    # The ion population includes autoionising levels that these rows omit. The fraction sum can be less than one.
+    # The output has six significant digits. Permit a small error in the sum of the rounded fractions.
+    require(all(total <= 1.0005 for total in ion_fractions.values()), "The NLTE level fractions exceed one")
 
 
 def check_virtual_spectra(modelpath: Path) -> None:
