@@ -24,6 +24,7 @@
 #include <print>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <vector>
 
@@ -38,7 +39,11 @@ inline auto get_run_lock() -> RunLock& {
 
 inline void acquire_run_lock() {
   if (globals::my_rank == 0) {
-    const auto contents = std::format("{}\n{}\n", getpid(), std::filesystem::current_path().generic_string());
+    std::array<char, MPI_MAX_PROCESSOR_NAME> hostname{};
+    int hostname_length = 0;
+    assert_always(MPI_Get_processor_name(hostname.data(), &hostname_length) == MPI_SUCCESS);
+    const auto contents = std::format("{}\n{}\n{}\n", getpid(), std::filesystem::current_path().generic_string(),
+                                      std::string_view{hostname.data(), static_cast<size_t>(hostname_length)});
     const auto error = get_run_lock().acquire("artis.pid", contents);
     if (error == std::errc::file_exists) {
       fatal_crash(

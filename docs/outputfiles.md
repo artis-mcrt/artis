@@ -87,7 +87,8 @@ A run writes these files into the model folder:
     - `gammalinelist.out`: each gamma line of each nuclide, with its energy in MeV and its number of photons for
       each decay;
     - `bflist.out`: each bound-free continuum, with its ion, its lower level, and its upper level.
-- `artis.pid`: the process id of rank 0 and the path of the model folder. Rank 0 creates this file exclusively.
+- `artis.pid`: the process id of rank 0, the path of the model folder, and the host name.
+  Rank 0 creates this file exclusively.
   `sn3d` and `exspec` stop if the file exists, including when another host owns it.
   Rank 0 removes its own file after all ranks finish their output.
   A failed run can leave this file. Confirm that all runs in this model folder stopped on every host.
