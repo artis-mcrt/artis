@@ -951,11 +951,29 @@ void reduce_estimators() {
     const auto sys_time_start_reduction = std::chrono::steady_clock::now();
     printlog("Reducing detailed line estimators");
 
+#ifndef REPRODUCIBLE
+    auto line_values = std::vector<double>(detailed_linecount);
+    auto line_contribcounts = std::vector<int>(detailed_linecount);
+#endif
     for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+#ifdef REPRODUCIBLE
+      // Keep the scalar reductions because MPI can select another sum order for an array.
       for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
         MPI_Allreduce_safe(Jb_lu_raw[nonemptymgi][jblueindex].value, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce_safe(Jb_lu_raw[nonemptymgi][jblueindex].contribcount, MPI_SUM, MPI_COMM_WORLD);
       }
+#else
+      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
+        line_values[jblueindex] = Jb_lu_raw[nonemptymgi][jblueindex].value;
+        line_contribcounts[jblueindex] = Jb_lu_raw[nonemptymgi][jblueindex].contribcount;
+      }
+      MPI_Allreduce_safe(line_values, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce_safe(line_contribcounts, MPI_SUM, MPI_COMM_WORLD);
+      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
+        Jb_lu_raw[nonemptymgi][jblueindex].value = line_values[jblueindex];
+        Jb_lu_raw[nonemptymgi][jblueindex].contribcount = line_contribcounts[jblueindex];
+      }
+#endif
     }
     const auto duration_reduction =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_reduction).count();
@@ -980,10 +998,7 @@ void do_MPI_Bcast(const ptrdiff_t nstart_nonempty, const ptrdiff_t ndo_nonempty,
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     for (auto nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
-      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-        MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi][jblueindex].value, root, MPI_COMM_WORLD);
-        MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount, root, MPI_COMM_WORLD);
-      }
+      MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi], root, MPI_COMM_WORLD);
     }
   }
 }
