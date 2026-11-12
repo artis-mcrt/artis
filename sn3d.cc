@@ -933,6 +933,76 @@ void setup_jobfolder() {
   MPI_Barrier_allranks();
 }
 
+// Keep the previous results until every rank has read the input and initialised the simulation.
+auto enter_newrun_folder() -> std::string {
+  const auto [timestep_initial, simulation_continued_from_saved] = read_start_timestep_and_continue_flag();
+  if (simulation_continued_from_saved) {
+    return {};
+  }
+  int process_id = getpid();
+  MPI_Bcast_safe(process_id, 0, MPI_COMM_WORLD);
+  const auto foldername = std::format(".artis-newrun-{}", process_id);
+  if (globals::my_rank == 0) {
+    std::error_code error;
+    if (!std::filesystem::create_directory(foldername, error)) {
+      fatal_crash("Could not create the new-run folder '{}': {}", foldername,
+                  error ? error.message() : "the folder already exists");
+    }
+  }
+  MPI_Barrier_allranks();
+  std::error_code error;
+  std::filesystem::current_path(foldername, error);
+  if (error) {
+    fatal_crash("Could not enter the new-run folder '{}': {}", foldername, error.message());
+  }
+  globals::path_to_modelfolder = "../";
+  return foldername;
+}
+
+void install_newrun_files(const std::string& foldername) {
+  if (foldername.empty()) {
+    return;
+  }
+  // Every rank must complete the input check before rank 0 removes the previous results.
+  MPI_Barrier_allranks();
+  std::error_code error;
+  std::filesystem::current_path("..", error);
+  if (error) {
+    fatal_crash("Could not return to the model folder: {}", error.message());
+  }
+  globals::path_to_modelfolder.clear();
+  MPI_Barrier_allranks();
+  if (globals::my_rank == 0) {
+    for (const auto& entry : std::filesystem::directory_iterator(foldername)) {
+      const auto destination = entry.path().filename();
+      const auto destination_status = std::filesystem::symlink_status(destination, error);
+      if (error && error != std::errc::no_such_file_or_directory) {
+        fatal_crash("Could not check the destination '{}': {}", destination.string(), error.message());
+      }
+      error.clear();
+      if (std::filesystem::exists(destination_status) &&
+          (entry.is_directory() != std::filesystem::is_directory(destination_status))) {
+        fatal_crash("The destination '{}' has a different file type. The previous results stay in place.",
+                    destination.string());
+      }
+    }
+    remove_previous_simulation_files();
+    for (const auto& entry : std::filesystem::directory_iterator(foldername)) {
+      std::filesystem::rename(entry.path(), entry.path().filename(), error);
+      if (error) {
+        fatal_crash("Could not move '{}' to the model folder: {}", entry.path().string(), error.message());
+      }
+    }
+    std::filesystem::remove(foldername, error);
+    if (error) {
+      fatal_crash("Could not remove the empty new-run folder '{}': {}", foldername, error.message());
+    }
+  }
+  // Open output streams keep their files when rank 0 moves those files to the model folder.
+  MPI_Barrier_allranks();
+  printlnlog("The input check is complete. The new simulation replaces the previous results.");
+}
+
 // An input check works in the folder inputcheck of the model folder, so that it changes no other file there.
 void enter_inputcheck_folder() {
   const auto* const foldername = "inputcheck";
@@ -1216,11 +1286,12 @@ auto main(int argc, char* argv[]) -> int {
 
   check_already_running();
 
+  const auto newrun_folder = options.check_inputs_only ? std::string{} : enter_newrun_folder();
   setup_jobfolder();
 
   if (globals::my_rank == 0) {
     // the standard output goes to the log of the Slurm job, which then names the job folder
-    std::println("job folder: {}", globals::jobfolder);
+    std::println("job folder: {}{}", newrun_folder.empty() ? "" : newrun_folder + "/", globals::jobfolder);
     std::fflush(stdout);
   }
 
@@ -1245,6 +1316,7 @@ auto main(int argc, char* argv[]) -> int {
   reserve_resize(packets, options.check_inputs_only ? 1 : npkts_thisrank);
 
   read_input_and_initialise_simulation(packets);
+  install_newrun_files(newrun_folder);
 
   if (options.check_inputs_only) {
     if (globals::simulation_continued_from_saved) {

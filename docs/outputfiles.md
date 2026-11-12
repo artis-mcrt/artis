@@ -427,8 +427,12 @@ whose virtual packet escaped in one direction or more:
 
 ## A new simulation removes the files of the previous one
 
-A new simulation first removes the output files, the restart files, and the `job_from_ts*` folders of the previous
-simulation. `scripts/clean.sh` removes the same files, and also the Slurm output files and the core files.
+A new simulation first checks the input files in a separate `.artis-newrun-PID` folder. `PID` is the process identifier
+of rank 0. If this check fails, the previous results stay in the model folder. The separate folder holds the logs
+of the failed check. Remove that folder after you examine the failure.
+
+After a successful check, the new simulation removes the output files, the restart files, and the previous job
+folders. `scripts/clean.sh` removes the same files, and also the Slurm output files and the core files.
 
 ## Plotting and analysis
 
