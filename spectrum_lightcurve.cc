@@ -175,11 +175,9 @@ void write_spectrum_file(const std::string& spec_filename, const std::span<const
 // a text file with a write buffer for rows of numbers
 class BufferedTextFile {
  public:
-  explicit BufferedTextFile(const std::string& filename) : file(open_output_file(filename)) {
-    buffer.reserve(2 * flushsize);
-  }
+  explicit BufferedTextFile(const std::string& filename) : file(open_output_file(filename)), buffer(2 * flushsize) {}
   ~BufferedTextFile() {
-    file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+    file.write(buffer.data(), used);
     file.close();
     assert_always(!file.fail());  // e.g. a full disk
   }
@@ -190,31 +188,34 @@ class BufferedTextFile {
 
   // append a line with the values in the format {:g} and a space between them
   void append_row(const std::span<const double> values) {
+    // a value in the format {:g} has at most 13 characters, e.g. -1.23457e+308
+    assert_always(used + (std::ssize(values) * 14) + 1 <= std::ssize(buffer));
     for (auto i = 0Z; i < std::ssize(values); i++) {
       if (i > 0) {
-        buffer += ' ';
+        buffer[used++] = ' ';
       }
       if (values[i] == 0. && !std::signbit(values[i])) {
-        buffer += '0';  // the arrays can be mostly zero, and this path is much faster
+        buffer[used++] = '0';  // the arrays can be mostly zero, and this path is much faster
       } else {
-        std::array<char, 32> text{};
-        const auto [textend, ec] =
-            std::to_chars(text.data(), std::to_address(text.end()), values[i], std::chars_format::general, 6);
+        const auto [textend, ec] = std::to_chars(std::to_address(buffer.begin() + used), std::to_address(buffer.end()),
+                                                 values[i], std::chars_format::general, 6);
         assert_always(ec == std::errc{});
-        buffer.append(text.data(), textend);
+        used = textend - buffer.data();
       }
     }
-    buffer += '\n';
-    if (buffer.size() >= flushsize) {
-      file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
-      buffer.clear();
+    buffer[used++] = '\n';
+    if (used >= flushsize) {
+      file.write(buffer.data(), used);
+      used = 0;
     }
   }
 
  private:
-  static constexpr auto flushsize = 1UZ << 22U;
+  static constexpr std::streamsize flushsize = 4 * 1024 * 1024;
   OutputFileStream file;
-  std::string buffer;
+  std::vector<char> buffer;
+  // the number of characters of buffer that wait for the next write
+  std::streamsize used = 0;
 };
 
 // Write emission-type spectra (emission or true emission) with a line for each frequency bin of
