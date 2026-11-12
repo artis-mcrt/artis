@@ -175,7 +175,8 @@ void output_isotopic_densities(std::ostream& estimators_file, int nonemptymgi, i
 // channel, then sample its release time and record the emitting nuclide and decay type.
 // Lucy (2005), A&A, 429, 19-30, doi:10.1051/0004-6361:20041656.
 void setup_radioactive_pellet(double e_cmf_per_packet, int nonemptymgi, Packet& pkt,
-                              std::span<const double> energy_per_massoftopnuc_decaypath);
+                              std::span<const double> energy_per_massoftopnuc_decaypath,
+                              std::span<double> cumulative_en_sum);
 
 }  // namespace decay
 

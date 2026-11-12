@@ -1465,7 +1465,8 @@ void output_isotopic_densities(std::ostream& estimators_file, const int nonempty
 }
 
 void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptymgi, Packet& pkt,
-                              const std::span<const double> energy_per_massoftopnuc_decaypath) {
+                              const std::span<const double> energy_per_massoftopnuc_decaypath,
+                              const std::span<double> cumulative_en_sum) {
   assert_testmodeonly(std::ssize(energy_per_massoftopnuc_decaypath) == get_num_decaypaths());
   const int num_decaypaths = static_cast<int>(std::ssize(energy_per_massoftopnuc_decaypath));
   const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -1473,7 +1474,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
   // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel
   const int num_decaychannels = num_decaypaths + (INITIAL_PACKETS_ON ? 1 : 0);
 
-  auto cumulative_en_sum = std::vector<double>(num_decaychannels, 0.);
+  assert_always(std::ssize(cumulative_en_sum) == num_decaychannels);
   double energysum = 0.;
 
   // add the radioactive decay paths

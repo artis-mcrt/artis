@@ -60,7 +60,8 @@ constexpr auto get_packets_text_header() -> std::string {
 // radioactive pellet at a random position within that cell at t=tmin, and assign its decay time and initial
 // rest-frame energy.
 void place_pellet(const double e_cmf_per_packet, const std::span<const double> en_cumulative, const int pktnumber,
-                  Packet& pkt, const std::span<const double> energy_per_massoftopnuc_decaypath) {
+                  Packet& pkt, const std::span<const double> energy_per_massoftopnuc_decaypath,
+                  const std::span<double> cumulative_en_sum) {
   const auto etot_simtime = en_cumulative.back();
   const double targetval = rng_uniform(get_rngstate(pkt)) * etot_simtime;
 
@@ -81,7 +82,8 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
 
-  decay::setup_radioactive_pellet(e_cmf_per_packet, nonemptymgi, pkt, energy_per_massoftopnuc_decaypath);
+  decay::setup_radioactive_pellet(e_cmf_per_packet, nonemptymgi, pkt, energy_per_massoftopnuc_decaypath,
+                                  cumulative_en_sum);
 
   // initial e_rf is probably never needed (e_rf is set at pellet decay time), but we
   // might as well give it a correct value since this code is fast and runs only once
@@ -179,9 +181,11 @@ void packet_init(std::span<Packet> packets) {
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
   printlnlog("Placing pellets...");
+  // Reuse one buffer in this serial loop. Each packet replaces every entry before it selects a channel.
+  auto cumulative_en_sum = std::vector<double>(energy_per_massoftopnuc_decaypath.size() + (INITIAL_PACKETS_ON ? 1 : 0));
   const auto allpktindices = std::ranges::iota_view{0, static_cast<int>(std::ssize(packets))};
   std::ranges::for_each(allpktindices, [&, e_cmf_per_packet](const int n) {
-    place_pellet(e_cmf_per_packet, en_cumulative, n, packets[n], energy_per_massoftopnuc_decaypath);
+    place_pellet(e_cmf_per_packet, en_cumulative, n, packets[n], energy_per_massoftopnuc_decaypath, cumulative_en_sum);
   });
 
   const double e_cmf_total =
