@@ -61,6 +61,7 @@
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
+#include "run_lock.h"
 #include "spectrum_lightcurve.h"
 #include "stats.h"
 #include "update_grid.h"
@@ -72,6 +73,7 @@ namespace {
 std::chrono::steady_clock::time_point real_time_start;
 std::chrono::steady_clock::time_point packet_propagation_start_time;
 JobFolderOutputFile estimators_file;
+RunLock inputcheck_run_lock;
 
 struct CellCacheBacking {
   MPI_shared_array<double> cooling_contrib;
@@ -958,7 +960,7 @@ void enter_inputcheck_folder() {
   if (ec) {
     fatal_crash("could not change to the folder '{}': {}", foldername, ec.message());
   }
-  acquire_run_lock();
+  acquire_run_lock(inputcheck_run_lock);
   if (globals::my_rank == 0) {
     // Keep the lock while we remove the output of an earlier input check.
     for (const auto& entry : std::filesystem::directory_iterator(".")) {
@@ -1228,10 +1230,9 @@ auto main(int argc, char* argv[]) -> int {
 
   const auto options = parse_command_line(argc, argv);
 
+  acquire_run_lock();
   if (options.check_inputs_only) {
     enter_inputcheck_folder();
-  } else {
-    acquire_run_lock();
   }
 
   setup_jobfolder();
@@ -1276,6 +1277,7 @@ auto main(int argc, char* argv[]) -> int {
     if (globals::my_rank == 0) {
       std::println("input check: complete");
     }
+    release_run_lock(inputcheck_run_lock);
     release_run_lock();
     MPI_Finalize();
     return 0;

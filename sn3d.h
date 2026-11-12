@@ -37,14 +37,14 @@ inline auto get_run_lock() -> RunLock& {
   return run_lock;
 }
 
-inline void acquire_run_lock() {
+inline void acquire_run_lock(RunLock& run_lock = get_run_lock()) {
   if (globals::my_rank == 0) {
     std::array<char, MPI_MAX_PROCESSOR_NAME> hostname{};
     int hostname_length = 0;
     assert_always(MPI_Get_processor_name(hostname.data(), &hostname_length) == MPI_SUCCESS);
     const auto contents = std::format("{}\n{}\n{}\n", getpid(), std::filesystem::current_path().generic_string(),
                                       std::string_view{hostname.data(), static_cast<size_t>(hostname_length)});
-    const auto error = get_run_lock().acquire("artis.pid", contents);
+    const auto error = run_lock.acquire("artis.pid", contents);
     if (error == std::errc::file_exists) {
       fatal_crash(
           "artis.pid exists. Confirm that sn3d and exspec stopped in this folder on every host. "
@@ -57,11 +57,11 @@ inline void acquire_run_lock() {
   MPI_Barrier_allranks();
 }
 
-inline void release_run_lock() {
+inline void release_run_lock(RunLock& run_lock = get_run_lock()) {
   // Every rank must finish its output before another job can use the model folder.
   MPI_Barrier_allranks();
   if (globals::my_rank == 0) {
-    if (const auto error = get_run_lock().release()) {
+    if (const auto error = run_lock.release()) {
       fatal_crash("Could not release artis.pid: {}", error.message());
     }
   }
