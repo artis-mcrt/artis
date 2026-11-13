@@ -40,6 +40,13 @@
 #include "sn3d.h"
 #include "vectors.h"
 
+auto get_comoving_escape_time(const Packet& pkt) -> double {
+  const double escape_time_squared = pow2(static_cast<double>(pkt.escape_time));
+  const double escape_radius_over_c_squared = dot(pkt.pos, pkt.pos) / CLIGHTSQUARED;
+  // the float escape_time can round to below the radius over c for a packet near the speed of light
+  return std::sqrt(std::max(0., escape_time_squared - escape_radius_over_c_squared));
+}
+
 namespace {
 
 constexpr ptrdiff_t MNUBINS = 1000;
@@ -507,11 +514,9 @@ void add_packet_to_light_curve(const Packet& pkt, const int dirbin, std::span<do
                      pkt.e_rf / globals::timesteps[nts].width * solidanglefactor / globals::nprocs_exspec);
   }
 
-  const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
-
   // Now do the cmf light curve. Unlike t_arrive above, this has no light-travel-time term:
   // it is the escape time transformed (time-dilated) into the comoving frame.
-  const double t_escape_cmf = pkt.escape_time * inverse_gamma;
+  const double t_escape_cmf = get_comoving_escape_time(pkt);
 
   if (t_escape_cmf > globals::tmin && t_escape_cmf < globals::tmax) {
     const int nts = get_timestep(t_escape_cmf);

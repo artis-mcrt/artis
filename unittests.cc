@@ -296,6 +296,23 @@ void test_expanding_shell_intersection() {
   check(roots_agree, "the selected root agrees with the reference for random paths");
 }
 
+void test_comoving_escape_time() {
+  std::println("comoving escape time...");
+  Packet pkt{};
+  pkt.escape_time = 1000.F;
+  const double coordinate_velocity = 0.3 * CLIGHT;
+  const double coordinate_radius = coordinate_velocity * pkt.escape_time;
+  pkt.pos = {coordinate_radius, 0., 0.};
+  check_close(get_comoving_escape_time(pkt), pkt.escape_time * std::sqrt(1. - pow2(0.3)), 1e-12,
+              "a spherical escape uses the radial surface velocity");
+  pkt.pos = {coordinate_radius, coordinate_radius, 0.};
+  check_close(get_comoving_escape_time(pkt), pkt.escape_time * std::sqrt(1. - (2. * pow2(0.3))), 1e-12,
+              "a cylindrical corner uses the full radial velocity");
+  pkt.pos = {coordinate_radius, coordinate_radius, coordinate_radius};
+  check_close(get_comoving_escape_time(pkt), pkt.escape_time * std::sqrt(1. - (3. * pow2(0.3))), 1e-12,
+              "a Cartesian corner uses the full radial velocity");
+}
+
 void test_escapedirectionbin() {
   std::println("get_escapedirectionbin...");
   rngstate_type rngstate{5501};
@@ -1631,6 +1648,7 @@ auto main() -> int {
   test_vector_geometry();
   test_expanding_shell_intersection();
   test_escapedirectionbin();
+  test_comoving_escape_time();
   test_frame_transform();
   test_zero_polarisation_intensity();
   test_meridian();
