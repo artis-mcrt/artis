@@ -31,6 +31,8 @@ constexpr bool INITIAL_PACKETS_ON = true;
 
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
+constexpr bool THERMAL_ENERGY_INPUT_FROM_FILES = false;
+
 constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
 
 constexpr std::optional<double> TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS;

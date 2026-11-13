@@ -159,6 +159,7 @@ void do_MPI_Bcast_nlte_solution_ranges(ptrdiff_t nstart_nonempty, ptrdiff_t ndo_
 void set_elem_massfrac(std::ptrdiff_t nonemptymgi, int element, float newmassfrac);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(std::ptrdiff_t nonemptymgi, int element) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_initenergyq(int modelgridindex) -> double;
+[[gnu::pure]] [[nodiscard]] auto get_thermal_input_energy(int modelgridindex) -> double;
 void set_nne(int nonemptymgi, float nne);
 void set_nnetot(int nonemptymgi);
 void set_rho(int nonemptymgi, float rho);

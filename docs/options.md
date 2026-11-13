@@ -35,6 +35,18 @@ True: every pellet gets the same energy, and the decay time of each pellet is a 
 
 **Every preset:** `true`
 
+### THERMAL_ENERGY_INPUT_FROM_FILES
+
+`bool THERMAL_ENERGY_INPUT_FROM_FILES`
+
+True: two input files give the energy source, and the radioactive decays give no energy. energydistribution.txt gives the energy of each model cell [erg]. energyrate.txt gives the cumulative fraction F(t) of that energy that the model cells release by the time t. F is linear in t between the rows.
+
+The energy of a model cell goes to its propagation cells by volume. Each pellet samples its propagation cell from these energies and its release time from F, between tmin and tmax. At the release time, the pellet becomes a k-packet in its propagation cell. With INITIAL_PACKETS_ON, the pellets also carry the energy that the model cells release before tmin. This energy seeds the cells at tmin and keeps tdecay / tmin of its energy, as for a decay. The q column of model.txt has no effect.
+
+The initial temperature of a cell comes from the input energy that the cell releases before the midpoint t_mid of the first timestep. A release at the time t keeps t / t_mid of its energy. The thermal balance adds the analytic release rate of the timestep as heating. The nuclides of model.txt still decay and change the composition, but all analytic decay powers in deposition.out and in the estimators files are zero. The option requires UNIFORM_PELLET_ENERGIES = true.
+
+**Every preset:** `false`
+
 ### TIMESTEP_SIZE_METHOD
 
 `TimeStepSizeMethod TIMESTEP_SIZE_METHOD`

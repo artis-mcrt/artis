@@ -44,6 +44,7 @@ jobs:
                 testname:
                     [
                         classicmode_1d_3dgrid,
+                        classicmode_1d_3dgrid_thermalinput,
                         classicmode_3d,
                         kilonova_1d,
                         kilonova_1d_timedepnlte,

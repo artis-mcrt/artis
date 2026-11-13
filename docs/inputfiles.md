@@ -19,6 +19,8 @@ exist.
 | [transitiondata.txt](#transitiondatatxt) | yes | the lines of each ion |
 | [phixsdata_v2.txt or phixsdata.txt](#phixsdata_v2txt-and-phixsdatatxt) | one of them | the photoionisation cross-sections |
 | [vpkt.txt](#vpkttxt) | with `VPKT_ON` | the observer directions of the virtual packets |
+| [energydistribution.txt](#energydistributiontxt) | with `THERMAL_ENERGY_INPUT_FROM_FILES` | the energy of each model cell |
+| [energyrate.txt](#energyratetxt) | with `THERMAL_ENERGY_INPUT_FROM_FILES` | the cumulative fraction of the cell energies that the model cells release by each time |
 | [Ye.txt](#yetxt) | with `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, if `model.txt` has no `Ye` column | the electron fraction of each cell |
 | [recombrates.txt](#recombratestxt) | no | the recombination rate coefficients for the calibration |
 | [autoion.txt](#autoiontxt) | no | the autoionisation rates |
@@ -164,7 +166,8 @@ More rules for the cells:
 - `sn3d` finds the first cell id from the first cell of `model.txt`. `abundances.txt` and `Ye.txt` must use the same
   ids. The log messages always give the 0-based cell index.
 - The value of the column `q` must already include the adiabatic losses before `t_model`. `INITIAL_PACKETS_ON` uses
-  the column for the initial temperature and for the initial packets.
+  the column for the initial temperature and for the initial packets. With `INITIAL_PACKETS_ON = false` or with
+  `THERMAL_ENERGY_INPUT_FROM_FILES = true`, the column has no effect, and the log gives a warning.
 - A column with a different name gets a warning in the log, and `sn3d` does not use it.
 
 ## abundances.txt
@@ -380,6 +383,53 @@ The ranges have limits. The time range of the spectra must be inside the range f
 `VSPEC_TIMEMAX` and inside the time range of the model. The wavelength ranges of the spectra must be inside the
 range that the frequencies `VSPEC_NUMAX` and `VSPEC_NUMIN` of `vpkt.h` give, which is 3500 to 10000 Angstroms. The ranges of the velocity grid map must be inside the ranges of the
 spectra.
+
+## energydistribution.txt
+
+With `THERMAL_ENERGY_INPUT_FROM_FILES`, this file gives the energy of each model cell in erg. The file can have no
+comment lines.
+
+```text
+<number of model cells>
+<cell id> <energy [erg]>
+```
+
+The second line occurs once for each model cell. The cell ids are the ids of `model.txt`, also for a 2D or a 3D
+model. The energy of a model cell goes to its propagation cells by volume. A model cell with no propagation cell,
+e.g. a small inner shell of a 1D model on a 3D grid, keeps its energy out of the simulation, and the log gives that
+energy. With `FORCE_SPHERICAL_ESCAPE_SURFACE`, the blanked share of a model cell also leaves the simulation. The run
+stops for each of these errors:
+
+- the first line does not give the number of model cells of `model.txt`;
+- a cell id is outside the range of `model.txt`, or it has more than one row;
+- an energy is negative or not finite;
+- a model cell with no mass in `model.txt` or in the elements of `compositiondata.txt` has energy;
+- the file has more data than the rows of the first line;
+- the total energy is 0.
+
+## energyrate.txt
+
+With `THERMAL_ENERGY_INPUT_FROM_FILES`, this file gives the cumulative fraction F of the cell energies that the model
+cells release by each time. The fraction is the same for all model cells. The file can have no comment lines.
+
+```text
+<number of rows>
+<time [d]> <cumulative fraction released>
+```
+
+The second line occurs once for each row. Between two rows, F is linear in the time. Before the first row, F is 0,
+so the fraction of the first row is a release at the time of that row. After the last row, F is 1.
+
+- The times must be positive, and each time must be greater than the time of the previous row.
+- The fractions must be in the range from 0 to 1, and each fraction must not be less than the previous fraction.
+- The last fraction must be within 0.001 of 1. `sn3d` divides all fractions by the last fraction.
+- The file must have no more data than the rows of the first line.
+
+The pellets release the energy from tmin to tmax. With `INITIAL_PACKETS_ON`, they also release the energy before
+tmin. Such a release becomes a blackbody r-packet at tmin, and it keeps the share tdecay / tmin of its energy, as for
+a decay before tmin. The initial temperatures come only from the energy that the model cells release before the
+midpoint of the first timestep, with any value of `INITIAL_PACKETS_ON`. The log gives a warning if the first row is after the snapshot
+time of `model.txt`, because the table then has no release between these times.
 
 ## Ye.txt
 

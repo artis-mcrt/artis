@@ -315,7 +315,8 @@ void write_deposition_file() {
             .header = "total_dep_Lsun",
             .value =
                 [](const auto& ts) {
-                  return (ts.gamma_dep + ts.positron_dep + ts.electron_dep + ts.alpha_dep + ts.spfission_dep_discrete) /
+                  return (ts.gamma_dep + ts.positron_dep + ts.electron_dep + ts.alpha_dep + ts.spfission_dep_discrete +
+                          ts.thermal_input_release) /
                          ts.width / LSUN;
                 },
         },
@@ -350,7 +351,7 @@ void write_deposition_file() {
             .value =
                 [&](const auto& ts) {
                   return (ts.gamma_emission + ts.positron_emission + ts.electron_emission + ts.alpha_emission +
-                          ts.spfission_dep_discrete) /
+                          ts.spfission_dep_discrete + ts.thermal_input_release) /
                          mtot / ts.width;
                 },
         },
@@ -418,10 +419,10 @@ void write_deposition_file() {
     for (int i = 0; i <= nts; i++) {
       cumulative_emission += globals::timesteps[i].gamma_emission + globals::timesteps[i].positron_emission +
                              globals::timesteps[i].electron_emission + globals::timesteps[i].alpha_emission +
-                             globals::timesteps[i].spfission_dep_discrete;
+                             globals::timesteps[i].spfission_dep_discrete + globals::timesteps[i].thermal_input_release;
       cumulative_dep += globals::timesteps[i].gamma_dep + globals::timesteps[i].positron_dep +
                         globals::timesteps[i].electron_dep + globals::timesteps[i].alpha_dep +
-                        globals::timesteps[i].spfission_dep_discrete;
+                        globals::timesteps[i].spfission_dep_discrete + globals::timesteps[i].thermal_input_release;
     }
     if (cumulative_emission > 0. && cumulative_dep > (1.2 * cumulative_emission)) {
       printlnlog(
@@ -629,6 +630,7 @@ void mpi_reduce_estimators(const int nts) {
            &globals::TimeStep::alpha_dep_discrete,
            &globals::TimeStep::alpha_emission,
            &globals::TimeStep::spfission_dep_discrete,
+           &globals::TimeStep::thermal_input_release,
            &globals::TimeStep::gamma_emission,
        }) {
     MPI_Allreduce_safe(globals::timesteps[nts].*timestep_sum, MPI_SUM, MPI_COMM_WORLD);
