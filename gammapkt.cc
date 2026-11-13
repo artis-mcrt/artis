@@ -70,16 +70,9 @@ constexpr int xcom_max_atomic_number = GAMMA_USE_XCOM_PHOTOION ? 100 : 0;
 
 std::array<std::vector<ElementPhotoionData>, xcom_max_atomic_number> photoion_data;
 
-// Reference scales and thresholds [Hz] for the photoelectric and pair-production cross-section fits below
-// (the Compton path works from H * nu_cmf / ME / CLIGHT^2 instead). These values are slightly inconsistent
-// with the constants of constants.h, which give MEV / H = 2.41799e+20 Hz. With those constants, nu_1mev is
-// 0.99804 MeV, nu_1p022mev is 1.02001 MeV, and nu_1p5mev is 1.49707 MeV. pair_production() therefore gives
-// prob_gamma > 1 for a photon between 1.020 and 1.022 MeV, and that photon always becomes a 511 keV photon.
-// Keep the values, because a change shifts the results and the stored checksums.
-constexpr double nu_100kev = 2.41326e+19;
-constexpr double nu_1mev = 2.41326e+20;
-constexpr double nu_1p022mev = 2.46636e+20;  // electron-positron pair rest mass energy (pair production threshold)
-constexpr double nu_1p5mev = 3.61990e+20;
+// Reference frequencies follow the energy constants of constants.h.
+constexpr double nu_100kev = 0.1 * MEV / H;
+constexpr double nu_1mev = MEV / H;
 
 void read_gamma_spectrum(const int nucindex, const std::string& filename) {
   // read the gamma ray lines and store the average energy in gamma rays per nuclear decay
@@ -584,24 +577,6 @@ void compton_scatter(Packet& pkt) {
   return chi_cmf;
 }
 
-// energy-dependent factor of the pair-production cross section, from equation 2 of Ambwani & Sutherland (1988),
-// ApJ, 325, 820-827, doi:10.1086/166052, after Hubbell (1969), NSRDS-NBS 29, National Bureau of Standards,
-// doi:10.6028/NBS.NSRDS.29. Multiply by Z^2 * 1e-27 for a cross section in cm^2. Only valid above the 1.022 MeV
-// threshold.
-[[nodiscard]] constexpr auto get_sigma_pair_prod_factor(const double nu_cmf) -> double {
-  const double hnu_over_1MeV = nu_cmf / nu_1mev;
-  if (nu_cmf > nu_1p5mev) {
-    return 0.0481 + (0.301 * (hnu_over_1MeV - 1.5));
-  }
-  // the coefficient below 1.5 MeV is 0.10063, not the 1.0063 printed in the paper: the latter makes
-  // the fit jump by a factor of ten at the junction between the two branches
-  return 0.10063 * (hnu_over_1MeV - 1.022);
-}
-
-// the two branches of the fit must agree where they meet at 1.5 MeV
-static_assert((get_sigma_pair_prod_factor(nu_1p5mev * (1. + 1e-12)) - get_sigma_pair_prod_factor(nu_1p5mev)) < 1e-6);
-static_assert((get_sigma_pair_prod_factor(nu_1p5mev) - get_sigma_pair_prod_factor(nu_1p5mev * (1. + 1e-12))) < 1e-6);
-
 // calculate the absorption coefficient [cm^-1] for pair production in the comoving frame
 [[nodiscard]] auto get_chi_pair_prod_cmf(const int nonemptymgi, const double ffegrp, const double nu_cmf) -> double {
   if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
@@ -610,7 +585,7 @@ static_assert((get_sigma_pair_prod_factor(nu_1p5mev) - get_sigma_pair_prod_facto
   const double rho = grid::get_rho(nonemptymgi);
 
   // below the pair production threshold there is no pair production
-  if (nu_cmf <= nu_1p022mev) {
+  if (nu_cmf <= pair_production_threshold_nu) {
     return 0.;
   }
 
@@ -655,7 +630,7 @@ static_assert((get_sigma_pair_prod_factor(nu_1p5mev) - get_sigma_pair_prod_facto
   // coefficient exceeds the Compton one by orders of magnitude in that regime, so the mismatch is
   // negligible.
   return ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_cmf +
-          (chi_pair_prod_cmf * (1. - (nu_1p022mev / nu_cmf))));
+          (chi_pair_prod_cmf * (1. - get_pair_annihilation_probability(nu_cmf))));
 }
 
 // update the energy deposition estimator for gamma ray path increment
@@ -714,11 +689,11 @@ void pair_production(Packet& pkt) {
   // gamma-ray energy minus the 1.022 MeV rest-mass energy. The indivisible-packet branch selection assigns either this
   // kinetic-energy share or the rest-mass energy to the packet. The latter produces 0.511 MeV annihilation gamma rays.
 
-  constexpr double pair_rest_mass_energy = 1.022 * MEV;
   const double gamma_energy = H * pkt.nu_cmf;
-  const double prob_gamma = pair_rest_mass_energy / gamma_energy;
+  // A redshift during the move can put nu_cmf below the threshold. The probability is then 1.
+  const double prob_gamma = get_pair_annihilation_probability(pkt.nu_cmf);
 
-  assert_always(prob_gamma >= 0);
+  assert_always(prob_gamma >= 0. && prob_gamma <= 1.);
 
   if (rng_uniform(get_rngstate(pkt)) > prob_gamma) {
     if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
@@ -738,7 +713,7 @@ void pair_production(Packet& pkt) {
     stats::increment(stats::Counter::NT_STAT_FROM_GAMMA);
   } else {
     // The energy goes into emission at 511 keV.
-    pkt.nu_cmf = 0.511 * MEV / H;
+    pkt.nu_cmf = pair_production_threshold_nu / 2.;
 
     // Now give the gamma ray an isotropic direction and set the rest-frame quantities.
     emit_gamma_isotropic(pkt);

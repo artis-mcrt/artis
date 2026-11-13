@@ -669,6 +669,31 @@ void test_compton() {
               1e-8, "meanf_sigma is continuous across the Taylor-series/closed-form crossover");
 }
 
+void test_pair_production_threshold() {
+  std::println("pair-production threshold and energy shares...");
+  const double threshold_nu = 1.022 * MEV / H;
+  for (const double gamma_energy_mev : {0.1, 1.020, 1.021, 1.022}) {
+    const double nu = gamma_energy_mev * MEV / H;
+    check(gammapkt::get_sigma_pair_prod_factor(nu) == 0., "the pair cross section is zero below the threshold");
+    check(gammapkt::get_pair_annihilation_probability(nu) == 1.,
+          "the pair kinetic energy share is zero below the threshold");
+  }
+  for (const double gamma_energy_mev : {1.022001, 1.1, 1.5, 2., 10.}) {
+    const double nu = gamma_energy_mev * MEV / H;
+    const double prob_gamma = gammapkt::get_pair_annihilation_probability(nu);
+    check(prob_gamma >= 0. && prob_gamma <= 1., "the pair annihilation probability stays between zero and one");
+    check_close(prob_gamma * gamma_energy_mev, 1.022, 1e-14,
+                "the annihilation photons receive the pair rest mass energy");
+    check_close((1. - prob_gamma) * gamma_energy_mev, gamma_energy_mev - 1.022, 1e-9,
+                "the deposition estimator receives the kinetic energy share");
+    check(gammapkt::get_sigma_pair_prod_factor(nu) > 0., "the pair cross section is positive above the threshold");
+  }
+  check(gammapkt::get_sigma_pair_prod_factor(std::nextafter(threshold_nu, 0.)) == 0.,
+        "the pair cross section is zero immediately below the threshold");
+  check(gammapkt::get_sigma_pair_prod_factor(std::nextafter(threshold_nu, INFINITY)) >= 0.,
+        "the pair cross section is non-negative immediately above the threshold");
+}
+
 void test_rad_deexcitation() {
   std::println("radiative deexcitation rate coefficient...");
   const double epsilon_trans = 2. * EV;
@@ -1641,6 +1666,7 @@ auto main() -> int {
   test_nuclide_names();
   test_bateman();
   test_compton();
+  test_pair_production_threshold();
   test_rad_deexcitation();
   test_phixs_table_lookup();
   test_closest_transition_randomised();
