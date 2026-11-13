@@ -8,6 +8,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -33,6 +34,8 @@
 #include "mpi_logging.h"
 #include "radfield.h"
 #include "random.h"
+#include "sn3d.h"
+#include "toms748.h"
 
 namespace {
 constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
@@ -572,81 +575,61 @@ void setup_photoion_luts() {
       mem_usage_photoionluts / 1024. / 1024.);
 }
 
-DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int lower, const int phixstargetindex,
-                                     float T_e, rngstate_type& rngstate) -> double {
-  const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
-  const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
-  const double nu_threshold = (1. / H) * E_threshold;
+DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_threshold, const float T_e,
+                                                              const std::span<const float> photoion_xs,
+                                                              const double cumulative_probability) -> double {
+  assert_always(T_e > 0.);
+  assert_always(cumulative_probability >= 0. && cumulative_probability <= 1.);
+  const double nu_range = nu_threshold * (last_phixs_nuovernuedge - 1.);
+  const double thermal_width = T_e / HOVERKB;
+  if (cumulative_probability == 0. || nu_range == 0.) {
+    return nu_threshold;
+  }
+  if (cumulative_probability == 1.) {
+    return nu_threshold + nu_range;
+  }
 
-  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
-
-  const int npieces = globals::NPHIXSPOINTS;
-
-  const auto photoion_xs = get_phixs_table(lower_uniquelevelindex);
-
-  const double zrand = 1. - rng_uniform(rngstate);  // Make sure that 0 < zrand <= 1
-
-  const double nu_range = nu_max_phixs - nu_threshold;
-  const double deltanu = nu_range / npieces;
+  // x = log(1 + h * (nu - nu_threshold) / kT_e) resolves the thermal width in a cold continuum.
+  // The Jacobian is thermal_width * exp(x). Its constant factor cancels from the cumulative probability.
+  const double log_thermal_offset_max = std::log1p(nu_range / thermal_width);
+  const auto emissivity_per_log_thermal_offset = [&](const double log_thermal_offset) {
+    const double nu_minus_nu_edge = thermal_width * std::expm1(log_thermal_offset);
+    return alpha_sp_E_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs) * std::exp(log_thermal_offset);
+  };
+  constexpr double emission_integral_accuracy = 1e-7;
   double error{NAN};
-
-  // integral of the energy-weighted emissivity over the whole continuum, i.e. the normalisation of the
-  // distribution that we are sampling a frequency from
-  const auto emissivity_integral_total = integrator<31>(
-      [&](const double nu_minus_nu_edge) {
-        return alpha_sp_E_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs);
-      },
-      0., nu_range, RATECOEFF_INTEGRAL_ACCURACY, &error);
-
+  const double emissivity_integral_total =
+      integrator<31>(emissivity_per_log_thermal_offset, 0., log_thermal_offset_max, emission_integral_accuracy, &error);
   assert_testmodeonly(std::isfinite(emissivity_integral_total));
   assert_testmodeonly(emissivity_integral_total > 0.);
   if (!(emissivity_integral_total > 0.) || !std::isfinite(emissivity_integral_total)) {
     return nu_threshold;
   }
 
-  // emissivity_tailintegral is the part of the integral above the current piece's lower boundary, so it
-  // decreases from emissivity_integral_total to zero as we step up in frequency. _prev is its value at the
-  // previous piece boundary.
-  double emissivity_tailintegral_prev = emissivity_integral_total;
-  double emissivity_tailintegral = emissivity_integral_total;
-
-  int i = 1;
-  for (; i < npieces; i++) {
-    emissivity_tailintegral_prev = emissivity_tailintegral;
-    const double nu_minus_nu_edge_low = i * deltanu;
-
-    emissivity_tailintegral = integrator<31>(
-        [&](const double nu_minus_nu_edge) {
-          return alpha_sp_E_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs);
-        },
-        nu_minus_nu_edge_low, nu_range, RATECOEFF_INTEGRAL_ACCURACY, &error);
-
-    if (zrand >= emissivity_tailintegral / emissivity_integral_total) {
-      break;
-    }
-  }
-
-  double nuoffset = 0.;
-  if (i < npieces) {
-    // the loop found the piece containing the target value, so interpolate between the remaining
-    // integrals at the piece boundaries
-    nuoffset = (emissivity_tailintegral != emissivity_tailintegral_prev)
-                   ? ((emissivity_integral_total * zrand) - emissivity_tailintegral_prev) /
-                         (emissivity_tailintegral - emissivity_tailintegral_prev) * deltanu
-                   : 0.;
-  } else if (emissivity_tailintegral > 0.) {
-    // the loop completed without a break, so the target lies in the topmost piece, where the remaining
-    // integral falls from emissivity_tailintegral at the piece's lower boundary to zero at nu_max_phixs.
-    // Interpolating with the previous piece's values here would extrapolate beyond nu_max_phixs.
-    nuoffset = (emissivity_tailintegral - (emissivity_integral_total * zrand)) / emissivity_tailintegral * deltanu;
-  }
-  const double nu_sampled = nu_threshold + ((i - 1) * deltanu) + nuoffset;
-
+  const auto cumulative_probability_residual = [&](const double log_thermal_offset) {
+    return (integrator<31>(emissivity_per_log_thermal_offset, 0., log_thermal_offset, emission_integral_accuracy,
+                           &error) /
+            emissivity_integral_total) -
+           cumulative_probability;
+  };
+  std::uintmax_t iterations = 100;
+  const auto [log_thermal_offset_low, log_thermal_offset_high] =
+      toms748_solve(cumulative_probability_residual, 0., log_thermal_offset_max, -cumulative_probability,
+                    1. - cumulative_probability, ftol<1e-7>, iterations);
+  const double log_thermal_offset = 0.5 * (log_thermal_offset_low + log_thermal_offset_high);
+  const double nu_sampled = nu_threshold + (thermal_width * std::expm1(log_thermal_offset));
   assert_testmodeonly(std::isfinite(nu_sampled));
   assert_testmodeonly(nu_sampled >= nu_threshold);
-  assert_testmodeonly(nu_sampled <= nu_max_phixs);
+  assert_testmodeonly(nu_sampled <= nu_threshold + nu_range);
+  return std::min(nu_sampled, nu_threshold + nu_range);
+}
 
-  return nu_sampled;
+DEVICE_FUNC auto select_continuum_nu(const int element, const int lowerion, const int lower, const int phixstargetindex,
+                                     const float T_e, rngstate_type& rngstate) -> double {
+  const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
+  const double nu_threshold = (1. / H) * get_phixs_threshold(element, lowerion, lower, phixstargetindex);
+  return get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, get_phixs_table(lower_uniquelevelindex),
+                                                      rng_uniform(rngstate));
 }
 
 // Get an ion's total rate coefficient for spontaneous recombination [cm^3/s] per nne, per population of each

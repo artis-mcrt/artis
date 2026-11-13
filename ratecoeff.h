@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <iosfwd>
 #include <optional>
+#include <span>
 #include <utility>
 
 #include "constants.h"
@@ -20,6 +21,11 @@
 void ratecoefficients_init();
 
 void setup_photoion_luts();
+
+// Invert the energy-weighted free-bound emissivity on the photoionisation table range.
+[[nodiscard]] DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(double nu_threshold, float T_e,
+                                                                            std::span<const float> photoion_xs,
+                                                                            double cumulative_probability) -> double;
 
 [[nodiscard]] DEVICE_FUNC auto select_continuum_nu(int element, int lowerion, int lower, int phixstargetindex,
                                                    float T_e, rngstate_type& rngstate) -> double;
