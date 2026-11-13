@@ -21,8 +21,8 @@ hold escapes from earlier jobs. The spectra and the observer light curve use the
 light travel time. A far-side packet can escape before the requested end and arrive after it. For example, an
 escape at 9.5 days can contribute to an arrival bin at 10.5 days.
 
-A near-side packet that escapes after the requested end can arrive before it. The packet files hold no such
-packet. Arrival bins that are incomplete therefore start before the requested end. The complete range of arrival
+A near-side packet that escapes after the requested end can arrive before it. The packet files cover escape
+times through the requested end only. Arrival bins that are incomplete therefore start before the requested end. The complete range of arrival
 times ends earlier than the requested end.
 
 After a partial run, later arrival bins can also hold nonzero flux. An incomplete bin can hold nonzero flux.
