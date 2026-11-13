@@ -115,7 +115,7 @@ one row for each timestep of the model:
 | --- | --- |
 | 1 | The midpoint of the timestep [days]. |
 | 2 | The luminosity of the escaped r-packets in the rest frame [L_sun]. The time of a packet is its arrival time at the observer. |
-| 3 | The luminosity of the escaped r-packets in the comoving frame [L_sun]. The time of a packet is its escape time multiplied by sqrt(1 - (`vmax`/c)^2), without the light travel time. |
+| 3 | The luminosity of the escaped r-packets in the comoving frame [L_sun]. The time of a packet is its escape time t multiplied by sqrt(1 - (r/(c t))^2), without the light travel time. r is the distance of the escape position from the centre. |
 
 `gamma_light_curve.out` has the same columns for the escaped {term}`gamma packets <gamma packet>`. Only a run with `KEEP_ESCAPED_GAMMAS`
 writes it.

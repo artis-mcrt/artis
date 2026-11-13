@@ -43,7 +43,8 @@
 auto get_comoving_escape_time(const Packet& pkt) -> double {
   const double escape_time_squared = pow2(static_cast<double>(pkt.escape_time));
   const double escape_radius_over_c_squared = dot(pkt.pos, pkt.pos) / CLIGHTSQUARED;
-  return std::sqrt(escape_time_squared - escape_radius_over_c_squared);
+  // the float escape_time can round to below the radius over c for a packet near the speed of light
+  return std::sqrt(std::max(0., escape_time_squared - escape_radius_over_c_squared));
 }
 
 namespace {
