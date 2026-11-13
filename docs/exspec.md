@@ -16,13 +16,17 @@ with an error. Two situations need `exspec`:
 - The {term}`model folder` holds the packet files but no spectra, e.g. from a run of an older version of ARTIS.
   `scripts/run-exspec-if-needed.sh` runs `exspec` when `emission.out` is absent.
 
-The requested timestep range limits the escape time of the packets. The spectra and the observer light curve use
-the arrival time, which includes the light travel time. A far-side packet can escape before the requested end
-and arrive after it. For example, an escape at 9.5 days can contribute to an arrival bin at 10.5 days.
+The requested end of the timestep range limits the latest escape time of the packets. The packet files can also
+hold escapes from earlier jobs. The spectra and the observer light curve use the arrival time, which includes the
+light travel time. A far-side packet can escape before the requested end and arrive after it. For example, an
+escape at 9.5 days can contribute to an arrival bin at 10.5 days.
 
-After a partial run, later arrival bins can therefore hold nonzero flux. These bins are incomplete because
-the packet files contain no packets that escape after the requested end. A nonzero flux does not establish
-complete time coverage. Extend the simulation to obtain the contributions of those later escapes.
+A near-side packet that escapes after the requested end can arrive before it. The packet files hold no such
+packet. Arrival bins that are incomplete therefore start before the requested end. The complete range of arrival
+times ends earlier than the requested end.
+
+After a partial run, later arrival bins can also hold nonzero flux. An incomplete bin can hold nonzero flux.
+Extend the simulation to obtain the contributions of the later escapes.
 
 Run it in the model folder with any number of ranks from one up to the number of packet files:
 
