@@ -690,7 +690,7 @@ void pair_production(Packet& pkt) {
   // kinetic-energy share or the rest-mass energy to the packet. The latter produces 0.511 MeV annihilation gamma rays.
 
   const double gamma_energy = H * pkt.nu_cmf;
-  assert_always(pkt.nu_cmf >= pair_production_threshold_nu);
+  // A redshift during the move can put nu_cmf below the threshold. The probability is then 1.
   const double prob_gamma = get_pair_annihilation_probability(pkt.nu_cmf);
 
   assert_always(prob_gamma >= 0. && prob_gamma <= 1.);
