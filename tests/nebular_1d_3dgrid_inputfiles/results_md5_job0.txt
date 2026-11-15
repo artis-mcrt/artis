@@ -5,7 +5,7 @@ bf4e5762145710dcabb01b05fdb0c5ef  emission.out
 1383626ab74caf8bf02719bf6dd7fe79  emissiontrue.out
 3e7aae2976eaf5caff3db2f8096dbdf2  gammalinelist.out
 a3e3cf9b6adeac882d182c06011c63e8  grid.out
-8ca3a8952fb40124469c8bf0bcc03d53  light_curve.out
+fbdcd8765aadb7bd10f95ea91a58843d  light_curve.out
 1b25735e8efe816f80773e742c1499e1  linelist.out
 25a9dd224aa09e3ac10e091ad673223d  modelgridrankassignments.out
 579f42a6982c71a6e4eee4c340396e7c  nuclides.out
