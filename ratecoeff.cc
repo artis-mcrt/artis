@@ -8,7 +8,6 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -34,8 +33,6 @@
 #include "mpi_logging.h"
 #include "radfield.h"
 #include "random.h"
-#include "sn3d.h"
-#include "toms748.h"
 
 namespace {
 constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
@@ -578,50 +575,53 @@ void setup_photoion_luts() {
 DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_threshold, const float T_e,
                                                               const std::span<const float> photoion_xs,
                                                               const double cumulative_probability) -> double {
-  assert_always(T_e > 0.);
-  assert_always(cumulative_probability >= 0. && cumulative_probability <= 1.);
+  assert_testmodeonly(T_e > 0.);
+  assert_testmodeonly(cumulative_probability >= 0. && cumulative_probability <= 1.);
   const double nu_range = nu_threshold * (last_phixs_nuovernuedge - 1.);
   const double thermal_width = T_e / HOVERKB;
-  if (cumulative_probability == 0. || nu_range == 0.) {
-    return nu_threshold;
-  }
-  if (cumulative_probability == 1.) {
-    return nu_threshold + nu_range;
-  }
 
-  // x = log(1 + h * (nu - nu_threshold) / kT_e) resolves the thermal width in a cold continuum.
-  // The Jacobian is thermal_width * exp(x). Its constant factor cancels from the cumulative probability.
-  const double log_thermal_offset_max = std::log1p(nu_range / thermal_width);
+  // Equal intervals of log(1 + h * (nu - nu_threshold) / kT_e) resolve the thermal width of a cold continuum.
+  constexpr int interval_count = 100;
+  const double delta_log_thermal_offset = std::log1p(nu_range / thermal_width) / interval_count;
+  // d(nu) = thermal_width * exp(log_thermal_offset) d(log_thermal_offset). The constant factor cancels.
   const auto emissivity_per_log_thermal_offset = [&](const double log_thermal_offset) {
     const double nu_minus_nu_edge = thermal_width * std::expm1(log_thermal_offset);
     return alpha_sp_E_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs) * std::exp(log_thermal_offset);
   };
-  constexpr double emission_integral_accuracy = 1e-7;
-  double error{NAN};
-  const double emissivity_integral_total =
-      integrator<31>(emissivity_per_log_thermal_offset, 0., log_thermal_offset_max, emission_integral_accuracy, &error);
-  assert_testmodeonly(std::isfinite(emissivity_integral_total));
-  assert_testmodeonly(emissivity_integral_total > 0.);
-  if (!(emissivity_integral_total > 0.) || !std::isfinite(emissivity_integral_total)) {
+
+  // Simpson integral of the emissivity from the threshold to the upper edge of each interval.
+  // The constant factor delta_log_thermal_offset / 6 cancels.
+  std::array<double, interval_count> cumulative_emissivity{};
+  double emissivity_lower_edge = emissivity_per_log_thermal_offset(0.);
+  double emissivity_integral = 0.;
+  for (int interval = 0; interval < interval_count; interval++) {
+    const double emissivity_middle = emissivity_per_log_thermal_offset((interval + 0.5) * delta_log_thermal_offset);
+    const double emissivity_upper_edge = emissivity_per_log_thermal_offset((interval + 1) * delta_log_thermal_offset);
+    emissivity_integral += emissivity_lower_edge + (4. * emissivity_middle) + emissivity_upper_edge;
+    cumulative_emissivity[interval] = emissivity_integral;
+    emissivity_lower_edge = emissivity_upper_edge;
+  }
+  assert_testmodeonly(std::isfinite(emissivity_integral));
+  assert_testmodeonly(emissivity_integral > 0.);
+  if (!(emissivity_integral > 0.) || !std::isfinite(emissivity_integral)) {
     return nu_threshold;
   }
 
-  const auto cumulative_probability_residual = [&](const double log_thermal_offset) {
-    return (integrator<31>(emissivity_per_log_thermal_offset, 0., log_thermal_offset, emission_integral_accuracy,
-                           &error) /
-            emissivity_integral_total) -
-           cumulative_probability;
-  };
-  std::uintmax_t iterations = 100;
-  const auto [log_thermal_offset_low, log_thermal_offset_high] =
-      toms748_solve(cumulative_probability_residual, 0., log_thermal_offset_max, -cumulative_probability,
-                    1. - cumulative_probability, ftol<1e-7>, iterations);
-  const double log_thermal_offset = 0.5 * (log_thermal_offset_low + log_thermal_offset_high);
-  const double nu_sampled = nu_threshold + (thermal_width * std::expm1(log_thermal_offset));
-  assert_testmodeonly(std::isfinite(nu_sampled));
-  assert_testmodeonly(nu_sampled >= nu_threshold);
-  assert_testmodeonly(nu_sampled <= nu_threshold + nu_range);
-  return std::min(nu_sampled, nu_threshold + nu_range);
+  // Find the interval that holds the target, then interpolate linearly inside it.
+  const double emissivity_target = cumulative_probability * emissivity_integral;
+  int interval = 0;
+  while (interval < interval_count && cumulative_emissivity[interval] <= emissivity_target) {
+    interval++;
+  }
+  if (interval == interval_count) {
+    return nu_threshold + nu_range;
+  }
+  const double cumulative_emissivity_lower_edge = (interval > 0) ? cumulative_emissivity[interval - 1] : 0.;
+  const double log_thermal_offset =
+      (interval + ((emissivity_target - cumulative_emissivity_lower_edge) /
+                   (cumulative_emissivity[interval] - cumulative_emissivity_lower_edge))) *
+      delta_log_thermal_offset;
+  return nu_threshold + std::min(thermal_width * std::expm1(log_thermal_offset), nu_range);
 }
 
 DEVICE_FUNC auto select_continuum_nu(const int element, const int lowerion, const int lower, const int phixstargetindex,

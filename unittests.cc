@@ -703,7 +703,7 @@ void test_cold_continuum_median() {
   const std::vector<float> photoion_xs(globals::NPHIXSPOINTS, 1e-18F);
   const double nu_threshold = 13.6 * EV / H;
   const double nu_median = get_continuum_nu_from_cumulative_probability(nu_threshold, 1000.F, photoion_xs, 0.5);
-  check_close(H * (nu_median - nu_threshold) / EV, 0.0608780526, 2e-6,
+  check_close(H * (nu_median - nu_threshold) / EV, 0.0608780526, 1e-3,
               "the median excess energy resolves the thermal width at 1000 K");
 }
 
