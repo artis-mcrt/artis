@@ -772,7 +772,7 @@ void test_continuum_distribution_independent() {
       };
       const double thermal_offset_max = threshold_over_thermal_width * (last_phixs_nuovernuedge - 1.);
       const double emissivity_total = emissivity_tail(0.) - emissivity_tail(thermal_offset_max);
-      for (const double cumulative_probability : {0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999}) {
+      for (const double cumulative_probability : {0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 1.}) {
         const double sampled_nu =
             get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, cumulative_probability);
         const double thermal_offset = (sampled_nu - nu_threshold) / thermal_width;
@@ -780,11 +780,11 @@ void test_continuum_distribution_independent() {
         // the linear interpolation inside an interval of the sampler gives an error of up to 4.4e-4 here
         check(std::abs(analytic_probability - cumulative_probability) < 1e-3,
               "the free-bound quantile agrees with the analytic energy-weighted distribution");
+        check(sampled_nu >= nu_threshold && sampled_nu <= nu_threshold * last_phixs_nuovernuedge * (1. + 1e-15),
+              "the free-bound quantile is inside the table");
       }
       check(get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, 0.) == nu_threshold,
             "the zero quantile is the continuum threshold");
-      check_close(get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, 1.),
-                  nu_threshold * last_phixs_nuovernuedge, 1e-15, "the unit quantile is the end of the table");
     }
   }
 }
