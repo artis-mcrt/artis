@@ -581,25 +581,23 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
   const double thermal_width = T_e / HOVERKB;
 
   // Equal intervals of log(1 + h * (nu - nu_threshold) / kT_e) resolve the thermal width of a cold continuum.
-  constexpr int interval_count = 100;
+  const int interval_count = std::max(100, globals::NPHIXSPOINTS);
   const double delta_log_thermal_offset = std::log1p(nu_range / thermal_width) / interval_count;
   // d(nu) = thermal_width * exp(log_thermal_offset) d(log_thermal_offset). The constant factor cancels.
   const auto emissivity_per_log_thermal_offset = [&](const double log_thermal_offset) {
     const double nu_minus_nu_edge = thermal_width * std::expm1(log_thermal_offset);
     return alpha_sp_E_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs) * std::exp(log_thermal_offset);
   };
+  // Simpson integral of the emissivity over one interval. The constant factor delta_log_thermal_offset / 6 cancels.
+  const auto emissivity_integral_of_interval = [&](const int interval) {
+    return emissivity_per_log_thermal_offset(interval * delta_log_thermal_offset) +
+           (4. * emissivity_per_log_thermal_offset((interval + 0.5) * delta_log_thermal_offset)) +
+           emissivity_per_log_thermal_offset((interval + 1) * delta_log_thermal_offset);
+  };
 
-  // Simpson integral of the emissivity from the threshold to the upper edge of each interval.
-  // The constant factor delta_log_thermal_offset / 6 cancels.
-  std::array<double, interval_count> cumulative_emissivity{};
-  double emissivity_lower_edge = emissivity_per_log_thermal_offset(0.);
   double emissivity_integral = 0.;
   for (int interval = 0; interval < interval_count; interval++) {
-    const double emissivity_middle = emissivity_per_log_thermal_offset((interval + 0.5) * delta_log_thermal_offset);
-    const double emissivity_upper_edge = emissivity_per_log_thermal_offset((interval + 1) * delta_log_thermal_offset);
-    emissivity_integral += emissivity_lower_edge + (4. * emissivity_middle) + emissivity_upper_edge;
-    cumulative_emissivity[interval] = emissivity_integral;
-    emissivity_lower_edge = emissivity_upper_edge;
+    emissivity_integral += emissivity_integral_of_interval(interval);
   }
   assert_testmodeonly(std::isfinite(emissivity_integral));
   assert_testmodeonly(emissivity_integral > 0.);
@@ -609,19 +607,18 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
 
   // Find the interval that holds the target, then interpolate linearly inside it.
   const double emissivity_target = cumulative_probability * emissivity_integral;
-  int interval = 0;
-  while (interval < interval_count && cumulative_emissivity[interval] <= emissivity_target) {
-    interval++;
+  double cumulative_emissivity = 0.;
+  for (int interval = 0; interval < interval_count; interval++) {
+    const double emissivity_integral_interval = emissivity_integral_of_interval(interval);
+    if (cumulative_emissivity + emissivity_integral_interval > emissivity_target) {
+      const double log_thermal_offset =
+          (interval + ((emissivity_target - cumulative_emissivity) / emissivity_integral_interval)) *
+          delta_log_thermal_offset;
+      return nu_threshold + std::min(thermal_width * std::expm1(log_thermal_offset), nu_range);
+    }
+    cumulative_emissivity += emissivity_integral_interval;
   }
-  if (interval == interval_count) {
-    return nu_threshold + nu_range;
-  }
-  const double cumulative_emissivity_lower_edge = (interval > 0) ? cumulative_emissivity[interval - 1] : 0.;
-  const double log_thermal_offset =
-      (interval + ((emissivity_target - cumulative_emissivity_lower_edge) /
-                   (cumulative_emissivity[interval] - cumulative_emissivity_lower_edge))) *
-      delta_log_thermal_offset;
-  return nu_threshold + std::min(thermal_width * std::expm1(log_thermal_offset), nu_range);
+  return nu_threshold + nu_range;
 }
 
 DEVICE_FUNC auto select_continuum_nu(const int element, const int lowerion, const int lower, const int phixstargetindex,
