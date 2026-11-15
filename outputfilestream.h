@@ -223,6 +223,9 @@ inline void remove_other_output_form(const std::string_view filename) {
 #endif
   std::error_code ec;
   std::filesystem::remove(otherpath, ec);
+  if (ec) {
+    fatal_crash("Could not remove the other output form '{}': {}", otherpath.string(), ec.message());
+  }
 }
 
 // open an output file without compression of the stream, e.g. input.txt, a log, a restart file, or a combined

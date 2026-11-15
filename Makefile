@@ -264,10 +264,12 @@ ifneq ($(ZSTD),OFF)
 	ifeq ($(ZSTD_LDFLAGS),)
 		ZSTD_LDFLAGS := -lzstd
 	endif
-	ZSTD_PROBE_SRC := $(BUILD_DIR)/zstdprobe.cc
+	# the process ID of make keeps the files of two makes at the same time apart
+	ZSTD_PROBE_SRC := $(BUILD_DIR)/zstdprobe_$(shell echo $$PPID).cc
 $(shell mkdir -p $(BUILD_DIR))
 $(shell printf '\043include <zstd.h>\nint main() { ZSTD_CCtx* cctx = ZSTD_createCCtx(); ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, 3); ZSTD_inBuffer in = {nullptr, 0, 0}; ZSTD_outBuffer out = {nullptr, 0, 0}; return ZSTD_compressStream2(cctx, &out, &in, ZSTD_e_end) == 0; }\n' > $(ZSTD_PROBE_SRC))
 	ZSTD_FOUND := $(shell $(CXX) $(CPPFLAGS) $(ZSTD_CXXFLAGS) $(ZSTD_PROBE_SRC) $(LDFLAGS) $(ZSTD_LDFLAGS) -o $(ZSTD_PROBE_SRC).out > /dev/null 2>&1 && echo true)
+$(shell rm -f $(ZSTD_PROBE_SRC) $(ZSTD_PROBE_SRC).out)
 	ifeq ($(ZSTD_FOUND),true)
 		CXXFLAGS += -DUSE_ZSTD $(ZSTD_CXXFLAGS)
 		LDFLAGS += $(ZSTD_LDFLAGS)

@@ -44,6 +44,7 @@
 #include "decay.h"
 #include "gammapkt.h"
 #include "globals.h"
+#include "grid.h"
 #include "input.h"
 #include "inputfilestream.h"
 #include "integrator.h"
@@ -198,6 +199,101 @@ void test_vector_geometry() {
   double e_cmf = e_rf * dopplerfactor;
   move_pkt_withtime(pos, dir_rf, t_current, nu_rf, nu_cmf, e_rf, e_cmf, 3.0e13);
   check_close(e_cmf / nu_cmf, e_rf / nu_rf, 1e-12, "move_pkt_withtime preserves e_cmf / nu_cmf = e_rf / nu_rf");
+}
+
+void test_expanding_shell_intersection() {
+  std::println("expanding shell intersections...");
+  // The units give the shell radius 1 and the shell speed 1 at the start time 1, unless a check gives other values.
+  const auto pos_outside_shell = std::array{1.01, 0.};
+  const auto inward_dir = std::array{-1., 0.};
+  const auto outward_dir = std::array{1., 0.};
+
+  // An inward packet at x = 1.01 meets the shell at 1.01 - d = 1 + d / packet_speed. The packet speed is equal to,
+  // slightly different from, or very different from the shell speed. Equal speeds give a linear equation (a = 0).
+  for (const double packet_speed_minus_shell_speed :
+       {0., -1e-14, 1e-14, -1e-12, 1e-12, -1e-10, 1e-10, -1e-7, 1e-7, -0.5, 1.}) {
+    const double packet_speed = 1. + packet_speed_minus_shell_speed;
+    const double distance_to_crossing = grid::expanding_shell_intersection<grid::BoundaryType::LOWER>(
+        pos_outside_shell, inward_dir, packet_speed, 1., 1.);
+    const double expected_distance = (pos_outside_shell[0] - 1.) / (1. + (1. / packet_speed));
+    check_close(distance_to_crossing, expected_distance, 1e-12,
+                "the inward packet meets the inner shell at the analytic distance");
+  }
+  check(
+      grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(std::array{0.99, 0.}, outward_dir, 1., 1., 1.) < 0.,
+      "an outward packet cannot overtake an outer shell with the same speed");
+  check(grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(std::array{1., 0.}, outward_dir, 1., 1., 1.) < 0.,
+        "a packet that moves with the shell has no crossing");
+  // With packet speed 0.5, the shell (radius 1 + 2 d) overtakes the outward packet (x = 1.01 + d) at d = 0.01.
+  check_close(
+      grid::expanding_shell_intersection<grid::BoundaryType::LOWER>(pos_outside_shell, outward_dir, 0.5, 1., 1.),
+      pos_outside_shell[0] - 1., 1e-12, "a faster inner shell overtakes an outward packet");
+  // From the centre with speed 2, the packet (r = d) leaves the sphere (radius 1 + d / 2) at d = 2.
+  check_close(
+      grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(Vec3d{0., 0., 0.}, Vec3d{1., 0., 0.}, 2., 1., 1.),
+      2., 1e-12, "a packet from the centre leaves the sphere at the analytic distance");
+
+  // A shell faster than the packet gives a < 0, e.g. a cylindrical radius when the packet moves mostly along z.
+  // With packet speed 0.5, the inner shell has radius 1 + 2 d and the packet starts at x = 1.5.
+  const auto pos_between_shells = std::array{1.5, 0.};
+  check_close(
+      grid::expanding_shell_intersection<grid::BoundaryType::LOWER>(pos_between_shells, outward_dir, 0.5, 1., 1.), 0.5,
+      1e-12, "a faster inner shell overtakes an outward packet (1.5 + d = 1 + 2 d)");
+  check_close(
+      grid::expanding_shell_intersection<grid::BoundaryType::LOWER>(pos_between_shells, inward_dir, 0.5, 1., 1.),
+      1. / 6., 1e-12, "a faster inner shell overtakes an inward packet (1.5 - d = 1 + 2 d)");
+  check(
+      grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(pos_between_shells, outward_dir, 0.5, 2., 1.) < 0.,
+      "a packet cannot leave an outer shell that is faster than the packet");
+  // A packet at (0, 2) with speed 2 along x passes outside the inner shell: a = 0.75, b = -1, c = 3, discriminant -8.
+  check(grid::expanding_shell_intersection<grid::BoundaryType::LOWER>(std::array{0., 2.}, outward_dir, 2., 1., 1.) < 0.,
+        "a packet that passes outside the inner shell has no crossing");
+
+  // Compare random paths with a reference that calculates both roots of the quadratic equation. The reference selects
+  // the nearest root ahead of the packet where the radial speed of the packet agrees with the boundary type: greater
+  // than the shell speed for a packet that leaves an outer shell, less for a packet that an inner shell overtakes.
+  rngstate_type rngstate{747};
+  bool roots_agree = true;
+  for (int i = 0; i < 10000; i++) {
+    const auto pos = vec_scale(get_rand_isotropic_unitvec(rngstate), 2. * rng_uniform(rngstate));
+    const auto dir = get_rand_isotropic_unitvec(rngstate);
+    const double packet_speed = 0.3 + (1.7 * rng_uniform(rngstate));
+    const double shell_radius_at_tstart = 0.5 + rng_uniform(rngstate);
+    const double tstart = 0.5 + rng_uniform(rngstate);
+    const double shell_speed = shell_radius_at_tstart / tstart;
+    // the coefficients of a * d^2 + b * d + c = 0 for |pos + d * dir| = R(d)
+    const double a = 1. - pow2(shell_speed / packet_speed);
+    const double b = 2 * (dot(dir, pos) - (shell_radius_at_tstart * shell_speed / packet_speed));
+    const double c = dot(pos, pos) - pow2(shell_radius_at_tstart);
+    const double discriminant = pow2(b) - (4 * a * c);
+    if (discriminant <= 0.) {
+      continue;
+    }
+    const bool packet_inside_shell = c < 0.;
+    double expected_distance = -1.;
+    for (const double root : {(-b + std::sqrt(discriminant)) / (2 * a), (-b - std::sqrt(discriminant)) / (2 * a)}) {
+      const auto pos_at_root = Vec3d{
+          pos[0] + (root * dir[0]),
+          pos[1] + (root * dir[1]),
+          pos[2] + (root * dir[2]),
+      };
+      const double radial_speed_at_root = dot(dir, pos_at_root) * packet_speed / vec_len(pos_at_root);
+      const bool packet_overtakes_shell = radial_speed_at_root > shell_speed;
+      if (root >= 0. && packet_overtakes_shell == packet_inside_shell &&
+          (expected_distance < 0. || root < expected_distance)) {
+        expected_distance = root;
+      }
+    }
+    const double distance_to_crossing = packet_inside_shell
+                                            ? grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(
+                                                  pos, dir, packet_speed, shell_radius_at_tstart, tstart)
+                                            : grid::expanding_shell_intersection<grid::BoundaryType::LOWER>(
+                                                  pos, dir, packet_speed, shell_radius_at_tstart, tstart);
+    roots_agree = roots_agree && ((expected_distance < 0.) ? distance_to_crossing < 0.
+                                                           : std::abs(distance_to_crossing - expected_distance) <=
+                                                                 1e-6 * (1. + expected_distance));
+  }
+  check(roots_agree, "the selected root agrees with the reference for random paths");
 }
 
 void test_escapedirectionbin() {
@@ -1533,6 +1629,7 @@ auto main() -> int {
   test_binindex_helpers();
   test_range_chunks();
   test_vector_geometry();
+  test_expanding_shell_intersection();
   test_escapedirectionbin();
   test_frame_transform();
   test_zero_polarisation_intensity();

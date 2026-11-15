@@ -175,11 +175,9 @@ void write_spectrum_file(const std::string& spec_filename, const std::span<const
 // a text file with a write buffer for rows of numbers
 class BufferedTextFile {
  public:
-  explicit BufferedTextFile(const std::string& filename) : file(open_output_file(filename)) {
-    buffer.reserve(2 * flushsize);
-  }
+  explicit BufferedTextFile(const std::string& filename) : file(open_output_file(filename)), buffer(2 * flushsize) {}
   ~BufferedTextFile() {
-    file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+    file.write(buffer.data(), nchars_to_write);
     file.close();
     assert_always(!file.fail());  // e.g. a full disk
   }
@@ -190,31 +188,49 @@ class BufferedTextFile {
 
   // append a line with the values in the format {:g} and a space between them
   void append_row(const std::span<const double> values) {
-    for (auto i = 0Z; i < std::ssize(values); i++) {
-      if (i > 0) {
-        buffer += ' ';
+    // a value in the format {:g} has at most 13 characters, e.g. -1.23457e+308
+    assert_always(nchars_to_write + (std::ssize(values) * 14) + 1 <= std::ssize(buffer));
+    if (!values.empty() &&
+        std::ranges::all_of(values, [](const double value) { return value == 0. && !std::signbit(value); })) {
+      // most rows of the emission and absorption files hold only zeros
+      if (std::ssize(zero_row_text) != 2 * std::ssize(values)) {
+        zero_row_text.assign(2 * values.size(), ' ');
+        for (auto i = 0UZ; i < zero_row_text.size(); i += 2) {
+          zero_row_text[i] = '0';
+        }
+        zero_row_text.back() = '\n';
       }
-      if (values[i] == 0. && !std::signbit(values[i])) {
-        buffer += '0';  // the arrays can be mostly zero, and this path is much faster
-      } else {
-        std::array<char, 32> text{};
-        const auto [textend, ec] =
-            std::to_chars(text.data(), std::to_address(text.end()), values[i], std::chars_format::general, 6);
-        assert_always(ec == std::errc{});
-        buffer.append(text.data(), textend);
+      nchars_to_write = std::ranges::copy(zero_row_text, buffer.begin() + nchars_to_write).out - buffer.begin();
+    } else {
+      for (auto i = 0Z; i < std::ssize(values); i++) {
+        if (i > 0) {
+          buffer[nchars_to_write++] = ' ';
+        }
+        if (values[i] == 0. && !std::signbit(values[i])) {
+          buffer[nchars_to_write++] = '0';  // the arrays can be mostly zero, and this path is much faster
+        } else {
+          const auto [textend, ec] =
+              std::to_chars(std::to_address(buffer.begin() + nchars_to_write), std::to_address(buffer.end()), values[i],
+                            std::chars_format::general, 6);
+          assert_always(ec == std::errc{});
+          nchars_to_write = textend - buffer.data();
+        }
       }
+      buffer[nchars_to_write++] = '\n';
     }
-    buffer += '\n';
-    if (buffer.size() >= flushsize) {
-      file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
-      buffer.clear();
+    if (nchars_to_write >= flushsize) {
+      file.write(buffer.data(), nchars_to_write);
+      nchars_to_write = 0;
     }
   }
 
  private:
-  static constexpr auto flushsize = 1UZ << 22U;
+  static constexpr std::streamsize flushsize = 4 * 1024 * 1024;
   OutputFileStream file;
-  std::string buffer;
+  std::vector<char> buffer;
+  std::streamsize nchars_to_write = 0;
+  // the text of the last row of zeros, e.g. "0 0 0\n"
+  std::string zero_row_text;
 };
 
 // Write emission-type spectra (emission or true emission) with a line for each frequency bin of

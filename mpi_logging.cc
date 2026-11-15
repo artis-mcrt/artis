@@ -13,6 +13,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <thread>
 
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
@@ -36,18 +37,16 @@ bool outputstartofline = true;
 #endif
 
 OutputFileStream output_file;
+std::thread::id mpi_main_thread;
 
-// End the run of every rank. MPI_Abort() stops the other ranks, which otherwise wait in their next collective call
-// until the wall time ends. MPI_Init() gives no thread support, so only the main thread can call MPI_Abort().
+// Only the main thread can call MPI with MPI_THREAD_FUNNELED. Test its identity before any MPI call.
 [[noreturn]] void abort_run() noexcept {
-  int mpi_initialized = 0;
-  MPI_Initialized(&mpi_initialized);
-  int mpi_finalized = 0;
-  MPI_Finalized(&mpi_finalized);
-  if (mpi_initialized != 0 && mpi_finalized == 0) {
-    int is_main_thread = 0;
-    MPI_Is_thread_main(&is_main_thread);
-    if (is_main_thread != 0) {
+  if (std::this_thread::get_id() == mpi_main_thread) {
+    int mpi_initialized = 0;
+    MPI_Initialized(&mpi_initialized);
+    int mpi_finalized = 0;
+    MPI_Finalized(&mpi_finalized);
+    if (mpi_initialized != 0 && mpi_finalized == 0) {
       MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
   }
@@ -61,6 +60,20 @@ void print_line_start() noexcept {
   }
 }
 }  // anonymous namespace
+
+void initialise_mpi(int& argc, char**& argv) {
+  mpi_main_thread = std::this_thread::get_id();
+  int provided = MPI_THREAD_SINGLE;
+  // OpenMP, standard parallelism, and zstd can create threads. Only the main thread calls MPI.
+  const int result = MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+  if (result != MPI_SUCCESS) {
+    fatal_crash("MPI_Init_thread failed with error {}", result);
+  }
+  if (provided < MPI_THREAD_FUNNELED) {
+    fatal_crash("MPI provides thread level {}, but ARTIS needs MPI_THREAD_FUNNELED ({})", provided,
+                static_cast<int>(MPI_THREAD_FUNNELED));
+  }
+}
 
 // the logs stay plain, so tail -f and the job scripts read them. exspec-after.sh compresses them later.
 void set_log_file(const std::string_view filename) noexcept { output_file = open_uncompressed_output_file(filename); }

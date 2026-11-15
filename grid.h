@@ -3,7 +3,10 @@
 #ifndef GRID_H
 #define GRID_H
 
+#include <array>
+#include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <tuple>
 
 #include "artisoptions.h"
@@ -13,8 +16,96 @@
 #include "packet.h"
 #include "random.h"
 #include "stats.h"
+#include "vectors.h"
 
 namespace grid {
+
+// The inner (LOWER) and the outer (UPPER) boundary of a cell along one coordinate. The grid expands homologously, so
+// each boundary moves with a speed that is proportional to its coordinate value.
+enum class BoundaryType : std::uint8_t { LOWER, UPPER };
+
+// Get the path length d from pos along dir to the point where a packet crosses an expanding shell. The shell is a
+// sphere around the origin for a cell boundary of a 1D grid and for the spherical escape surface. For the cylindrical
+// radius of a 2D grid, the shell is a circle in the xy plane. Then pos and dir are the projections into that plane,
+// and packet_speed is the speed of the packet in that plane. In each case, dir must be a unit vector.
+//
+// The shell radius increases homologously with the time of flight d / packet_speed:
+//   R(d) = R_0 * (t_0 + d / packet_speed) / t_0, with R_0 = shell_radius_at_tstart and t_0 = tstart.
+// For an UPPER boundary, the result is the distance to the point where the packet leaves the shell from inside. For
+// a LOWER boundary, the result is the distance to the point where the shell overtakes a packet outside the shell.
+// The function returns -1 if no such crossing lies ahead of the packet.
+template <BoundaryType boundarytype, size_t VECDIM>
+[[gnu::pure]] [[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, VECDIM>& pos,
+                                                                        const std::array<double, VECDIM>& dir,
+                                                                        const double packet_speed,
+                                                                        const double shell_radius_at_tstart,
+                                                                        const double tstart) -> double {
+  static_assert(VECDIM == 2 || VECDIM == 3);
+  assert_testmodeonly(shell_radius_at_tstart > 0);
+  assert_testmodeonly(std::fabs(dot(dir, dir) - 1.) < 1e-6);
+
+  // The packet is at pos + d * dir. The crossing condition |pos + d * dir|^2 = R(d)^2 gives the quadratic equation
+  // a * d^2 + b * d + c = 0. With the shell speed v_shell = R_0 / t_0, the coefficients are:
+  //   a = |dir|^2 - (v_shell / packet_speed)^2, which is positive when the packet is faster than the shell;
+  //   b = 2 * (pos . dir - R_0 * v_shell / packet_speed);
+  //   c = |pos|^2 - R_0^2, which is negative for a packet inside the shell and positive for a packet outside it.
+  const double a = dot(dir, dir) - pow2(shell_radius_at_tstart / tstart / packet_speed);
+  const double b = 2 * (dot(dir, pos) - (pow2(shell_radius_at_tstart) / tstart / packet_speed));
+  const double c = dot(pos, pos) - pow2(shell_radius_at_tstart);
+
+  const double discriminant = pow2(b) - (4 * a * c);
+
+  if (discriminant < 0) {
+    // The path of the packet does not meet the shell. This occurs only for a packet that passes outside an inner shell.
+    assert_testmodeonly(boundarytype == BoundaryType::LOWER);
+    assert_testmodeonly(shell_radius_at_tstart < vec_len(pos));
+    return -1.;
+  }
+
+  if (discriminant == 0) {
+    // The path of the packet touches the shell at one point and does not cross it, so the packet stays in its cell.
+    assert_testmodeonly(shell_radius_at_tstart <= vec_len(pos));
+    return -1.;
+  }
+
+  // Select the root for the direction of the crossing. The function f(d) = |pos + d * dir|^2 - R(d)^2 is negative
+  // inside the shell and positive outside it. At a root, f(d) = 0 and the derivative f'(d) = 2 * a * d + b is
+  // +sqrt(discriminant) or -sqrt(discriminant). At a crossing, |pos + d * dir| = R(d), and
+  //   f'(d) = (2 * R(d) / packet_speed) * (v_rad - v_shell),
+  // with the radial speed v_rad = packet_speed * dir . (pos + d * dir) / R(d) of the packet. So, at the root with
+  // +sqrt(discriminant), the packet moves outward faster than the shell and leaves it (UPPER). At the root with
+  // -sqrt(discriminant), the shell moves faster than the packet and overtakes it (LOWER).
+  //
+  // Each root has two equal forms, for example (-b + sqrt(discriminant)) / (2 * a) = 2 * c / (-b - sqrt(discriminant)).
+  // The calculation uses the form that adds two numbers of the same sign, because the difference of two almost equal
+  // numbers loses precision. For equal packet and shell speeds, a = 0. One form then gives the root -c / b of the
+  // linear equation, and the other form gives an infinite distance.
+  const double sqrt_discriminant = std::sqrt(discriminant);
+  double distance_to_crossing = -1.;
+  if constexpr (boundarytype == BoundaryType::UPPER) {
+    distance_to_crossing = (b < 0.) ? (-b + sqrt_discriminant) / (2 * a) : 2 * c / (-b - sqrt_discriminant);
+  } else {
+    distance_to_crossing = (b > 0.) ? (-b - sqrt_discriminant) / (2 * a) : 2 * c / (-b + sqrt_discriminant);
+  }
+
+  // A negative distance is behind the packet. An infinite distance is a crossing that never occurs.
+  if (!std::isfinite(distance_to_crossing) || distance_to_crossing < 0.) {
+    return -1.;
+  }
+
+#if (TESTMODE)
+  // At the crossing, the distance of the packet from the centre must equal the shell radius at that time.
+  std::array<double, VECDIM> pos_at_crossing{};
+  for (auto axis = 0ZU; axis < VECDIM; axis++) {
+    pos_at_crossing[axis] = pos[axis] + (distance_to_crossing * dir[axis]);
+  }
+  const double shell_radius_at_crossing =
+      shell_radius_at_tstart / tstart * (tstart + (distance_to_crossing / packet_speed));
+  assert_testmodeonly(fabs((vec_len(pos_at_crossing) / shell_radius_at_crossing) - 1.) < 1e-3);
+#endif
+
+  return distance_to_crossing;
+}
 
 // these arrays are indexed by nonemptymgi
 inline MPI_shared_array<float> rho_allcells;
