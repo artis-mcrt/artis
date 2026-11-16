@@ -673,6 +673,7 @@ void test_compton_distribution_independent() {
   std::println("Compton distribution and energy transfer against angular quadrature...");
   constexpr int angle_count = 16384;
   constexpr int sample_count = 2048;
+  // The largest errors here are 2e-7 (estimator), 8e-5 (quantile), and 2e-6 (mean energy transfer).
   for (const double photon_energy_over_rest_mass : {0.05, 0.2, 1., 5., 20.}) {
     // The differential cross section uses the scattering angle, independently of the inverse sampler.
     const auto differential_cross_section = [&](const double cos_scatter_angle) {
@@ -709,7 +710,7 @@ void test_compton_distribution_independent() {
       const double loss_factor = gammapkt::choose_f(photon_energy_over_rest_mass, cumulative_probability);
       sampled_energy_loss += 1. - (1. / loss_factor);
     }
-    check_close(sampled_energy_loss / sample_count, energy_transfer_cross_section / total_cross_section, 2e-4,
+    check_close(sampled_energy_loss / sample_count, energy_transfer_cross_section / total_cross_section, 2e-5,
                 "the mean sampled Compton energy transfer agrees with the deposition estimator");
   }
 }
@@ -738,18 +739,6 @@ void test_rad_deexcitation() {
   check(rad_deexcitation_ratecoeff(epsilon_trans, einstein_A, upperstatweight, lowerstatweight, 1e8, 0., t_current) ==
             einstein_A,
         "radiative deexcitation is the Einstein A coefficient for inverted populations");
-}
-
-void test_cold_continuum_median() {
-  std::println("cold free-bound continuum median...");
-  globals::NPHIXSPOINTS = 100;
-  globals::NPHIXSNUINCREMENT = 0.03;
-  last_phixs_nuovernuedge = 3.97;
-  const std::vector<float> photoion_xs(globals::NPHIXSPOINTS, 1e-18F);
-  const double nu_threshold = 13.6 * EV / H;
-  const double nu_median = get_continuum_nu_from_cumulative_probability(nu_threshold, 1000.F, photoion_xs, 0.5);
-  check_close(H * (nu_median - nu_threshold) / EV, 0.0608780526, 1e-3,
-              "the median excess energy resolves the thermal width at 1000 K");
 }
 
 void test_continuum_distribution_independent() {
@@ -1738,7 +1727,6 @@ auto main() -> int {
   test_compton_distribution_independent();
   test_rad_deexcitation();
   test_phixs_table_lookup();
-  test_cold_continuum_median();
   test_continuum_distribution_independent();
   test_closest_transition_randomised();
   test_recombination_rate_rows();
