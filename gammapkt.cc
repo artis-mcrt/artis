@@ -592,14 +592,12 @@ void compton_scatter(Packet& pkt) {
 }
 
 // the factor is zero below the threshold and positive above it
-static_assert(get_sigma_pair_prod_factor(0.999 * nu_pair_production_threshold) == 0.);
-static_assert(get_sigma_pair_prod_factor(1.001 * nu_pair_production_threshold) > 0.);
+static_assert(get_sigma_pair_prod_factor((1. - 1e-9) * nu_pair_production_threshold) == 0.);
+static_assert(get_sigma_pair_prod_factor((1. + 1e-9) * nu_pair_production_threshold) > 0.);
 
 // the two branches of the fit agree at 1.5 MeV to the precision of the coefficients
-static_assert((get_sigma_pair_prod_factor(1.5000001 * MEV / H) - get_sigma_pair_prod_factor(1.4999999 * MEV / H)) <
-              2e-6);
-static_assert((get_sigma_pair_prod_factor(1.4999999 * MEV / H) - get_sigma_pair_prod_factor(1.5000001 * MEV / H)) <
-              2e-6);
+static_assert((get_sigma_pair_prod_factor(1.500001 * MEV / H) - get_sigma_pair_prod_factor(1.499999 * MEV / H)) < 2e-6);
+static_assert((get_sigma_pair_prod_factor(1.499999 * MEV / H) - get_sigma_pair_prod_factor(1.500001 * MEV / H)) < 2e-6);
 
 // calculate the absorption coefficient [cm^-1] for pair production in the comoving frame
 [[nodiscard]] auto get_chi_pair_prod_cmf(const int nonemptymgi, const double ffegrp, const double nu_cmf) -> double {
@@ -706,7 +704,6 @@ void pair_production(Packet& pkt) {
   // gamma-ray energy minus the 1.022 MeV rest-mass energy. The indivisible-packet branch selection assigns either this
   // kinetic-energy share or the rest-mass energy to the packet. The latter produces 0.511 MeV annihilation gamma rays.
 
-  const double gamma_energy = H * pkt.nu_cmf;
   // A redshift during the move can put nu_cmf below the threshold. The probability is then 1.
   const double prob_gamma = std::min(1., nu_pair_production_threshold / pkt.nu_cmf);
 
@@ -715,7 +712,7 @@ void pair_production(Packet& pkt) {
       // Represent one of the two particles, assuming that they share the available kinetic energy equally. e_cmf stays
       // unchanged because it is the indivisible macro-packet energy; nu_cmf stores the physical particle energy used by
       // the time-dependent thermalisation calculation.
-      const double particle_kinetic_energy = (gamma_energy - pair_rest_mass_energy) / 2;
+      const double particle_kinetic_energy = ((H * pkt.nu_cmf) - pair_rest_mass_energy) / 2;
       assert_testmodeonly(particle_kinetic_energy > 0.);
       pkt.nu_cmf = particle_kinetic_energy / H;
       pkt.type = (rng_uniform(get_rngstate(pkt)) > 0.5) ? TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS
