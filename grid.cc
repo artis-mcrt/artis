@@ -728,8 +728,8 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
     auto abundance_file = istream_required("abundances.txt");
     std::string line;
 
-    // Every log line gets a timestamp and a flush, so a large 3D model must not warn per cell.
     std::set<int> atomic_numbers_without_atomic_data;  // elements with mass in the cells that became empty
+    // Every log line gets a timestamp and a flush, so a large 3D model must not warn per cell.
     constexpr int max_warnings = 10;
 
     for (int mgi = 0; mgi < get_npts_model(); mgi++) {
@@ -773,8 +773,7 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
       }
 
       if (get_rho_tmin(mgi) > 0.) {
-        // a sum above one is not physical, e.g. a file that holds element densities. The limit permits the
-        // rounding of the values in the file.
+        // a sum above one is not physical. The limit permits the rounding of the values in the file.
         if (elem_massfrac_sum > 1. + 1e-3) {
           fatal_crash("abundances.txt cell {} has element mass fractions that sum to {:g}, which is more than 1", mgi,
                       elem_massfrac_sum);
