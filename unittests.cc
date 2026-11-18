@@ -751,10 +751,13 @@ void test_continuum_quantiles_structured_table() {
   std::fill_n(photoion_xs.begin(), 10, 0.F);
   photoion_xs[50] = 1e-15F;
   const double nu_threshold = 13.6 * EV / H;
-  for (const float T_e : {1000.F, 10000.F, 100000.F}) {
-    // midpoint integral of the energy-weighted emissivity from the threshold, with 1000 steps in each table interval
+  // At 100 K, the table step is 47 times the thermal width.
+  for (const float T_e : {100.F, 1000.F, 10000.F, 100000.F}) {
+    // midpoint integral of the energy-weighted emissivity from the threshold, with a maximum step of 0.005 times the
+    // thermal width and a minimum of 1000 steps in each table interval
     const auto emissivity_integral_below = [&](const double nu_minus_nu_threshold_max) {
-      const double delta_nu = nu_threshold * globals::NPHIXSNUINCREMENT / 1000.;
+      const double nu_table_step = nu_threshold * globals::NPHIXSNUINCREMENT;
+      const double delta_nu = nu_table_step / std::max(1000., std::ceil(200. * HOVERKB * nu_table_step / T_e));
       double emissivity_integral = 0.;
       for (int step = 0; step * delta_nu < nu_minus_nu_threshold_max; step++) {
         const double nu_minus_nu_threshold_high = std::min((step + 1) * delta_nu, nu_minus_nu_threshold_max);
@@ -773,8 +776,8 @@ void test_continuum_quantiles_structured_table() {
       check(sampled_nu >= nu_threshold && sampled_nu <= nu_threshold * last_phixs_nuovernuedge * (1. + 1e-15),
             "the free-bound quantile is inside the table");
       const double integral_probability = emissivity_integral_below(sampled_nu - nu_threshold) / emissivity_total;
-      // the largest error here is 1.7e-3
-      check(std::abs(integral_probability - cumulative_probability) < 3e-3,
+      // the largest difference here is 7e-7, and it comes from the midpoint integral
+      check(std::abs(integral_probability - cumulative_probability) < 3e-6,
             "the free-bound quantile agrees with the integral of the emissivity");
     }
     const int first_table_interval_with_emission = PHIXS_CLASSIC_NO_INTERPOLATION ? 10 : 9;
