@@ -812,8 +812,8 @@ void test_continuum_distribution_independent() {
             get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, cumulative_probability);
         const double thermal_offset = (sampled_nu - nu_threshold) / thermal_width;
         const double analytic_probability = (emissivity_tail(0.) - emissivity_tail(thermal_offset)) / emissivity_total;
-        // the largest error here is 6.4e-5
-        check(std::abs(analytic_probability - cumulative_probability) < 2e-4,
+        // the largest error here is 3e-11
+        check(std::abs(analytic_probability - cumulative_probability) < 1e-10,
               "the free-bound quantile agrees with the analytic energy-weighted distribution");
         check(sampled_nu >= nu_threshold && sampled_nu <= nu_threshold * last_phixs_nuovernuedge * (1. + 1e-15),
               "the free-bound quantile is inside the table");
