@@ -80,15 +80,6 @@ auto alpha_sp_integrand(const double nu_minus_nu_edge, const double nu_edge, con
   return (2 / CLIGHTSQUARED) * sigma_bf * pow2(nu_edge + nu_minus_nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
 }
 
-// Energy-weighted integrand used to sample the frequency of a spontaneous free-bound emission
-auto alpha_sp_E_integrand(const double nu_minus_nu_edge, const double nu_edge, const float T_e,
-                          const std::span<const float> photoion_xs) -> double {
-  const double nu = nu_edge + nu_minus_nu_edge;
-  const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
-  // The omitted exp(-h nu_edge / kT_e) factor is constant across the continuum and cancels from the normalised CDF.
-  return (2 / CLIGHTSQUARED) * sigma_bf * pow3(nu) / nu_edge * exp(-HOVERKB * nu_minus_nu_edge / T_e);
-}
-
 // Integrand to calculate the rate coefficient for photoionisation corrected for stimulated recombination.
 auto gammacorr_integrand(const double nu, const double nu_edge, const float temperature,
                          const std::span<const float> photoion_xs) -> double {
@@ -572,81 +563,161 @@ void setup_photoion_luts() {
       mem_usage_photoionluts / 1024. / 1024.);
 }
 
-DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int lower, const int phixstargetindex,
-                                     float T_e, rngstate_type& rngstate) -> double {
-  const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
-  const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
-  const double nu_threshold = (1. / H) * E_threshold;
+DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_threshold, const float T_e,
+                                                              const std::span<const float> photoion_xs,
+                                                              const double cumulative_probability) -> double {
+  assert_testmodeonly(T_e > 0.);
+  assert_testmodeonly(cumulative_probability >= 0. && cumulative_probability <= 1.);
+  const double thermal_width = T_e / HOVERKB;
+  const double nu_table_step = nu_threshold * globals::NPHIXSNUINCREMENT;
+  const double table_step_over_thermal_width = nu_table_step / thermal_width;
+  const double exp_minus_table_step = std::exp(-table_step_over_thermal_width);
+  // nearest integer, because nvc++ has no std::lround for a device
+  const int table_interval_count =
+      static_cast<int>(std::floor(((last_phixs_nuovernuedge - 1.) / globals::NPHIXSNUINCREMENT) + 0.5));
 
-  const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
+  // In the table interval with the lower end nu_low, the energy-weighted emissivity is proportional to
+  // exp(-h * (nu_low - nu_threshold) / kT_e) * q(t) * exp(-t), where t = h * (nu - nu_low) / kT_e, and q(t) is the
+  // polynomial (sigma_bf_low + sigma_bf_slope * t) * (h * nu_low / kT_e + t)^3. Give the coefficients of q.
+  const auto get_emissivity_polynomial = [&](const int table_interval) -> std::array<double, 5> {
+    const double sigma_bf_low = photoion_xs[table_interval];
+    const double sigma_bf_slope = PHIXS_CLASSIC_NO_INTERPOLATION ? 0.
+                                                                 : (photoion_xs[table_interval + 1] - sigma_bf_low) /
+                                                                       table_step_over_thermal_width;
+    const double nu_low_over_thermal_width =
+        (nu_threshold / thermal_width) + (table_interval * table_step_over_thermal_width);
+    return {
+        sigma_bf_low * pow3(nu_low_over_thermal_width),
+        (3. * sigma_bf_low * pow2(nu_low_over_thermal_width)) + (sigma_bf_slope * pow3(nu_low_over_thermal_width)),
+        (3. * sigma_bf_low * nu_low_over_thermal_width) + (3. * sigma_bf_slope * pow2(nu_low_over_thermal_width)),
+        sigma_bf_low + (3. * sigma_bf_slope * nu_low_over_thermal_width),
+        sigma_bf_slope,
+    };
+  };
 
-  const int npieces = globals::NPHIXSPOINTS;
+  // Give the integrals of t^power * exp(-t) from 0 to thermal_offset, divided by thermal_offset^(power + 1).
+  const auto get_power_integrals = [](const double thermal_offset,
+                                      const double exp_minus_thermal_offset) -> std::array<double, 5> {
+    std::array<double, 5> power_integrals{};
+    if (thermal_offset < 1.) {
+      // The series for the highest power and the downward recurrence have no cancellation for a small offset.
+      double series_term = 1. / 5.;
+      double series_sum = 0.;
+      for (int term = 1; series_term > 1e-17 * series_sum; term++) {
+        series_sum += series_term;
+        series_term *= thermal_offset / (5 + term);
+      }
+      power_integrals[4] = exp_minus_thermal_offset * series_sum;
+      for (int power = 4; power >= 1; power--) {
+        power_integrals[power - 1] = ((thermal_offset * power_integrals[power]) + exp_minus_thermal_offset) / power;
+      }
+    } else {
+      power_integrals[0] = -std::expm1(-thermal_offset) / thermal_offset;
+      for (int power = 1; power <= 4; power++) {
+        power_integrals[power] = ((power * power_integrals[power - 1]) - exp_minus_thermal_offset) / thermal_offset;
+      }
+    }
+    return power_integrals;
+  };
 
-  const auto photoion_xs = get_phixs_table(lower_uniquelevelindex);
+  // Give the integral of q(t) * exp(-t) from 0 to thermal_offset.
+  const auto integral_below = [](const std::array<double, 5>& polynomial, const std::array<double, 5>& power_integrals,
+                                 const double thermal_offset) {
+    double integral = 0.;
+    for (int power = 4; power >= 0; power--) {
+      integral = thermal_offset * ((polynomial[power] * power_integrals[power]) + integral);
+    }
+    return integral;
+  };
 
-  const double zrand = 1. - rng_uniform(rngstate);  // Make sure that 0 < zrand <= 1
+  // All table intervals have the same step, and thus the same power integrals.
+  const auto power_integrals_table_step = get_power_integrals(table_step_over_thermal_width, exp_minus_table_step);
 
-  const double nu_range = nu_max_phixs - nu_threshold;
-  const double deltanu = nu_range / npieces;
-  double error{NAN};
-
-  // integral of the energy-weighted emissivity over the whole continuum, i.e. the normalisation of the
-  // distribution that we are sampling a frequency from
-  const auto emissivity_integral_total = integrator<31>(
-      [&](const double nu_minus_nu_edge) {
-        return alpha_sp_E_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs);
-      },
-      0., nu_range, RATECOEFF_INTEGRAL_ACCURACY, &error);
-
-  assert_testmodeonly(std::isfinite(emissivity_integral_total));
-  assert_testmodeonly(emissivity_integral_total > 0.);
-  if (!(emissivity_integral_total > 0.) || !std::isfinite(emissivity_integral_total)) {
+  double emissivity_total = 0.;
+  double boltzmann_factor_low = 1.;
+  for (int table_interval = 0; table_interval < table_interval_count; table_interval++) {
+    emissivity_total +=
+        boltzmann_factor_low * integral_below(get_emissivity_polynomial(table_interval), power_integrals_table_step,
+                                              table_step_over_thermal_width);
+    boltzmann_factor_low *= exp_minus_table_step;
+  }
+  assert_testmodeonly(std::isfinite(emissivity_total));
+  assert_testmodeonly(emissivity_total > 0.);
+  if (!(emissivity_total > 0.) || !std::isfinite(emissivity_total)) {
     return nu_threshold;
   }
 
-  // emissivity_tailintegral is the part of the integral above the current piece's lower boundary, so it
-  // decreases from emissivity_integral_total to zero as we step up in frequency. _prev is its value at the
-  // previous piece boundary.
-  double emissivity_tailintegral_prev = emissivity_integral_total;
-  double emissivity_tailintegral = emissivity_integral_total;
+  // Find the table interval that holds the target, and the fraction of its emissivity integral below the target.
+  const double emissivity_target = cumulative_probability * emissivity_total;
+  double emissivity_below = 0.;
+  double integral_fraction = 0.;
+  boltzmann_factor_low = 1.;
+  int table_interval = 0;
+  for (; table_interval < table_interval_count; table_interval++) {
+    const double emissivity_integral =
+        boltzmann_factor_low * integral_below(get_emissivity_polynomial(table_interval), power_integrals_table_step,
+                                              table_step_over_thermal_width);
+    if (emissivity_below + emissivity_integral > emissivity_target) {
+      integral_fraction = std::min((emissivity_target - emissivity_below) / emissivity_integral, 1.);
+      break;
+    }
+    emissivity_below += emissivity_integral;
+    boltzmann_factor_low *= exp_minus_table_step;
+  }
+  const double nu_low = nu_threshold + (table_interval * nu_table_step);
+  if (table_interval == table_interval_count || !(integral_fraction > 0.)) {
+    return nu_low;
+  }
 
-  int i = 1;
-  for (; i < npieces; i++) {
-    emissivity_tailintegral_prev = emissivity_tailintegral;
-    const double nu_minus_nu_edge_low = i * deltanu;
-
-    emissivity_tailintegral = integrator<31>(
-        [&](const double nu_minus_nu_edge) {
-          return alpha_sp_E_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs);
-        },
-        nu_minus_nu_edge_low, nu_range, RATECOEFF_INTEGRAL_ACCURACY, &error);
-
-    if (zrand >= emissivity_tailintegral / emissivity_integral_total) {
+  // Solve integral_below(thermal_offset) = integral_target with a Newton iteration inside a bracket.
+  const auto polynomial = get_emissivity_polynomial(table_interval);
+  const double integral_target =
+      integral_fraction * integral_below(polynomial, power_integrals_table_step, table_step_over_thermal_width);
+  double thermal_offset_low = 0.;
+  double thermal_offset_high = table_step_over_thermal_width;
+  // The first value is exact for a constant q. The lower limit of the argument keeps it finite.
+  double thermal_offset = std::min(-std::log1p(std::max(integral_fraction * std::expm1(-table_step_over_thermal_width),
+                                                        -1. + std::numeric_limits<double>::epsilon())),
+                                   table_step_over_thermal_width);
+  for (int iteration = 0; iteration < 50; iteration++) {
+    const double exp_minus_thermal_offset = std::exp(-thermal_offset);
+    const double residual =
+        integral_below(polynomial, get_power_integrals(thermal_offset, exp_minus_thermal_offset), thermal_offset) -
+        integral_target;
+    if (residual > 0.) {
+      thermal_offset_high = thermal_offset;
+    } else {
+      thermal_offset_low = thermal_offset;
+    }
+    double emissivity = 0.;
+    for (int power = 4; power >= 0; power--) {
+      emissivity = polynomial[power] + (thermal_offset * emissivity);
+    }
+    emissivity *= exp_minus_thermal_offset;
+    // Bisect the bracket where the emissivity is zero or the Newton value is outside the bracket.
+    double thermal_offset_next = 0.5 * (thermal_offset_low + thermal_offset_high);
+    if (emissivity > 0.) {
+      const double thermal_offset_newton = thermal_offset - (residual / emissivity);
+      if (thermal_offset_newton > thermal_offset_low && thermal_offset_newton < thermal_offset_high) {
+        thermal_offset_next = thermal_offset_newton;
+      }
+    }
+    const bool converged = std::abs(thermal_offset_next - thermal_offset) <= 1e-10 * thermal_offset_next;
+    thermal_offset = thermal_offset_next;
+    if (converged) {
       break;
     }
   }
+  assert_testmodeonly(thermal_offset >= 0. && thermal_offset <= table_step_over_thermal_width);
+  return nu_low + std::min(thermal_width * thermal_offset, nu_table_step);
+}
 
-  double nuoffset = 0.;
-  if (i < npieces) {
-    // the loop found the piece containing the target value, so interpolate between the remaining
-    // integrals at the piece boundaries
-    nuoffset = (emissivity_tailintegral != emissivity_tailintegral_prev)
-                   ? ((emissivity_integral_total * zrand) - emissivity_tailintegral_prev) /
-                         (emissivity_tailintegral - emissivity_tailintegral_prev) * deltanu
-                   : 0.;
-  } else if (emissivity_tailintegral > 0.) {
-    // the loop completed without a break, so the target lies in the topmost piece, where the remaining
-    // integral falls from emissivity_tailintegral at the piece's lower boundary to zero at nu_max_phixs.
-    // Interpolating with the previous piece's values here would extrapolate beyond nu_max_phixs.
-    nuoffset = (emissivity_tailintegral - (emissivity_integral_total * zrand)) / emissivity_tailintegral * deltanu;
-  }
-  const double nu_sampled = nu_threshold + ((i - 1) * deltanu) + nuoffset;
-
-  assert_testmodeonly(std::isfinite(nu_sampled));
-  assert_testmodeonly(nu_sampled >= nu_threshold);
-  assert_testmodeonly(nu_sampled <= nu_max_phixs);
-
-  return nu_sampled;
+DEVICE_FUNC auto select_continuum_nu(const int element, const int lowerion, const int lower, const int phixstargetindex,
+                                     const float T_e, rngstate_type& rngstate) -> double {
+  const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
+  const double nu_threshold = (1. / H) * get_phixs_threshold(element, lowerion, lower, phixstargetindex);
+  return get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, get_phixs_table(lower_uniquelevelindex),
+                                                      rng_uniform(rngstate));
 }
 
 // Get an ion's total rate coefficient for spontaneous recombination [cm^3/s] per nne, per population of each

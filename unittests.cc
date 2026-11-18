@@ -695,6 +695,52 @@ void test_rad_deexcitation() {
         "radiative deexcitation is the Einstein A coefficient for inverted populations");
 }
 
+void test_continuum_quantiles_structured_table() {
+  std::println("free-bound quantiles of a table with structure against a fine integral...");
+  globals::NPHIXSPOINTS = 100;
+  globals::NPHIXSNUINCREMENT = 0.03;
+  last_phixs_nuovernuedge = 3.97;
+  // The cross-section is zero at the threshold and has a resonance.
+  std::vector<float> photoion_xs(globals::NPHIXSPOINTS, 1e-18F);
+  std::fill_n(photoion_xs.begin(), 10, 0.F);
+  photoion_xs[50] = 1e-15F;
+  const double nu_threshold = 13.6 * EV / H;
+  // At 100 K, the table step is 47 times the thermal width.
+  for (const float T_e : {100.F, 1000.F, 10000.F, 100000.F}) {
+    // midpoint integral of the energy-weighted emissivity from the threshold, with a maximum step of 0.005 times the
+    // thermal width and a minimum of 1000 steps in each table interval
+    const auto emissivity_integral_below = [&](const double nu_minus_nu_threshold_max) {
+      const double nu_table_step = nu_threshold * globals::NPHIXSNUINCREMENT;
+      const double delta_nu = nu_table_step / std::max(1000., std::ceil(200. * HOVERKB * nu_table_step / T_e));
+      double emissivity_integral = 0.;
+      for (int step = 0; step * delta_nu < nu_minus_nu_threshold_max; step++) {
+        const double nu_minus_nu_threshold_high = std::min((step + 1) * delta_nu, nu_minus_nu_threshold_max);
+        const double nu_minus_nu_threshold = 0.5 * ((step * delta_nu) + nu_minus_nu_threshold_high);
+        const double nu = nu_threshold + nu_minus_nu_threshold;
+        emissivity_integral += photoionisation_crosssection_fromtable(photoion_xs, nu_threshold, nu) * pow3(nu) *
+                               std::exp(-HOVERKB * nu_minus_nu_threshold / T_e) *
+                               (nu_minus_nu_threshold_high - (step * delta_nu));
+      }
+      return emissivity_integral;
+    };
+    const double emissivity_total = emissivity_integral_below(nu_threshold * (last_phixs_nuovernuedge - 1.));
+    for (const double cumulative_probability : {0., 0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999}) {
+      const double sampled_nu =
+          get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, cumulative_probability);
+      check(sampled_nu >= nu_threshold && sampled_nu <= nu_threshold * last_phixs_nuovernuedge * (1. + 1e-15),
+            "the free-bound quantile is inside the table");
+      const double integral_probability = emissivity_integral_below(sampled_nu - nu_threshold) / emissivity_total;
+      // the largest difference here is 7e-7, and it comes from the midpoint integral
+      check(std::abs(integral_probability - cumulative_probability) < 3e-6,
+            "the free-bound quantile agrees with the integral of the emissivity");
+    }
+    const int first_table_interval_with_emission = PHIXS_CLASSIC_NO_INTERPOLATION ? 10 : 9;
+    check_close(get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, 0.),
+                nu_threshold * (1. + (first_table_interval_with_emission * globals::NPHIXSNUINCREMENT)), 1e-12,
+                "the zero quantile is the lowest frequency with emission");
+  }
+}
+
 void test_phixs_table_lookup() {
   std::println("photoionisation cross-section table lookup...");
   globals::NPHIXSPOINTS = 10;
@@ -1643,6 +1689,7 @@ auto main() -> int {
   test_compton();
   test_rad_deexcitation();
   test_phixs_table_lookup();
+  test_continuum_quantiles_structured_table();
   test_closest_transition_randomised();
   test_recombination_rate_rows();
   test_input_helpers();
