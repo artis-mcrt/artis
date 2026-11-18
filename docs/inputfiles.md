@@ -82,12 +82,17 @@ At the start of a new simulation, `sn3d` writes `input.txt` again with a comment
 
 ## model.txt
 
-`model.txt` holds the grid, the density of each cell, and the mass fractions of the nuclides. `sn3d` finds the
-coordinates of the grid from the first lines of the file. A 1D spherical, a 2D cylindrical, and a 3D Cartesian model
-have a header of numbers. A 2D spherical and a 3D spherical model have a header of keys (see
-[Spherical 2D and 3D models](#spherical-2d-and-3d-models)).
+`model.txt` holds the grid, the density of each cell, and the mass fractions of the nuclides. The file has two format
+versions:
 
-A 1D model has spherical shells:
+- Format version 1 has a header of numbers, and `sn3d` finds the coordinates of the grid from the first lines of the
+  file. It has 1D spherical, 2D cylindrical, and 3D Cartesian coordinates. This section gives its layout.
+- [Format version 2](#format-version-2) starts with the line `format_version 2` and has a header of keys. It has the
+  same three coordinates, and also 2D spherical and 3D spherical coordinates.
+
+`artistools inputmodel makeartismodel --format-version` converts a model between the two versions.
+
+A 1D model of format version 1 has spherical shells:
 
 ```text
 <number of cells>
@@ -169,54 +174,87 @@ More rules for the cells:
   the column for the initial temperature and for the initial packets.
 - A column with a different name gets a warning in the log, and `sn3d` does not use it.
 
-### Spherical 2D and 3D models
+### Format version 2
 
-A 2D spherical model has cells in the radius r and the polar angle theta, with rotational symmetry around the z axis.
-A 3D spherical model also has cells in the azimuthal angle phi. The header of such a model gives one key on each
-line, and then the edges of the cells on each axis:
+A `model.txt` of format version 2 has the line `format_version 2` as its first line. Its header gives one key on each
+line, with the edges of the cells on each axis. This is a 3D spherical model:
 
 ```text
+format_version 2
 coordinates spherical3d
 t_model_init_days <t_model in days>
 vel_r_edges_kmps <n_r + 1 radial velocities in km/s>
-theta_edges_rad <n_theta + 1 polar angles in radians>
-phi_edges_rad <n_phi + 1 azimuthal angles in radians>
-#inputcellid rho X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48
-<one row for each cell>
+theta_edges_radians <n_theta + 1 polar angles in radians>
+phi_edges_radians <n_phi + 1 azimuthal angles in radians>
+columns inputcellid rho X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48
+<one row for each cell that is not empty>
 ```
 
-A 2D spherical model has `coordinates spherical2d` and no `phi_edges_rad` line.
+The key `coordinates` gives the grid, and each grid has its own keys for the edges, in the sequence of its axes:
+
+| `coordinates` | Keys of the cell edges | Grid |
+| --- | --- | --- |
+| `spherical1d` | `vel_r_edges_kmps` | Spherical shells. |
+| `cylindrical2d` | `vel_rcyl_edges_kmps`, `vel_z_edges_kmps` | Cells in the cylindrical radius and in z, with rotational symmetry around the z axis. |
+| `cartesian3d` | `vel_x_edges_kmps`, `vel_y_edges_kmps`, `vel_z_edges_kmps` | Cubes. |
+| `spherical2d` | `vel_r_edges_kmps`, `theta_edges_radians` | Cells in the radius r and the polar angle theta, with rotational symmetry around the z axis. |
+| `spherical3d` | `vel_r_edges_kmps`, `theta_edges_radians`, `phi_edges_radians` | Cells in r, in theta, and in the azimuthal angle phi. |
 
 The header:
 
-- The key `coordinates` is on the first line that is not a comment. Its value is `spherical2d` or `spherical3d`.
-- The keys come in the sequence above. A comment line can come before each key line and before the line of the
-  column names. A key line can end with a comment that starts with `#`.
+- The first line of the file is `format_version 2`, with no comment line before it. A file with a different version
+  number stops the run.
+- Each header line after it holds a key and its values. A comment line can come between the header lines, and a
+  header line can end with a comment that starts with `#`.
+- The keys can come in any sequence, but the key `columns` is the last line of the header. Each key can occur one
+  time.
+- The keys `coordinates`, `t_model_init_days`, `columns`, and the edge keys of the coordinates are necessary. An edge
+  key of different coordinates stops the run, e.g. `phi_edges_radians` in a `spherical2d` model.
+- `sn3d` gives a warning in the log for a key that it does not know, and it does not use that key. Thus a later
+  version of ARTIS can add a key, and an older `sn3d` still reads the file.
 - Each list of edges has one value more than the number of cells on that axis, and it must have two or more values.
-  The first value must be 0, and each value must be larger than the value before. Thus the cells of one axis can have
-  different widths.
-- The last value of `vel_r_edges_kmps` is `vmax`, which must be less than the speed of light.
-- The last value of `theta_edges_rad` must be pi, and the last value of `phi_edges_rad` must be 2 pi. `sn3d` accepts
-  a difference of 1e-8 and then uses the exact value. It does the same for a polar edge at pi / 2, and the values of
-  `theta_edges_rad` must still increase after that change. Write the angles with 17 significant digits.
+  Each value must be larger than the value before.
+- A list of r, rcyl, theta, or phi starts at 0. The last value of the first list is `vmax`. For the spherical
+  coordinates, `vmax` must be less than the speed of light.
+- A cylindrical or a Cartesian grid has cells of equal width, because `sn3d` holds no other grid of these types. The
+  lists of x, y, and z must have equal steps from -`vmax` to `vmax`, and the list of rcyl from 0 to `vmax`. `sn3d`
+  permits a difference of 1e-9 times `vmax` for each edge. The three lists of a Cartesian grid must have the same
+  number of values. The rule of the corner velocity of format version 1 also applies.
+- The last value of `theta_edges_radians` must be pi, and the last value of `phi_edges_radians` must be 2 pi. `sn3d`
+  accepts a difference of 1e-8 and then uses the exact value. It does the same for a polar edge at pi / 2, and the
+  values of `theta_edges_radians` must still increase after that change. Write each edge with sufficient digits to
+  give the same number again, i.e. a maximum of 17 significant digits.
 - theta is the angle from the +z axis. phi is the angle atan2(y, x) in the range from 0 to 2 pi. Thus
   x = r sin(theta) cos(phi), y = r sin(theta) sin(phi), and z = r cos(theta).
-- The line of the column names is necessary. It starts with `#inputcellid`, and `rho` is the second column. A model
-  of these types has no position column, thus a column `vel_r_max_kmps`, `logrho`, or `pos_...` stops the run.
+- The key `columns` gives the column names. The first two names must be `inputcellid` and `rho`. A file of format
+  version 2 has no position column, thus a column `vel_r_max_kmps`, `logrho`, or `pos_...` stops the run.
 
 The cells:
 
 - Each cell has one line.
-- The cells go through the r index first, then the theta index, and then the phi index. The cell with the indices
-  i_r, i_theta, and i_phi is cell number i_r + n_r * (i_theta + n_theta * i_phi) of the file, counted from 0.
-- The header has no number of cells. `sn3d` stops if the file does not have exactly n_r * n_theta * n_phi cells.
-- The columns `rho`, `X_Fegroup`, `X_<nuclide>`, `Ye`, and `q` have the meaning of the table above.
+- The cell id is the index of the cell in the grid of the edges, and the first index is 0. The index of the first
+  axis changes fastest. For example, the cell of a 3D spherical model with the indices i_r, i_theta, and i_phi has
+  the id i_r + n_r * (i_theta + n_theta * i_phi). A Cartesian model has x as its first axis, and a cylindrical model
+  has rcyl.
+- The cell ids must increase through the file. A cell with no line is an empty cell, thus the file needs no line for
+  a cell without density.
+- The header has no number of cells. `sn3d` stops for a cell id that is not below the product of the cell numbers of
+  the axes, and for more cell lines than that product.
+- `abundances.txt` and `Ye.txt` of the model must also have cell ids from 0. They have a row for each cell, also for
+  an empty cell.
+- The columns `rho`, `X_Fegroup`, `X_<nuclide>`, `Ye`, and `q` have the meaning of the table above. A 1D model also
+  has `rho` and not `logrho`.
 
-Without [GRID_TYPE_OVERRIDE](options.md#grid_type_override), the propagation grid has the cells of the model. A
-boundary of theta is a cone around the z axis, and a boundary of phi is a half of a plane through the z axis. These
-boundaries have constant velocity coordinates, thus they do not move in the homologous expansion. The cells near the
-centre and near the z axis are small. A packet path within 10 cm of the centre changes its cell there in one step.
-Thus `sn3d` stops if the outer radius of the first radial shell is not above 1e5 cm at the start time.
+A model of format version 2 with 1D spherical, 2D cylindrical, or 3D Cartesian coordinates gives the same grid as its
+file of format version 1. The density of a 1D cell can differ in the last digits, because version 1 holds its
+logarithm.
+
+For a 2D spherical or a 3D spherical model without [GRID_TYPE_OVERRIDE](options.md#grid_type_override), the
+propagation grid has the cells of the model. A boundary of theta is a cone around the z axis, and a boundary of phi
+is a half of a plane through the z axis. These boundaries have constant velocity coordinates, thus they do not move
+in the homologous expansion. The cells near the centre and near the z axis are small. A packet path within 10 cm of
+the centre changes its cell there in one step. Thus `sn3d` stops if the outer radius of the first radial shell is not
+above 1e5 cm at the start time.
 
 ## abundances.txt
 

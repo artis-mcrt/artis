@@ -62,6 +62,8 @@ namespace {
 std::array<int, 3> ncoordgrid{0, 0, 0};  // propagation grid dimensions
 
 std::optional<GridType> model_type{};
+// 2 for a model.txt that starts with the line "format_version 2", which has a header of keys with the cell edges
+int model_format_version{1};
 
 ptrdiff_t npts_model = 0;  // number of model grid cells
 ptrdiff_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
@@ -980,9 +982,9 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
   while (iss >> token) {
     columnindex++;
 
-    // The header of a 2D spherical or a 3D spherical model gives the cell edges, thus such a model has no position
-    // column, and rho comes directly after the cell id.
-    const bool model_has_edge_lists = has_spherical_angle_axes(get_modelgridtype());
+    // The header of a file of format version 2 gives the cell edges, thus such a file has no position column, and
+    // rho comes directly after the cell id.
+    const bool model_has_edge_lists = (model_format_version == 2);
 
     // -1 for a column that this model type cannot have
     int required_columnindex = columnindex;
@@ -996,13 +998,15 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
       required_columnindex = -1;
     } else if (token == "logrho") {
       // 1D models have log10(rho [g/cm3])
-      required_columnindex = (get_modelgridtype() == GridType::SPHERICAL1D) ? 2 : -1;
+      required_columnindex = (get_modelgridtype() == GridType::SPHERICAL1D && !model_has_edge_lists) ? 2 : -1;
     } else if (token == "rho") {
       // 2D and 3D models have rho [g/cm3] after the cell id and the position columns
-      if (get_modelgridtype() == GridType::SPHERICAL1D) {
+      if (model_has_edge_lists) {
+        required_columnindex = 1;
+      } else if (get_modelgridtype() == GridType::SPHERICAL1D) {
         required_columnindex = -1;
       } else {
-        required_columnindex = model_has_edge_lists ? 1 : get_ndim(get_modelgridtype()) + 1;
+        required_columnindex = get_ndim(get_modelgridtype()) + 1;
       }
     } else if (token.starts_with("X_") && token != "X_Fegroup") {
       const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
@@ -1027,8 +1031,10 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
     }
 
     if (required_columnindex < 0) {
-      fatal_crash("the model.txt header line has the column {}, but a {}D {} model cannot have this column", token,
-                  get_ndim(get_modelgridtype()), get_grid_type_name(get_modelgridtype()));
+      fatal_crash(
+          "the model.txt header line has the column {}, but a {}D {} model of format version {} cannot have this "
+          "column",
+          token, get_ndim(get_modelgridtype()), get_grid_type_name(get_modelgridtype()), model_format_version);
     }
     if (columnindex != required_columnindex) {
       fatal_crash("the model.txt header line has the column {} at index {}, but the required index is {}", token,
@@ -1144,9 +1150,7 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
         break;
       case GridType::SPHERICAL2D:
       case GridType::SPHERICAL3D:
-        fatal_crash(
-            "model.txt: a line that starts with #inputcellid and gives the column names must come before "
-            "the first cell of a 2D spherical or a 3D spherical model");
+        fatal_crash("model.txt: a 2D spherical or a 3D spherical model needs format version 2");
     }
     headerline += " X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48";
   }
@@ -1155,10 +1159,10 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
   const bool one_line_per_cell = (colcount >= get_token_count(headerline));
 
   printlnlog("model.txt has {} line per cell format", one_line_per_cell ? "one" : "two");
-  if (!one_line_per_cell && has_spherical_angle_axes(get_modelgridtype())) {
+  if (!one_line_per_cell && model_format_version == 2) {
     fatal_crash(
-        "model.txt: the first cell has {} values, but the column line has {} names. A cell of a 2D spherical "
-        "or a 3D spherical model has one line",
+        "model.txt: the first cell has {} values, but the key columns has {} names. A cell of format version 2 has "
+        "one line",
         colcount, get_token_count(headerline));
   }
 
@@ -2329,34 +2333,53 @@ void set_spherical_model_cell_counts(const GridType spherical_model_type) {
 // between a polar edge and pi / 2, that the reader of model.txt replaces by the exact angle
 constexpr double model_angle_edge_tolerance = 1e-8;
 
-// Read the header of a model.txt for a 2D spherical or a 3D spherical model. Such a file has the key coordinates on
-// its first line that is not a comment, and coordinatesline holds that line. The keys are, in this order:
-// coordinates, t_model_init_days, vel_r_edges_kmps, theta_edges_rad, and phi_edges_rad (3D spherical only). Each
-// list of edges has one value more than the count of the cells on that axis. The function reads to the line of the
-// column names, which starts with #inputcellid, and gives that line back to the reader.
-auto read_model_keyword_header(ModelFileReader& fmodel, const std::string& coordinatesline) -> GridType {
-  // get the text after the key, without a comment that starts with #
-  const auto get_text_after_key = [](const std::string_view keyline, const std::string_view key) {
-    auto text = keyline.substr(0, keyline.find('#'));
-    text.remove_prefix(std::min(text.find_first_not_of(token_whitespace), text.size()));
-    const auto firstword = text.substr(0, text.find_first_of(token_whitespace));
-    if (firstword != key) {
-      fatal_crash(
-          "model.txt: expected the key {}, but the line is '{}'. The keys of a 2D spherical or a 3D spherical model "
-          "are coordinates, t_model_init_days, vel_r_edges_kmps, theta_edges_rad, and phi_edges_rad (3D spherical "
-          "only), in this order",
-          key, keyline);
+// the largest difference of a cylindrical or a Cartesian cell edge from its place on a grid of equal cells, as a
+// fraction of vmax. The model grid of these two types has cells of equal width only
+constexpr double model_uniform_edge_tolerance = 1e-9;
+
+// Read the header of a model.txt of format version 2, after its first line "format_version 2". Each header line is
+// a key and its values, and the keys can come in any sequence. The key columns gives the column names and ends the
+// header. The other keys are coordinates, t_model_init_days, and one list of cell edges for each axis of the
+// coordinates, e.g. vel_r_edges_kmps. A list has one value more than the count of the cells on its axis. A key that
+// this version of sn3d does not know gets a warning, thus a later version of the format can add a key. The function
+// gives the column names back to the reader as a header line of format version 1.
+auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
+  using KeyLine = std::pair<std::string, std::string>;  // a key and the text after it, without a comment
+  std::vector<KeyLine> keylines;
+  const auto find_key = [&keylines](const std::string_view key) {
+    return std::ranges::find(keylines, key, &KeyLine::first);
+  };
+  std::string line;
+  while (find_key("columns") == keylines.end()) {
+    if (!std::getline(fmodel.file, line)) {
+      fatal_crash("model.txt: the header must end with the key columns, which gives the column names");
     }
-    text.remove_prefix(firstword.size());
-    return text;
+    if (lineiscommentonly(line)) {
+      continue;
+    }
+    auto text = std::string_view{line};
+    text = text.substr(0, text.find('#'));
+    text.remove_prefix(std::min(text.find_first_not_of(token_whitespace), text.size()));
+    const auto key = text.substr(0, text.find_first_of(token_whitespace));
+    if (find_key(key) != keylines.end()) {
+      fatal_crash("model.txt: the header has the key {} two times", key);
+    }
+    keylines.emplace_back(std::string{key}, std::string{text.substr(key.size())});
+  }
+
+  const auto get_text_of_key = [&](const std::string_view key) -> std::string_view {
+    for (const auto& [linekey, linetext] : keylines) {
+      if (linekey == key) {
+        auto text = std::string_view{linetext};
+        text.remove_prefix(std::min(text.find_first_not_of(token_whitespace), text.size()));
+        return text.substr(0, text.find_last_not_of(token_whitespace) + 1);
+      }
+    }
+    fatal_crash("model.txt: the header has no key {}", key);
   };
 
-  std::string keyline;
-  const auto read_numbers_of_key = [&](const std::string_view key) {
-    if (!get_noncommentline(fmodel.file, keyline)) {
-      fatal_crash("model.txt ends before the key {}", key);
-    }
-    auto remainder = get_text_after_key(keyline, key);
+  const auto get_numbers_of_key = [&](const std::string_view key) {
+    auto remainder = get_text_of_key(key);
     std::vector<double> numbers;
     double number{NAN};
     while (parse_next_token(remainder, number)) {
@@ -2369,13 +2392,14 @@ auto read_model_keyword_header(ModelFileReader& fmodel, const std::string& coord
     return numbers;
   };
 
-  // an edge list starts at exactly zero and increases. An angular list ends at last_edge_exact (pi or 2 pi)
+  // An edge list increases. A list of r, rcyl, theta, or phi starts at exactly zero. An angular list ends at
+  // last_edge_exact (pi or 2 pi)
   const auto require_valid_edges = [](std::vector<double>& edges, const std::string_view key,
-                                      const std::optional<double> last_edge_exact) {
+                                      const bool first_edge_is_zero, const std::optional<double> last_edge_exact) {
     if (edges.size() < 2) {
       fatal_crash("model.txt: the key {} must have two or more values", key);
     }
-    if (edges.front() != 0.) {
+    if (first_edge_is_zero && edges.front() != 0.) {
       fatal_crash("model.txt: the first value of {} is {:g}, but it must be 0", key, edges.front());
     }
     if (last_edge_exact.has_value()) {
@@ -2393,74 +2417,193 @@ auto read_model_keyword_header(ModelFileReader& fmodel, const std::string& coord
     }
   };
 
-  auto coordinates = get_text_after_key(coordinatesline, "coordinates");
-  coordinates.remove_prefix(std::min(coordinates.find_first_not_of(token_whitespace), coordinates.size()));
-  coordinates = coordinates.substr(0, coordinates.find_last_not_of(token_whitespace) + 1);
-  if (coordinates != "spherical2d" && coordinates != "spherical3d") {
-    fatal_crash("model.txt: the coordinates '{}' are not known. The choices are spherical2d and spherical3d",
-                coordinates);
-  }
-  const auto detected_model_type = (coordinates == "spherical2d") ? GridType::SPHERICAL2D : GridType::SPHERICAL3D;
-  printlnlog("Detected {} model", coordinates);
+  // the cell edges of a velocity axis [cm/s]
+  const auto get_velocity_edges = [&](const std::string_view key, const bool first_edge_is_zero) {
+    auto edges = get_numbers_of_key(key);
+    require_valid_edges(edges, key, first_edge_is_zero, std::nullopt);
+    for (auto& edge : edges) {
+      edge *= 1.e5;  // km/s to cm/s
+    }
+    return edges;
+  };
 
-  const auto t_model_days = read_numbers_of_key("t_model_init_days");
+  // sn3d holds a cylindrical grid and a Cartesian grid with cells of equal width from first_edge to vmax [cm/s]
+  const auto require_uniform_edges = [](const std::vector<double>& edges, const std::string_view key,
+                                        const double first_edge, const double vmax) {
+    const auto num_cells = std::ssize(edges) - 1;
+    for (auto i = 0Z; i <= num_cells; i++) {
+      const double uniform_edge = first_edge + ((vmax - first_edge) * static_cast<double>(i) / num_cells);
+      if (!(std::abs(edges[i] - uniform_edge) <= model_uniform_edge_tolerance * vmax)) {
+        fatal_crash(
+            "model.txt: the values of {} must have equal steps from {:g} to {:g} [km/s], but the value at index {} is "
+            "{:.17g}. sn3d reads a cylindrical grid and a Cartesian grid with cells of equal width and one vmax only",
+            key, first_edge / 1.e5, vmax / 1.e5, i, edges[i] / 1.e5);
+      }
+    }
+  };
+
+  const auto coordinates = get_text_of_key("coordinates");
+  using CoordinatesName = std::pair<std::string_view, GridType>;
+  constexpr std::array<CoordinatesName, 5> coordinates_names{
+      CoordinatesName{"spherical1d", GridType::SPHERICAL1D}, CoordinatesName{"cylindrical2d", GridType::CYLINDRICAL2D},
+      CoordinatesName{"cartesian3d", GridType::CARTESIAN3D}, CoordinatesName{"spherical2d", GridType::SPHERICAL2D},
+      CoordinatesName{"spherical3d", GridType::SPHERICAL3D},
+  };
+  std::optional<GridType> named_model_type;
+  for (const auto& [name, gridtype] : coordinates_names) {
+    if (name == coordinates) {
+      named_model_type = gridtype;
+    }
+  }
+  if (!named_model_type.has_value()) {
+    fatal_crash(
+        "model.txt: the coordinates '{}' are not known. The choices are spherical1d, cylindrical2d, cartesian3d, "
+        "spherical2d, and spherical3d",
+        coordinates);
+  }
+  const auto detected_model_type = named_model_type.value();
+  printlnlog("Detected {} model of format version 2", coordinates);
+
+  const auto t_model_days = get_numbers_of_key("t_model_init_days");
   if (t_model_days.size() != 1 || !std::isfinite(t_model_days[0]) || t_model_days[0] <= 0.) {
-    fatal_crash("model.txt: the key t_model_init_days must have one value above zero, but the line is '{}'", keyline);
+    fatal_crash("model.txt: the key t_model_init_days must have one value above zero, but it has '{}'",
+                get_text_of_key("t_model_init_days"));
   }
   t_model = t_model_days[0] * DAY;
   if (t_model > globals::tmin) {
     fatal_crash("The model snapshot time {} d is after tmin {} d", t_model_days[0], globals::tmin / DAY);
   }
 
-  model_vel_r_edges = read_numbers_of_key("vel_r_edges_kmps");
-  require_valid_edges(model_vel_r_edges, "vel_r_edges_kmps", std::nullopt);
-  for (auto& vel_r_edge : model_vel_r_edges) {
-    vel_r_edge *= 1.e5;  // km/s to cm/s
+  constexpr std::array<std::string_view, 7> edge_keys{
+      "vel_r_edges_kmps", "theta_edges_radians", "phi_edges_radians", "vel_rcyl_edges_kmps",
+      "vel_x_edges_kmps", "vel_y_edges_kmps",    "vel_z_edges_kmps",
+  };
+  std::vector<std::string_view> edge_keys_of_model;
+  switch (detected_model_type) {
+    case GridType::SPHERICAL1D:
+      edge_keys_of_model = {"vel_r_edges_kmps"};
+      break;
+    case GridType::CYLINDRICAL2D:
+      edge_keys_of_model = {"vel_rcyl_edges_kmps", "vel_z_edges_kmps"};
+      break;
+    case GridType::CARTESIAN3D:
+      edge_keys_of_model = {"vel_x_edges_kmps", "vel_y_edges_kmps", "vel_z_edges_kmps"};
+      break;
+    case GridType::SPHERICAL2D:
+      edge_keys_of_model = {"vel_r_edges_kmps", "theta_edges_radians"};
+      break;
+    case GridType::SPHERICAL3D:
+      edge_keys_of_model = {"vel_r_edges_kmps", "theta_edges_radians", "phi_edges_radians"};
+      break;
   }
-  globals::vmax = model_vel_r_edges.back();
-
-  model_theta_edges = read_numbers_of_key("theta_edges_rad");
-  for (auto& theta_edge : model_theta_edges) {
-    // the plane z = 0 is a cell boundary with an exact cosine of zero
-    if (std::abs(theta_edge - (PI / 2)) <= model_angle_edge_tolerance) {
-      theta_edge = PI / 2;
+  for (const auto& keyline : keylines) {
+    const std::string_view key = keyline.first;
+    if (key == "coordinates" || key == "t_model_init_days" || key == "columns") {
+      continue;
+    }
+    if (std::ranges::find(edge_keys, key) == edge_keys.end()) {
+      printlnlog("[warning] model.txt: this version of sn3d does not know the key {}, and it ignores the key", key);
+    } else if (std::ranges::find(edge_keys_of_model, key) == edge_keys_of_model.end()) {
+      fatal_crash("model.txt: a {} model takes no key {}", coordinates, key);
     }
   }
-  // this check comes after the change to pi / 2, because two edges that become equal there make a cell with no volume
-  require_valid_edges(model_theta_edges, "theta_edges_rad", PI);
 
-  if (detected_model_type == GridType::SPHERICAL3D) {
-    model_phi_edges = read_numbers_of_key("phi_edges_rad");
-    require_valid_edges(model_phi_edges, "phi_edges_rad", 2 * PI);
-  } else {
-    model_phi_edges = {0., 2 * PI};
-  }
-
-  // a comment line can come before the line of the column names
-  std::string columnline;
-  while (true) {
-    if (!std::getline(fmodel.file, columnline)) {
-      fatal_crash("model.txt ends before the line that starts with #inputcellid and gives the column names");
-    }
-    if (columnline.starts_with("#inputcellid")) {
+  switch (detected_model_type) {
+    case GridType::SPHERICAL1D: {
+      model_vel_r_edges = get_velocity_edges("vel_r_edges_kmps", true);
+      globals::vmax = model_vel_r_edges.back();
+      // a version 1 file gives the outer velocity of each shell in a column
+      vout_model.assign(model_vel_r_edges.begin() + 1, model_vel_r_edges.end());
+      ncoord_model = {static_cast<int>(std::ssize(vout_model)), 0, 0};
+      npts_model = std::ssize(vout_model);
       break;
     }
-    if (!lineiscommentonly(columnline)) {
-      fatal_crash(
-          "model.txt: a line that starts with #inputcellid and gives the column names must follow the keys of a {} "
-          "model, but the line is '{}'",
-          coordinates, columnline);
+
+    case GridType::CYLINDRICAL2D: {
+      const auto vel_rcyl_edges = get_velocity_edges("vel_rcyl_edges_kmps", true);
+      const auto vel_z_edges = get_velocity_edges("vel_z_edges_kmps", false);
+      globals::vmax = vel_rcyl_edges.back();
+      require_uniform_edges(vel_rcyl_edges, "vel_rcyl_edges_kmps", 0., globals::vmax);
+      require_uniform_edges(vel_z_edges, "vel_z_edges_kmps", -globals::vmax, globals::vmax);
+      ncoord_model = {
+          static_cast<int>(std::ssize(vel_rcyl_edges)) - 1,
+          static_cast<int>(std::ssize(vel_z_edges)) - 1,
+          0,
+      };
+      npts_model = static_cast<ptrdiff_t>(ncoord_model[0]) * ncoord_model[1];
+      break;
+    }
+
+    case GridType::CARTESIAN3D: {
+      for (int axis = 0; axis < 3; axis++) {
+        const auto vel_edges = get_velocity_edges(edge_keys_of_model[axis], false);
+        if (axis == 0) {
+          globals::vmax = vel_edges.back();
+        }
+        require_uniform_edges(vel_edges, edge_keys_of_model[axis], -globals::vmax, globals::vmax);
+        ncoord_model[axis] = static_cast<int>(std::ssize(vel_edges)) - 1;
+      }
+      if (ncoord_model[1] != ncoord_model[0] || ncoord_model[2] != ncoord_model[0]) {
+        fatal_crash(
+            "model.txt: the lists vel_x_edges_kmps, vel_y_edges_kmps, and vel_z_edges_kmps give {} x {} x {} cells, "
+            "but sn3d reads a Cartesian grid with the same count of cells on each axis",
+            ncoord_model[0], ncoord_model[1], ncoord_model[2]);
+      }
+      npts_model = static_cast<ptrdiff_t>(ncoord_model[0]) * ncoord_model[1] * ncoord_model[2];
+      break;
+    }
+
+    case GridType::SPHERICAL2D:
+    case GridType::SPHERICAL3D: {
+      model_vel_r_edges = get_velocity_edges("vel_r_edges_kmps", true);
+      globals::vmax = model_vel_r_edges.back();
+
+      model_theta_edges = get_numbers_of_key("theta_edges_radians");
+      for (auto& theta_edge : model_theta_edges) {
+        // the plane z = 0 is a cell boundary with an exact cosine of zero
+        if (std::abs(theta_edge - (PI / 2)) <= model_angle_edge_tolerance) {
+          theta_edge = PI / 2;
+        }
+      }
+      // this check comes after the change to pi / 2, because two edges that become equal there make a cell with no
+      // volume
+      require_valid_edges(model_theta_edges, "theta_edges_radians", true, PI);
+
+      if (detected_model_type == GridType::SPHERICAL3D) {
+        model_phi_edges = get_numbers_of_key("phi_edges_radians");
+        require_valid_edges(model_phi_edges, "phi_edges_radians", true, 2 * PI);
+      } else {
+        model_phi_edges = {0., 2 * PI};
+      }
+      set_spherical_model_cell_counts(detected_model_type);
+      break;
     }
   }
-  fmodel.lines_read_ahead.push_back(columnline);
+  if (npts_model > std::numeric_limits<int>::max()) {
+    fatal_crash("model.txt: the cell edges give {} cells, which is more than the largest cell index", npts_model);
+  }
 
-  set_spherical_model_cell_counts(detected_model_type);
+  const auto columns = get_text_of_key("columns");
+  auto columns_remainder = columns;
+  for (const std::string_view required_column : {"inputcellid", "rho"}) {
+    columns_remainder.remove_prefix(
+        std::min(columns_remainder.find_first_not_of(token_whitespace), columns_remainder.size()));
+    const auto column = columns_remainder.substr(0, columns_remainder.find_first_of(token_whitespace));
+    if (column != required_column) {
+      fatal_crash("model.txt: the first two values of the key columns must be inputcellid and rho, but they are '{}'",
+                  columns);
+    }
+    columns_remainder.remove_prefix(column.size());
+  }
+  // read_model_columns() takes the column names as a header line of format version 1
+  fmodel.lines_read_ahead.push_back(std::format("#{}", columns));
+
   return detected_model_type;
 }
 
 }  // anonymous namespace
 
-// read the input ejecta model from model.txt, auto-detecting its dimensionality (1D spherical,
+// read the input ejecta model from model.txt, auto-detecting its format version and its dimensionality (1D spherical,
 // 2D cylindrical, 3D Cartesian, 2D spherical, or 3D spherical) and reading the per-cell densities,
 // abundances, and any optional extra columns into the model grid
 void read_ejecta_model() {
@@ -2471,15 +2614,35 @@ void read_ejecta_model() {
   // two integers on the first line of the model file
   int npts_0 = 0;  // total model points for 1D/3D, and number of points in r for 2D
   int npts_1 = 0;  // number of points in z for 2D
-  assert_always(get_noncommentline(fmodel.file, line));
-  // a 2D spherical or a 3D spherical model has a header of keys in place of the header of numbers
-  std::string firstword;
-  std::istringstream{line} >> firstword;
-  const bool has_keyword_header = (firstword == "coordinates");
-  if (has_keyword_header) {
-    detected_model_type = read_model_keyword_header(fmodel, line);
+  // The first line of a file of format version 2 is "format_version 2". Such a file has a header of keys in place
+  // of the header of numbers. A file of version 1 has no version line.
+  if (!std::getline(fmodel.file, line)) {
+    fatal_crash("model.txt is empty");
   }
-  if (!has_keyword_header) {
+  std::string firstword;
+  std::string versiontext;
+  std::istringstream{line} >> firstword >> versiontext;
+  model_format_version = (firstword == "format_version") ? 2 : 1;
+  if (model_format_version == 2) {
+    if (versiontext != "2") {
+      fatal_crash(
+          "model.txt has the format version '{}'. This version of sn3d reads version 2, and version 1, which has no "
+          "format_version line",
+          versiontext);
+    }
+    detected_model_type = read_model_keyword_header(fmodel);
+  } else {
+    if (lineiscommentonly(line)) {
+      assert_always(get_noncommentline(fmodel.file, line));
+      firstword.clear();
+      std::istringstream{line} >> firstword;
+    }
+    if (firstword == "format_version") {
+      fatal_crash("model.txt: the line '{}' must be the first line of the file", line);
+    }
+    if (firstword == "coordinates") {
+      fatal_crash("model.txt: the key coordinates needs the line 'format_version 2' as the first line of the file");
+    }
     auto ssline = std::istringstream{line};
     ssline >> npts_0;
     if (npts_0 <= 0) {
@@ -2539,7 +2702,17 @@ void read_ejecta_model() {
   nonemptymgi_of_mgi.resize(npts_model, -1);
 
   // geometry-specific setup of the model coordinate counts
-  if (get_modelgridtype() == GridType::SPHERICAL1D) {
+  if (model_format_version == 2) {
+    // read_model_keyword_header() set the cell counts from the cell edges
+    printlnlog("model.txt gives {} cells on the first axis{}{}", ncoord_model[0],
+               (ncoord_model[1] > 0) ? std::format(", {} on the second axis", ncoord_model[1]) : std::string{},
+               (ncoord_model[2] > 0) ? std::format(", and {} on the third axis", ncoord_model[2]) : std::string{});
+    if (get_modelgridtype() == GridType::CARTESIAN3D) {
+      // for a 3D input model, the propagation cells will match the input cells exactly
+      ncoordgrid = ncoord_model;
+      ngrid = npts_model;
+    }
+  } else if (get_modelgridtype() == GridType::SPHERICAL1D) {
     ncoord_model[0] = npts_0;
     ncoord_model[1] = 0;
     ncoord_model[2] = 0;
@@ -2548,10 +2721,6 @@ void read_ejecta_model() {
     ncoord_model[0] = npts_0;
     ncoord_model[1] = npts_1;
     ncoord_model[2] = 0;
-  } else if (has_spherical_angle_axes(get_modelgridtype())) {
-    // read_model_keyword_header() set the cell counts from the cell edges
-    printlnlog("model.txt gives {} radial shells and {} polar cells{}", ncoord_model[0], ncoord_model[1],
-               (ncoord_model[2] > 0) ? std::format(" and {} azimuthal cells", ncoord_model[2]) : std::string{});
   } else {
     ncoord_model[0] = static_cast<int>(round(std::cbrt(npts_model)));
     ncoord_model[1] = ncoord_model[0];
@@ -2575,6 +2744,9 @@ void read_ejecta_model() {
     bool posmatch_xyz = true;
     bool posmatch_zyx = true;
 
+    if (model_format_version == 2) {
+      first_input_cellid = 0;
+    }
     int mgi = 0;
     while (mgi < get_npts_model() && fmodel.getline(line)) {
       auto remainder = std::string_view{line};
@@ -2583,7 +2755,35 @@ void read_ejecta_model() {
 
       // parse the geometry-specific part of the cell line to get the density (and for 1D, the
       // outer velocity), and check that any cell midpoint coordinates match the expected values
-      if (get_modelgridtype() == GridType::SPHERICAL1D) {
+      if (model_format_version == 2) {
+        if (lineiscommentonly(line)) {
+          continue;
+        }
+        // columns: cell number, density. The header gives the cell edges. The cell number is the index of the cell
+        // in the grid of the edges, from zero, with the index of the first axis as the fastest index.
+        if (!(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, rho_tmodel))) {
+          fatal_crash("model.txt: a cell line must start with 2 numbers (inputcellid rho), but the line is: {}", line);
+        }
+        if (cellnumberin < mgi || cellnumberin >= get_npts_model()) {
+          fatal_crash(
+              "model.txt has the cell id {} after {} cells. The cell ids of format version 2 must increase, and the "
+              "cell edges of the header give the ids 0 to {}",
+              cellnumberin, mgi, get_npts_model() - 1);
+        }
+        // a cell with no line is empty
+        for (; mgi < cellnumberin; mgi++) {
+          set_rho_tmin(mgi, 0.F);
+        }
+        if (get_modelgridtype() == GridType::CARTESIAN3D) {
+          // the reader of a version 1 file of a 3D model takes the density as a float, thus the same file in
+          // version 2 gives the same density
+          const auto rho_model_in = static_cast<float>(rho_tmodel);
+          rho_tmodel = rho_model_in;
+          if (min_den < 0. || min_den > rho_tmodel) {
+            min_den = rho_tmodel;
+          }
+        }
+      } else if (get_modelgridtype() == GridType::SPHERICAL1D) {
         // columns: cell number, outer velocity [km/s], log10 of the density
         double vout_kmps{NAN};
         double log_rho{NAN};
@@ -2636,12 +2836,6 @@ void read_ejecta_model() {
                         pos_z_mid);
           }
         }
-      } else if (has_spherical_angle_axes(get_modelgridtype())) {
-        // columns: cell number, density. The header gives the cell edges, and the cell number gives the place of
-        // the cell in the grid, with the radial index as the fastest index.
-        if (!(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, rho_tmodel))) {
-          fatal_crash("model.txt cell {} must start with 2 numbers (inputcellid rho), but the line is: {}", mgi, line);
-        }
       } else {
         // columns: cell number, x minimum, y minimum, z minimum, density. The position columns hold the corner
         // of the cell with the lowest coordinates. The check below permits a difference of half a cell width, so
@@ -2677,7 +2871,7 @@ void read_ejecta_model() {
         }
       }
 
-      if (mgi == 0) {
+      if (mgi == 0 && model_format_version == 1) {
         first_input_cellid = cellnumberin;
         printlnlog("model.txt: autodetected cell numbering starting from {}", first_input_cellid);
         if (first_input_cellid != 0 && first_input_cellid != 1) {
@@ -2701,11 +2895,17 @@ void read_ejecta_model() {
       mgi++;
     }
 
+    if (model_format_version == 2) {
+      // a cell with no line is empty, also after the last line of the file
+      for (; mgi < get_npts_model(); mgi++) {
+        set_rho_tmin(mgi, 0.F);
+      }
+    }
     if (mgi != get_npts_model()) {
       fatal_crash("model.txt: found only {} cells instead of {} expected.", mgi, get_npts_model());
     }
 
-    if (has_spherical_angle_axes(get_modelgridtype())) {
+    if (model_format_version == 2) {
       // the header of this format has no cell count, thus a cell after the last one is a sign of a wrong edge list
       while (fmodel.getline(line)) {
         if (!lineiscommentonly(line)) {
@@ -2718,6 +2918,8 @@ void read_ejecta_model() {
     if (get_modelgridtype() == GridType::SPHERICAL1D) {
       // for 1D models, vmax is the outer velocity of the last cell
       globals::vmax = vout_model[get_npts_model() - 1];
+    } else if (get_modelgridtype() == GridType::CARTESIAN3D && model_format_version == 2) {
+      printlnlog("minimum model density {:g} [g/cm3]", min_den);
     } else if (get_modelgridtype() == GridType::CARTESIAN3D) {
       // posmatch_xyz and posmatch_zyx should be mutually exclusive: if both column orders matched, an
       // infinity probably occurred in the calculated positions
