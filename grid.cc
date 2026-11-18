@@ -1220,6 +1220,14 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
     if (!fmodel.getline(line)) {
       fatal_crash("model.txt ends after the column header, before the first cell");
     }
+    if (model_format_version == 2) {
+      // a comment line or an empty line can come before each cell line of format version 2, also before the first one
+      while (lineiscommentonly(line)) {
+        if (!fmodel.getline(line)) {
+          fatal_crash("model.txt ends after the key columns, before the first cell");
+        }
+      }
+    }
   } else {
     // line is not a comment, so it must be the first line of data
     // add a default header for unlabelled columns
@@ -1731,6 +1739,16 @@ void setup_grid_spherical() {
     if (model_theta_edges[i] == PI / 2) {
       theta_edge_cos[i] = 0.;
       theta_edge_sin[i] = 1.;
+    }
+  }
+  // A polar edge very near the z axis has the cosine of the axis. The cell between two edges with one cosine has no
+  // volume, and its boundary has no cone.
+  for (auto i = 1Z; i < std::ssize(theta_edge_cos); i++) {
+    if (!(theta_edge_cos[i] < theta_edge_cos[i - 1])) {
+      fatal_crash(
+          "model.txt: the polar edges {:.17g} and {:.17g} [rad] have the same cosine, thus the polar cell between "
+          "them is too thin for the precision of the numbers",
+          model_theta_edges[i - 1], model_theta_edges[i]);
     }
   }
   set_cos_sin_of_edges(model_phi_edges, phi_edge_cos, phi_edge_sin);
