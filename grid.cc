@@ -2520,6 +2520,14 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
         fatal_crash("model.txt: the values of {} must increase, but {:.17g} follows {:.17g}", key, edges[i],
                     edges[i - 1]);
       }
+      // The position tolerance of a cell boundary is 1e-12 of the radius (see cellbound_tolerance). A packet in an
+      // angular cell that is thinner than this tolerance goes through the cell with no path length.
+      if (last_edge_exact.has_value() && !(edges[i] - edges[i - 1] > model_angle_edge_tolerance)) {
+        fatal_crash(
+            "model.txt: the values {:.17g} and {:.17g} of {} are the edges of a cell that is too thin. Each angular "
+            "cell must be wider than {:g} [rad]",
+            edges[i - 1], edges[i], key, model_angle_edge_tolerance);
+      }
     }
   };
 

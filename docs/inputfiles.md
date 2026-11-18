@@ -227,9 +227,10 @@ The header:
   number of values. The rule of the corner velocity of format version 1 also applies.
 - The last value of `theta_edges_radians` must be pi, and the last value of `phi_edges_radians` must be 2 pi. `sn3d`
   accepts a difference of 1e-8 and then uses the exact value. It does the same for a polar edge at pi / 2, and the
-  values of `theta_edges_radians` must still increase after that change. Two polar edges must also have different
-  cosines, thus a polar cell at the z axis cannot be thinner than approximately 1.5e-8 rad. Write each edge with
-  sufficient digits to give the same number again, i.e. a maximum of 17 significant digits.
+  values of `theta_edges_radians` must still increase after that change.
+- Each cell in theta and in phi must be wider than 1e-8 rad. Two polar edges must also have different cosines, thus a
+  polar cell at the z axis must be wider than approximately 1.06e-8 rad.
+- Write each edge with sufficient digits to give the same number again, i.e. a maximum of 17 significant digits.
 - theta is the angle from the +z axis. phi is the angle atan2(y, x) in the range from 0 to 2 pi. Thus
   x = r sin(theta) cos(phi), y = r sin(theta) sin(phi), and z = r cos(theta).
 - The key `columns` gives the column names. The first two names must be `inputcellid` and `rho`. A file of format
