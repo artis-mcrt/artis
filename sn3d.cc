@@ -1203,7 +1203,7 @@ void log_job_end(const bool terminate_early) {
 auto main(int argc, char* argv[]) -> int {
   real_time_start = std::chrono::steady_clock::now();
 
-  MPI_Init(&argc, &argv);
+  initialise_mpi(argc, argv);
   set_terminate_handler_to_fatal_error();
 
   globals::setup_mpi_vars();

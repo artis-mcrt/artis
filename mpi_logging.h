@@ -105,6 +105,9 @@ inline void setup_mpi_vars() {
 
 inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_node); }
 
+// Initialise MPI with thread support. All MPI calls must stay on this thread.
+void initialise_mpi(int& argc, char**& argv);
+
 void set_log_file(std::string_view filename) noexcept;
 
 // Write the git branch, version, and status of the build and the lines of artisoptions.h to the log file.
