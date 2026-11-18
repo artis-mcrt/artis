@@ -197,8 +197,8 @@ The header:
   different widths.
 - The last value of `vel_r_edges_kmps` is `vmax`, which must be less than the speed of light.
 - The last value of `theta_edges_rad` must be pi, and the last value of `phi_edges_rad` must be 2 pi. `sn3d` accepts
-  a difference of 1e-8 and then uses the exact value. It does the same for a polar edge at pi / 2. Write the angles
-  with 17 significant digits.
+  a difference of 1e-8 and then uses the exact value. It does the same for a polar edge at pi / 2, and the values of
+  `theta_edges_rad` must still increase after that change. Write the angles with 17 significant digits.
 - theta is the angle from the +z axis. phi is the angle atan2(y, x) in the range from 0 to 2 pi. Thus
   x = r sin(theta) cos(phi), y = r sin(theta) sin(phi), and z = r cos(theta).
 - The line of the column names is necessary. It starts with `#inputcellid`, and `rho` is the second column. A model

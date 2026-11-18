@@ -585,6 +585,51 @@ void test_spherical_grid_boundary_distance() {
     check(special_paths_are_consistent,
           "paths through the centre, through the z axis, along the z direction, and in the plane z = 0 change cell "
           "at the cell boundaries");
+
+    // A packet a small distance [cm] before a cell boundary, with the direction of the ray from the centre (or from
+    // the z axis) through the point at that distance after the boundary. The centre (or the z axis) is behind the
+    // packet, and the path stays in the position tolerance of the boundary until it goes through it.
+    bool outward_paths_change_cell_at_once = true;
+    constexpr double distance_from_boundary = 3.;
+    const double radius = 0.3 * globals::rmax;
+    const auto path_changes_cell_at_once = [](const Vec3d& pos, const Vec3d& pos_after_boundary, const Vec3d& dir) {
+      const int cellindex = grid::get_cellindex_from_pos(pos, globals::tmin);
+      const int cellindex_after = grid::get_cellindex_from_pos(pos_after_boundary, globals::tmin);
+      const auto [distance, next_cellindex] = grid::boundary_distance(dir, pos, globals::tmin, cellindex);
+      return cellindex != cellindex_after && distance == 0. && next_cellindex == cellindex_after;
+    };
+    for (const double sense : {1., -1.}) {
+      for (auto edgeindex = 1Z; edgeindex < std::ssize(gridcase.theta_edges) - 1; edgeindex++) {
+        const double theta = gridcase.theta_edges[edgeindex];
+        const double phi = 0.3;
+        const auto pos_on_cone =
+            vec_scale(Vec3d{std::sin(theta) * std::cos(phi), std::sin(theta) * std::sin(phi), std::cos(theta)}, radius);
+        const Vec3d dir_of_theta{std::cos(theta) * std::cos(phi), std::cos(theta) * std::sin(phi), -std::sin(theta)};
+        const auto pos_after_boundary = get_pos_on_path(pos_on_cone, dir_of_theta, sense * distance_from_boundary);
+        outward_paths_change_cell_at_once =
+            outward_paths_change_cell_at_once &&
+            path_changes_cell_at_once(get_pos_on_path(pos_on_cone, dir_of_theta, -sense * distance_from_boundary),
+                                      pos_after_boundary, vec_norm(pos_after_boundary));
+      }
+      for (auto edgeindex = 0Z; edgeindex < std::ssize(gridcase.phi_edges) - 1 && gridcase.phi_edges.size() > 2;
+           edgeindex++) {
+        const double theta = 1.;
+        const double phi = gridcase.phi_edges[edgeindex];
+        const auto pos_on_halfplane =
+            vec_scale(Vec3d{std::sin(theta) * std::cos(phi), std::sin(theta) * std::sin(phi), std::cos(theta)}, radius);
+        const Vec3d dir_of_phi{-std::sin(phi), std::cos(phi), 0.};
+        const auto pos_after_boundary = get_pos_on_path(pos_on_halfplane, dir_of_phi, sense * distance_from_boundary);
+        // this direction is not radial, thus only the z axis is on the line of the path
+        outward_paths_change_cell_at_once =
+            outward_paths_change_cell_at_once &&
+            path_changes_cell_at_once(get_pos_on_path(pos_on_halfplane, dir_of_phi, -sense * distance_from_boundary),
+                                      pos_after_boundary,
+                                      vec_norm(Vec3d{pos_after_boundary[0], pos_after_boundary[1], 0.}));
+      }
+    }
+    check(outward_paths_change_cell_at_once,
+          "a path away from the centre or the z axis, in the position tolerance of a cell boundary, changes cell at "
+          "once");
   }
 }
 

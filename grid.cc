@@ -1812,7 +1812,8 @@ struct AngularBoundaryCrossing {
     const int index_theta_after = get_cellindex_from_lower_edges(coord_pos_min_tmin[1], theta_of_dir);
     const int index_phi_after = get_cellindex_from_lower_edges(coord_pos_min_tmin[2], phi_of_dir);
     if (index_theta_after != index_theta || index_phi_after != index_phi) {
-      // a packet after the centre that is not in the cell of its direction changes cell at once
+      // A packet after the centre that is not in the cell of its direction changes cell at once. It is within the
+      // tolerance of each boundary between the two cells, because the path stays that near to the ray of dir.
       take_crossing_if_nearer(std::max(-dot(pos, dir), 0.), index_theta_after, index_phi_after);
     }
     return first_crossing;
@@ -2419,13 +2420,14 @@ auto read_model_keyword_header(ModelFileReader& fmodel, const std::string& coord
   globals::vmax = model_vel_r_edges.back();
 
   model_theta_edges = read_numbers_of_key("theta_edges_rad");
-  require_valid_edges(model_theta_edges, "theta_edges_rad", PI);
   for (auto& theta_edge : model_theta_edges) {
     // the plane z = 0 is a cell boundary with an exact cosine of zero
     if (std::abs(theta_edge - (PI / 2)) <= model_angle_edge_tolerance) {
       theta_edge = PI / 2;
     }
   }
+  // this check comes after the change to pi / 2, because two edges that become equal there make a cell with no volume
+  require_valid_edges(model_theta_edges, "theta_edges_rad", PI);
 
   if (detected_model_type == GridType::SPHERICAL3D) {
     model_phi_edges = read_numbers_of_key("phi_edges_rad");
