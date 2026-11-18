@@ -252,7 +252,16 @@ The cells:
 A 1D spherical, a 2D cylindrical, or a 3D Cartesian model gives the same grid in format version 1 and in format
 version 2. The density of a 1D cell can differ in the last digits, because version 1 holds its logarithm.
 
-#### The element mass fractions
+For a 2D spherical or a 3D spherical model without [GRID_TYPE_OVERRIDE](options.md#grid_type_override), the
+propagation grid has the cells of the model. A boundary of theta is a cone around the z axis, and a boundary of phi
+is a half of a plane through the z axis. These boundaries have constant velocity coordinates, thus they do not move
+in the homologous expansion. The cells near the centre and near the z axis are small. A packet path within 10 cm of
+the centre changes its cell there in one step. Thus `sn3d` stops if the outer radius of the first radial shell is not
+above 1e5 cm at the start time.
+
+### The element mass fractions
+
+This section applies to a `model.txt` of [format version 2](#format-version-2).
 
 A model of format version 2 has no `abundances.txt`, and `sn3d` stops if that file is present. `sn3d` calculates the
 mass fraction of each element from the columns of `model.txt`:
@@ -264,13 +273,6 @@ mass fraction of each element from the columns of `model.txt`:
 The rules of [abundances.txt](#abundancestxt) for the sum of the element mass fractions of a cell also apply here. A
 negative value in an otherstable column has the same rule as a negative `X_<nuclide>` value. The mass fraction of an
 element in `X_<element>_otherstable` does not decay, and `sn3d` puts no decay energy into it.
-
-For a 2D spherical or a 3D spherical model without [GRID_TYPE_OVERRIDE](options.md#grid_type_override), the
-propagation grid has the cells of the model. A boundary of theta is a cone around the z axis, and a boundary of phi
-is a half of a plane through the z axis. These boundaries have constant velocity coordinates, thus they do not move
-in the homologous expansion. The cells near the centre and near the z axis are small. A packet path within 10 cm of
-the centre changes its cell there in one step. Thus `sn3d` stops if the outer radius of the first radial shell is not
-above 1e5 cm at the start time.
 
 ## abundances.txt
 
