@@ -45,6 +45,7 @@ jobs:
                     [
                         classicmode_1d_3dgrid,
                         classicmode_3d,
+                        classicmode_3d_formatversion2,
                         kilonova_1d,
                         kilonova_1d_timedepnlte,
                         kilonova_2d,

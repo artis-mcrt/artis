@@ -62,8 +62,15 @@ namespace {
 std::array<int, 3> ncoordgrid{0, 0, 0};  // propagation grid dimensions
 
 std::optional<GridType> model_type{};
-// 2 for a model.txt that starts with the line "format_version 2", which has a header of keys with the cell edges
+// The format version of model.txt. A file of version 2 starts with the line "format_version 2" and has a header of
+// keys with the cell edges. A file of version 1 has no version line
 int model_format_version{1};
+// The columns X_<element>_otherstable of a model.txt of format version 2. Such a column holds the mass fraction of
+// the stable isotopes of an element that have no nuclide column. The first list gives the atomic number of each
+// column. The node leaders hold the values of each model cell and column until read_elem_abundances() uses them.
+std::vector<int> model_otherstable_atomic_numbers;
+std::vector<float> model_otherstable_massfracs;
+constexpr std::string_view otherstable_suffix = "_otherstable";
 
 ptrdiff_t npts_model = 0;  // number of model grid cells
 ptrdiff_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
@@ -836,7 +843,19 @@ void map_modeltogrid_direct() {
 // fractions in model cell order (an empty vector on the ranks other than the node leader) and the number of
 // cells that became empty.
 auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
-  printlnlog("reading abundances.txt...");
+  // a model.txt of format version 2 gives the element mass fractions, and such a model has no abundances.txt
+  const bool elements_from_model = (model_format_version == 2);
+  const std::string_view massfrac_source = elements_from_model ? "model.txt" : "abundances.txt";
+  if (elements_from_model && inputfile_exists("abundances.txt")) {
+    fatal_crash(
+        "abundances.txt is present, but model.txt has format version 2. Such a model.txt gives the mass fraction of "
+        "an element as the sum of its nuclide columns and its column X_<element>_otherstable. Remove abundances.txt");
+  }
+  if (elements_from_model) {
+    printlnlog("calculating the element mass fractions from the columns of model.txt...");
+  } else {
+    printlnlog("reading abundances.txt...");
+  }
   const int nelements = get_nelements();
 
   // abundances.txt holds one line for each model cell, also for an empty cell. Each line gives the cell number and
@@ -849,105 +868,141 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
   int ncells_emptied = 0;
   if (globals::rank_in_node == 0) {
     elem_massfracs_of_mgi.assign(static_cast<size_t>(get_npts_model()) * nelements, 0.F);
-    auto abundance_file = istream_required("abundances.txt");
-    std::string line;
-
     std::set<int> atomic_numbers_without_atomic_data;  // elements with mass in the cells that became empty
     // Every log line gets a timestamp and a flush, so a large 3D model must not warn per cell.
     constexpr int max_warnings = 10;
 
-    for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-      if (!get_noncommentline(abundance_file, line)) {
-        fatal_crash("abundances.txt ends before cell {} of the {} cells of model.txt", mgi, get_npts_model());
+    // Check the element mass fractions of one cell with density, and store those of the elements with atomic data.
+    // elem_massfracs_in holds the mass fraction of each element from Z=1 upwards.
+    const auto store_cell_elem_massfracs = [&](const int mgi,
+                                               const std::array<float, max_atomic_number>& elem_massfracs_in,
+                                               const double elem_massfrac_sum) {
+      // a sum above one is not physical. The limit permits the rounding of the values in the file.
+      if (elem_massfrac_sum > 1. + 1e-3) {
+        fatal_crash("{}: cell {} has element mass fractions that sum to {:g}, which is more than 1", massfrac_source,
+                    mgi, elem_massfrac_sum);
       }
-      auto remainder = std::string_view{line};
 
-      int cellnumberinput = -1;
-      if (!parse_next_token(remainder, cellnumberinput) || cellnumberinput != mgi + first_input_cellid) {
-        fatal_crash("abundances.txt cell {} must start with the cell id {} as in model.txt, but the line is '{}'", mgi,
-                    mgi + first_input_cellid, line);
+      bool has_mass_in_composition_elements = false;
+      const auto tracked_isotope_massfrac_sum_by_atomic_number = get_tracked_isotope_massfrac_sum_by_atomic_number(mgi);
+
+      for (int element = 0; element < nelements; element++) {
+        // set the mass fraction of each element that the atomic data includes
+        const int atomic_number = get_atomicnumber(element);
+        const float elemmassfrac = elem_massfracs_in[atomic_number - 1];
+        assert_always(elemmassfrac >= 0.);
+
+        // read_ejecta_model() has already set the nuclide mass fractions. Check here, while
+        // the mass fractions are still exactly as the input files gave them, that abundances.txt gives the
+        // element at least as much mass as model.txt gives its tracked isotopes. Any later mapping rescale
+        // changes the nuclide mass fractions but not the elemental ones, so this cannot be tested afterwards.
+        // a small negative remainder is allowed for roundoff error
+        const double tracked_isotope_massfrac_sum = tracked_isotope_massfrac_sum_by_atomic_number[atomic_number];
+        assert_always((elemmassfrac - tracked_isotope_massfrac_sum) >= -1e-2);
+
+        elem_massfracs_of_mgi[(static_cast<size_t>(mgi) * nelements) + element] = elemmassfrac;
+        has_mass_in_composition_elements =
+            has_mass_in_composition_elements ||
+            (get_nions(element) > 0 && (elemmassfrac > 0.F || tracked_isotope_massfrac_sum > 0.));
       }
 
-      // the abundances.txt file specifies the elemental mass fractions for each model cell.
-      // The values are true mass fractions and get no normalisation. Their sum can be below one.
-      // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
-      double elem_massfrac_sum = 0.;
-      std::array<float, max_atomic_number> elem_massfracs_in{};
-      double abund_in = 0.;
-      for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
-        if (!parse_next_token(remainder, abund_in)) {
-          // a row with no values is a cell with no elements
-          break;
+      if (!has_mass_in_composition_elements) {
+        // e.g. a mapped model gives zero abundances to a cell whose mass comes only from particles without
+        // nucleosynthesis data. Matter without the elements of compositiondata.txt has no opacity and no cooling
+        // processes.
+        ncells_emptied++;
+        // every element with mass in this cell has no atomic data, so list them for the user
+        std::string elements_without_atomic_data;
+        for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
+          if (elem_massfracs_in[elem_z_index] > 0.F) {
+            atomic_numbers_without_atomic_data.insert(elem_z_index + 1);
+            elements_without_atomic_data +=
+                std::format(" Z={} ({:.2e})", elem_z_index + 1, elem_massfracs_in[elem_z_index]);
+          }
         }
-
-        if (abund_in < std::numeric_limits<float>::min()) {
-          assert_always(abund_in > -1e-6);
-          abund_in = 0.;
+        if (ncells_emptied <= max_warnings) {
+          printlnlog(
+              "[warning] read_elem_abundances: cell {} has density {:g} [g/cm3] at tmin and no mass in the "
+              "elements of compositiondata.txt. The cell becomes empty. Elements with mass and no atomic data:{}",
+              mgi, get_rho_tmin(mgi), elements_without_atomic_data.empty() ? " none" : elements_without_atomic_data);
         }
-        elem_massfracs_in[elem_z_index] = static_cast<float>(abund_in);
-        elem_massfrac_sum += elem_massfracs_in[elem_z_index];
+        set_rho_tmin(mgi, 0.);
       }
+    };
 
-      // parse_next_token() gives false at the end of the row and also for a token that is not a
-      // number, e.g. "nan". The loop above stops on both, so a bad token would silently zero every
-      // later element. Only whitespace may remain here.
-      remainder.remove_prefix(std::min(remainder.find_first_not_of(token_whitespace), remainder.size()));
-      if (!remainder.empty()) {
-        fatal_crash("read_elem_abundances: cell {} has an unreadable token at '{}'", mgi, remainder);
-      }
-
-      if (get_rho_tmin(mgi) > 0.) {
-        // a sum above one is not physical. The limit permits the rounding of the values in the file.
-        if (elem_massfrac_sum > 1. + 1e-3) {
-          fatal_crash("abundances.txt cell {} has element mass fractions that sum to {:g}, which is more than 1", mgi,
-                      elem_massfrac_sum);
+    if (elements_from_model) {
+      // The mass fraction of an element is the sum of its nuclide columns of model.txt and of its column
+      // X_<element>_otherstable, which holds the stable isotopes that have no column of their own.
+      const auto num_otherstable_columns = std::ssize(model_otherstable_atomic_numbers);
+      for (int mgi = 0; mgi < get_npts_model(); mgi++) {
+        if (get_rho_tmin(mgi) <= 0.) {
+          continue;
         }
-
-        bool has_mass_in_composition_elements = false;
         const auto tracked_isotope_massfrac_sum_by_atomic_number =
             get_tracked_isotope_massfrac_sum_by_atomic_number(mgi);
+        std::array<double, max_atomic_number> elem_massfracs_double{};
+        for (int atomic_number = 1; atomic_number <= max_atomic_number; atomic_number++) {
+          elem_massfracs_double[atomic_number - 1] = tracked_isotope_massfrac_sum_by_atomic_number[atomic_number];
+        }
+        for (auto column = 0Z; column < num_otherstable_columns; column++) {
+          elem_massfracs_double[model_otherstable_atomic_numbers[column] - 1] +=
+              model_otherstable_massfracs[(static_cast<ptrdiff_t>(mgi) * num_otherstable_columns) + column];
+        }
+        double elem_massfrac_sum = 0.;
+        std::array<float, max_atomic_number> elem_massfracs_in{};
+        for (int elem_z_index = 0; elem_z_index < max_atomic_number; elem_z_index++) {
+          elem_massfracs_in[elem_z_index] = static_cast<float>(elem_massfracs_double[elem_z_index]);
+          elem_massfrac_sum += elem_massfracs_in[elem_z_index];
+        }
+        store_cell_elem_massfracs(mgi, elem_massfracs_in, elem_massfrac_sum);
+      }
+      model_otherstable_massfracs.clear();
+      model_otherstable_massfracs.shrink_to_fit();
+    } else {
+      auto abundance_file = istream_required("abundances.txt");
+      std::string line;
+      for (int mgi = 0; mgi < get_npts_model(); mgi++) {
+        if (!get_noncommentline(abundance_file, line)) {
+          fatal_crash("abundances.txt ends before cell {} of the {} cells of model.txt", mgi, get_npts_model());
+        }
+        auto remainder = std::string_view{line};
 
-        for (int element = 0; element < nelements; element++) {
-          // set the mass fraction of each element that the atomic data includes
-          const int atomic_number = get_atomicnumber(element);
-          const float elemmassfrac = elem_massfracs_in[atomic_number - 1];
-          assert_always(elemmassfrac >= 0.);
-
-          // read_ejecta_model() has already set the nuclide mass fractions. Check here, while
-          // the mass fractions are still exactly as the input files gave them, that abundances.txt gives the
-          // element at least as much mass as model.txt gives its tracked isotopes. Any later mapping rescale
-          // changes the nuclide mass fractions but not the elemental ones, so this cannot be tested afterwards.
-          // a small negative remainder is allowed for roundoff error
-          const double tracked_isotope_massfrac_sum = tracked_isotope_massfrac_sum_by_atomic_number[atomic_number];
-          assert_always((elemmassfrac - tracked_isotope_massfrac_sum) >= -1e-2);
-
-          elem_massfracs_of_mgi[(static_cast<size_t>(mgi) * nelements) + element] = elemmassfrac;
-          has_mass_in_composition_elements =
-              has_mass_in_composition_elements ||
-              (get_nions(element) > 0 && (elemmassfrac > 0.F || tracked_isotope_massfrac_sum > 0.));
+        int cellnumberinput = -1;
+        if (!parse_next_token(remainder, cellnumberinput) || cellnumberinput != mgi + first_input_cellid) {
+          fatal_crash("abundances.txt cell {} must start with the cell id {} as in model.txt, but the line is '{}'",
+                      mgi, mgi + first_input_cellid, line);
         }
 
-        if (!has_mass_in_composition_elements) {
-          // e.g. a mapped model gives zero abundances to a cell whose mass comes only from particles without
-          // nucleosynthesis data. Matter without the elements of compositiondata.txt has no opacity and no cooling
-          // processes.
-          ncells_emptied++;
-          // every element with mass in this cell has no atomic data, so list them for the user
-          std::string elements_without_atomic_data;
-          for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
-            if (elem_massfracs_in[elem_z_index] > 0.F) {
-              atomic_numbers_without_atomic_data.insert(elem_z_index + 1);
-              elements_without_atomic_data +=
-                  std::format(" Z={} ({:.2e})", elem_z_index + 1, elem_massfracs_in[elem_z_index]);
-            }
+        // the abundances.txt file specifies the elemental mass fractions for each model cell.
+        // The values are true mass fractions and get no normalisation. Their sum can be below one.
+        // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
+        double elem_massfrac_sum = 0.;
+        std::array<float, max_atomic_number> elem_massfracs_in{};
+        double abund_in = 0.;
+        for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
+          if (!parse_next_token(remainder, abund_in)) {
+            // a row with no values is a cell with no elements
+            break;
           }
-          if (ncells_emptied <= max_warnings) {
-            printlnlog(
-                "[warning] read_elem_abundances: cell {} has density {:g} [g/cm3] at tmin and no mass in the "
-                "elements of compositiondata.txt. The cell becomes empty. Elements with mass and no atomic data:{}",
-                mgi, get_rho_tmin(mgi), elements_without_atomic_data.empty() ? " none" : elements_without_atomic_data);
+
+          if (abund_in < std::numeric_limits<float>::min()) {
+            assert_always(abund_in > -1e-6);
+            abund_in = 0.;
           }
-          set_rho_tmin(mgi, 0.);
+          elem_massfracs_in[elem_z_index] = static_cast<float>(abund_in);
+          elem_massfrac_sum += elem_massfracs_in[elem_z_index];
+        }
+
+        // parse_next_token() gives false at the end of the row and also for a token that is not a
+        // number, e.g. "nan". The loop above stops on both, so a bad token would silently zero every
+        // later element. Only whitespace may remain here.
+        remainder.remove_prefix(std::min(remainder.find_first_not_of(token_whitespace), remainder.size()));
+        if (!remainder.empty()) {
+          fatal_crash("read_elem_abundances: cell {} has an unreadable token at '{}'", mgi, remainder);
+        }
+
+        if (get_rho_tmin(mgi) > 0.) {
+          store_cell_elem_massfracs(mgi, elem_massfracs_in, elem_massfrac_sum);
         }
       }
     }
@@ -967,7 +1022,7 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier_allranks();
   MPI_Bcast_safe(ncells_emptied, 0, globals::mpi_comm_node);
-  printlnlog("finished reading abundances.txt");
+  printlnlog("finished setting the element mass fractions from {}", massfrac_source);
   return {std::move(elem_massfracs_of_mgi), ncells_emptied};
 }
 
@@ -1008,6 +1063,23 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
       } else {
         required_columnindex = get_ndim(get_modelgridtype()) + 1;
       }
+    } else if (token.starts_with("X_") && token.ends_with(otherstable_suffix)) {
+      if (!model_has_edge_lists) {
+        fatal_crash("the model.txt header line has the column {}, but only format version 2 has such a column", token);
+      }
+      const int atomic_number =
+          decay::get_atomic_number_of_elsymbol(token.substr(2, token.size() - 2 - otherstable_suffix.size()));
+      if (atomic_number < 1 || atomic_number > max_atomic_number) {
+        fatal_crash("the model.txt header line has the column {}, which does not name an element", token);
+      }
+      if (std::ranges::find(model_otherstable_atomic_numbers, atomic_number) !=
+          model_otherstable_atomic_numbers.end()) {
+        fatal_crash("the model.txt header line has two columns {} for the element with Z={}", token, atomic_number);
+      }
+      model_otherstable_atomic_numbers.push_back(atomic_number);
+      colnames.push_back(token);
+      zlist.push_back(-1);
+      alist.push_back(-1);
     } else if (token.starts_with("X_") && token != "X_Fegroup") {
       const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
       const int a = decay::get_nucstring_a(token.substr(2));
@@ -1084,6 +1156,8 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
     return;
   }
 
+  const auto num_otherstable_columns = std::ssize(model_otherstable_atomic_numbers);
+  ptrdiff_t otherstable_column = 0;
   for (auto i = 0Z; i < std::ssize(colnames); i++) {
     double valuein = 0.;  // a mass fraction or another column value, e.g. Ye or q
     if (!parse_next_token(remainder, valuein)) {
@@ -1093,6 +1167,17 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
     if (nucindexlist[i] >= 0) {
       assert_testmodeonly(valuein <= 1.);
       set_modelinitnucmassfrac(mgi, nucindexlist[i], static_cast<float>(valuein));
+    } else if (colnames[i].starts_with("X_") && colnames[i].ends_with(otherstable_suffix)) {
+      // the columns have the sequence of model_otherstable_atomic_numbers
+      if (valuein < 0.) {
+        if (valuein <= -1e-6) {
+          fatal_crash("model.txt cell {} has the negative value {:g} in the column {}", mgi, valuein, colnames[i]);
+        }
+        valuein = 0.;
+      }
+      model_otherstable_massfracs[(static_cast<ptrdiff_t>(mgi) * num_otherstable_columns) + otherstable_column] =
+          static_cast<float>(valuein);
+      otherstable_column++;
     } else if (colnames[i] == "X_Fegroup") {
       set_ffegrp(mgi, static_cast<float>(valuein));
     } else if (colnames[i] == "cellYe" || colnames[i] == "Ye") {
@@ -1161,8 +1246,8 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
   printlnlog("model.txt has {} line per cell format", one_line_per_cell ? "one" : "two");
   if (!one_line_per_cell && model_format_version == 2) {
     fatal_crash(
-        "model.txt: the first cell has {} values, but the key columns has {} names. A cell of format version 2 has "
-        "one line",
+        "model.txt: the first cell has {} values, but the key columns has {} names. A cell has one line in format "
+        "version 2",
         colcount, get_token_count(headerline));
   }
 
@@ -1219,6 +1304,9 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
   const ptrdiff_t num_nuclides = decay::get_num_nuclides();
 
   initnucmassfrac_allcells = MPI_shared_array<float>(npts_model * num_nuclides, 0.);
+  if (globals::rank_in_node == 0) {
+    model_otherstable_massfracs.assign(npts_model * std::ssize(model_otherstable_atomic_numbers), 0.F);
+  }
   printlnlog(
       "[info] mem_usage: input abundance data for {} nuclides for {} cells occupies {:.3f} MB (node shared memory)",
       num_nuclides, npts_model, (initnucmassfrac_allcells.size() * sizeof(float)) / 1024. / 1024.);
@@ -2333,16 +2421,16 @@ void set_spherical_model_cell_counts(const GridType spherical_model_type) {
 // between a polar edge and pi / 2, that the reader of model.txt replaces by the exact angle
 constexpr double model_angle_edge_tolerance = 1e-8;
 
-// the largest difference of a cylindrical or a Cartesian cell edge from its place on a grid of equal cells, as a
-// fraction of vmax. The model grid of these two types has cells of equal width only
+// the largest difference of a cylindrical or a Cartesian cell edge from its place on a grid with cells of equal width,
+// as a fraction of vmax. The model grid of these two types has cells of equal width only
 constexpr double model_uniform_edge_tolerance = 1e-9;
 
 // Read the header of a model.txt of format version 2, after its first line "format_version 2". Each header line is
 // a key and its values, and the keys can come in any sequence. The key columns gives the column names and ends the
 // header. The other keys are coordinates, t_model_init_days, and one list of cell edges for each axis of the
 // coordinates, e.g. vel_r_edges_kmps. A list has one value more than the count of the cells on its axis. A key that
-// this version of sn3d does not know gets a warning, thus a later version of the format can add a key. The function
-// gives the column names back to the reader as a header line of format version 1.
+// this version of sn3d does not know gets a warning, thus a later version of sn3d can add a key to format version 2.
+// The function gives the column names back to the reader as a header line of format version 1.
 auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
   using KeyLine = std::pair<std::string, std::string>;  // a key and the text after it, without a comment
   std::vector<KeyLine> keylines;
@@ -2436,7 +2524,8 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
       if (!(std::abs(edges[i] - uniform_edge) <= model_uniform_edge_tolerance * vmax)) {
         fatal_crash(
             "model.txt: the values of {} must have equal steps from {:g} to {:g} [km/s], but the value at index {} is "
-            "{:.17g}. sn3d reads a cylindrical grid and a Cartesian grid with cells of equal width and one vmax only",
+            "{:.17g}. sn3d reads a cylindrical grid or a Cartesian grid only with cells of equal width and the same "
+            "vmax on each axis",
             key, first_edge / 1.e5, vmax / 1.e5, i, edges[i] / 1.e5);
       }
     }
@@ -2626,8 +2715,8 @@ void read_ejecta_model() {
   if (model_format_version == 2) {
     if (versiontext != "2") {
       fatal_crash(
-          "model.txt has the format version '{}'. This version of sn3d reads version 2, and version 1, which has no "
-          "format_version line",
+          "model.txt has the format version '{}'. This version of sn3d reads format version 2, and format version 1, "
+          "which has no format_version line",
           versiontext);
     }
     detected_model_type = read_model_keyword_header(fmodel);
@@ -2949,6 +3038,9 @@ void read_ejecta_model() {
   if (globals::rank_in_node == 0) {
     MPI_Bcast_safe(modelgrid_input, 0, globals::mpi_comm_internode);
     MPI_Bcast_safe(initnucmassfrac_allcells, 0, globals::mpi_comm_internode);
+    if (!model_otherstable_massfracs.empty()) {
+      MPI_Bcast_safe(model_otherstable_massfracs, 0, globals::mpi_comm_internode);
+    }
   }
   MPI_Barrier_allranks();
 

@@ -14,7 +14,7 @@ catch.
 
 ## The end-to-end tests
 
-The `tests` folder holds fourteen small end-to-end test models. `tests/runtest.sh` runs one of them:
+The `tests` folder holds fifteen small end-to-end test models. `tests/runtest.sh` runs one of them:
 
 ```sh
 tests/runtest.sh kilonova_1d
@@ -51,7 +51,7 @@ Each test uses one preset and a reduced atomic dataset from a release of this re
 
 | Tests | Preset | Archive | Elements |
 | --- | --- | --- | --- |
-| `classicmode_1d_3dgrid`, `classicmode_3d` | `classic` | `atomicdata_classic.tar.xz` | the classic dataset, with cross-sections in the v1 format |
+| `classicmode_1d_3dgrid`, `classicmode_3d*` | `classic` | `atomicdata_classic.tar.xz` | the classic dataset, with cross-sections in the v1 format |
 | `kilonova_1d`, `kilonova_2d*`, `kilonova_3dspherical*` | `kilonova_lte` | `atomicdata_feconi.tar.xz` | Fe, Co, Ni |
 | `nebular_1d_3dgrid*` | `nltenebular` | `atomicdata_feconi.tar.xz` | Fe, Co, Ni |
 | `nltephotospheric_dynamic_ion_range_1d_1dgrid` | `nltephotospheric` | `atomicdata_hefeconi_fe_i_to_vii.tar.xz` | He, Fe, Co, Ni, with Fe I to Fe VII |

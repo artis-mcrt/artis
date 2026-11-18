@@ -86,9 +86,11 @@ At the start of a new simulation, `sn3d` writes `input.txt` again with a comment
 versions:
 
 - Format version 1 has a header of numbers, and `sn3d` finds the coordinates of the grid from the first lines of the
-  file. It has 1D spherical, 2D cylindrical, and 3D Cartesian coordinates. This section gives its layout.
-- [Format version 2](#format-version-2) starts with the line `format_version 2` and has a header of keys. It has the
-  same three coordinates, and also 2D spherical and 3D spherical coordinates.
+  file. Such a file holds a 1D spherical, a 2D cylindrical, or a 3D Cartesian model. This section gives its layout.
+  The element mass fractions of such a model are in `abundances.txt`.
+- [Format version 2](#format-version-2) starts with the line `format_version 2` and has a header of keys. Such a
+  file holds one of the same three types of model, or a 2D spherical or a 3D spherical model. Such a model has no
+  `abundances.txt`, because `model.txt` also gives the element mass fractions.
 
 `artistools inputmodel makeartismodel --format-version` converts a model between the two versions.
 
@@ -190,6 +192,9 @@ columns inputcellid rho X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48
 <one row for each cell that is not empty>
 ```
 
+The columns can also hold `X_<element>_otherstable`, e.g. `X_Fe_otherstable` (see
+[The element mass fractions](#the-element-mass-fractions)).
+
 The key `coordinates` gives the grid, and each grid has its own keys for the edges, in the sequence of its axes:
 
 | `coordinates` | Keys of the cell edges | Grid |
@@ -214,8 +219,8 @@ The header:
   version of ARTIS can add a key, and an older `sn3d` still reads the file.
 - Each list of edges has one value more than the number of cells on that axis, and it must have two or more values.
   Each value must be larger than the value before.
-- A list of r, rcyl, theta, or phi starts at 0. The last value of the first list is `vmax`. For the spherical
-  coordinates, `vmax` must be less than the speed of light.
+- A list of r, rcyl, theta, or phi starts at 0. The last value of the list of the first axis is `vmax`. For the
+  spherical coordinates, `vmax` must be less than the speed of light.
 - A cylindrical or a Cartesian grid has cells of equal width, because `sn3d` holds no other grid of these types. The
   lists of x, y, and z must have equal steps from -`vmax` to `vmax`, and the list of rcyl from 0 to `vmax`. `sn3d`
   permits a difference of 1e-9 times `vmax` for each edge. The three lists of a Cartesian grid must have the same
@@ -231,23 +236,34 @@ The header:
 
 The cells:
 
-- Each cell has one line.
+- Each cell that is not empty has one line.
 - The cell id is the index of the cell in the grid of the edges, and the first index is 0. The index of the first
   axis changes fastest. For example, the cell of a 3D spherical model with the indices i_r, i_theta, and i_phi has
   the id i_r + n_r * (i_theta + n_theta * i_phi). A Cartesian model has x as its first axis, and a cylindrical model
   has rcyl.
-- The cell ids must increase through the file. A cell with no line is an empty cell, thus the file needs no line for
-  a cell without density.
-- The header has no number of cells. `sn3d` stops for a cell id that is not below the product of the cell numbers of
-  the axes, and for more cell lines than that product.
-- `abundances.txt` and `Ye.txt` of the model must also have cell ids from 0. They have a row for each cell, also for
-  an empty cell.
-- The columns `rho`, `X_Fegroup`, `X_<nuclide>`, `Ye`, and `q` have the meaning of the table above. A 1D model also
-  has `rho` and not `logrho`.
+- The cell ids must increase through the file. A cell with no line is an empty cell. Thus the file needs a line only
+  for a cell that is not empty, and it must have one cell line or more.
+- The header has no number of cells. `sn3d` calculates it as the product of the numbers of cells on the axes. `sn3d`
+  stops if a cell id is equal to or larger than this number, or if the file has more cell lines than this number.
+- `Ye.txt` of the model must also have cell ids from 0.
+- The columns `rho`, `X_Fegroup`, `X_<nuclide>`, `Ye`, and `q` have the meaning of the table above. Each model of
+  format version 2 holds `rho`, and no model holds `logrho`.
 
-A model of format version 2 with 1D spherical, 2D cylindrical, or 3D Cartesian coordinates gives the same grid as its
-file of format version 1. The density of a 1D cell can differ in the last digits, because version 1 holds its
-logarithm.
+A 1D spherical, a 2D cylindrical, or a 3D Cartesian model gives the same grid in format version 1 and in format
+version 2. The density of a 1D cell can differ in the last digits, because version 1 holds its logarithm.
+
+#### The element mass fractions
+
+A model of format version 2 has no `abundances.txt`, and `sn3d` stops if that file is present. `sn3d` calculates the
+mass fraction of each element from the columns of `model.txt`:
+
+- It adds the columns `X_<nuclide>` of the isotopes of the element, e.g. `X_Ni56` and `X_Ni58`.
+- It adds the column `X_<element>_otherstable`, e.g. `X_Ni_otherstable`. This optional column holds the mass fraction
+  of the stable isotopes of the element that have no column of their own. An element can have one such column.
+
+The rules of [abundances.txt](#abundancestxt) for the sum of the element mass fractions of a cell also apply here. A
+negative value in an otherstable column has the same rule as a negative `X_<nuclide>` value. The mass fraction of an
+element in `X_<element>_otherstable` does not decay, and `sn3d` puts no decay energy into it.
 
 For a 2D spherical or a 3D spherical model without [GRID_TYPE_OVERRIDE](options.md#grid_type_override), the
 propagation grid has the cells of the model. A boundary of theta is a cone around the z axis, and a boundary of phi
@@ -259,7 +275,8 @@ above 1e5 cm at the start time.
 ## abundances.txt
 
 `abundances.txt` holds the mass fractions of the elements of each cell. These include the elements whose nuclide mass
-fractions are not in `model.txt`. The file can have comment lines.
+fractions are not in `model.txt`. The file can have comment lines. Only a model with a `model.txt` of format version
+1 has this file. A `model.txt` of [format version 2](#the-element-mass-fractions) gives the element mass fractions.
 
 The file has one row for each cell of `model.txt`, also for an empty cell, in the same sequence:
 
