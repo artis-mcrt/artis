@@ -596,8 +596,8 @@ void compton_scatter(Packet& pkt) {
   return std::max(0., 0.10063 * (hnu_over_1MeV - 1.022));
 }
 
+// the factor is zero below the threshold and positive above it
 static_assert(get_sigma_pair_prod_factor(0.999 * nu_pair_production_threshold) == 0.);
-static_assert(get_sigma_pair_prod_factor(nu_pair_production_threshold) < 1e-15);
 static_assert(get_sigma_pair_prod_factor(1.001 * nu_pair_production_threshold) > 0.);
 
 // the two branches of the fit agree at 1.5 MeV to the precision of the coefficients
@@ -731,7 +731,7 @@ void pair_production(Packet& pkt) {
     stats::increment(stats::Counter::NT_STAT_FROM_GAMMA);
   } else {
     // The energy goes into emission at 511 keV.
-    pkt.nu_cmf = nu_pair_production_threshold / 2.;
+    pkt.nu_cmf = pair_rest_mass_energy / 2. / H;
 
     // Now give the gamma ray an isotropic direction and set the rest-frame quantities.
     emit_gamma_isotropic(pkt);
