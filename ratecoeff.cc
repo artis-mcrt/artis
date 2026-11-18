@@ -571,8 +571,9 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
   const double thermal_width = T_e / HOVERKB;
   const double nu_table_step = nu_threshold * globals::NPHIXSNUINCREMENT;
   const double table_step_over_thermal_width = nu_table_step / thermal_width;
+  // nearest integer, because nvc++ has no std::lround for a device
   const int table_interval_count =
-      static_cast<int>(std::lround((last_phixs_nuovernuedge - 1.) / globals::NPHIXSNUINCREMENT));
+      static_cast<int>(std::floor(((last_phixs_nuovernuedge - 1.) / globals::NPHIXSNUINCREMENT) + 0.5));
 
   // Each table interval has subintervals that are equal in log(1 + h * (nu - nu_low) / kT_e), where nu_low is the
   // lower end of the table interval. They resolve the thermal width above each table point.
@@ -617,11 +618,15 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
           const double integral_fraction = (emissivity_target - emissivity_sum) / emissivity_integral;
           const double relative_emissivity_low = emissivity_low / emissivity_integral;
           const double relative_emissivity_high = emissivity_high / emissivity_integral;
+          const double denominator =
+              relative_emissivity_low +
+              std::sqrt(pow2(relative_emissivity_low) +
+                        (integral_fraction * (pow2(relative_emissivity_high) - pow2(relative_emissivity_low))));
+          // The denominator is zero for a target at the lower end where the emissivity is zero.
           const double subinterval_fraction =
-              integral_fraction * (relative_emissivity_low + relative_emissivity_high) /
-              (relative_emissivity_low +
-               std::sqrt(pow2(relative_emissivity_low) +
-                         (integral_fraction * (pow2(relative_emissivity_high) - pow2(relative_emissivity_low)))));
+              (denominator > 0.)
+                  ? integral_fraction * (relative_emissivity_low + relative_emissivity_high) / denominator
+                  : integral_fraction;
           const double log_thermal_offset = (subinterval + subinterval_fraction) * delta_log_thermal_offset;
           return {(table_interval * nu_table_step) +
                       std::min(thermal_width * std::expm1(log_thermal_offset), nu_table_step),
