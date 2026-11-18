@@ -80,15 +80,6 @@ auto alpha_sp_integrand(const double nu_minus_nu_edge, const double nu_edge, con
   return (2 / CLIGHTSQUARED) * sigma_bf * pow2(nu_edge + nu_minus_nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
 }
 
-// Energy-weighted integrand used to sample the frequency of a spontaneous free-bound emission
-auto alpha_sp_E_integrand(const double nu_minus_nu_edge, const double nu_edge, const float T_e,
-                          const std::span<const float> photoion_xs) -> double {
-  const double nu = nu_edge + nu_minus_nu_edge;
-  const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
-  // The omitted exp(-h nu_edge / kT_e) factor is constant across the continuum and cancels from the normalised CDF.
-  return (2 / CLIGHTSQUARED) * sigma_bf * pow3(nu) / nu_edge * exp(-HOVERKB * nu_minus_nu_edge / T_e);
-}
-
 // Integrand to calculate the rate coefficient for photoionisation corrected for stimulated recombination.
 auto gammacorr_integrand(const double nu, const double nu_edge, const float temperature,
                          const std::span<const float> photoion_xs) -> double {
@@ -577,48 +568,79 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
                                                               const double cumulative_probability) -> double {
   assert_testmodeonly(T_e > 0.);
   assert_testmodeonly(cumulative_probability >= 0. && cumulative_probability <= 1.);
-  const double nu_range = nu_threshold * (last_phixs_nuovernuedge - 1.);
   const double thermal_width = T_e / HOVERKB;
+  const double nu_table_step = nu_threshold * globals::NPHIXSNUINCREMENT;
+  const double table_step_over_thermal_width = nu_table_step / thermal_width;
+  const int table_interval_count =
+      static_cast<int>(std::lround((last_phixs_nuovernuedge - 1.) / globals::NPHIXSNUINCREMENT));
 
-  // Equal intervals of log(1 + h * (nu - nu_threshold) / kT_e) resolve the thermal width of a cold continuum.
-  const int interval_count = std::max(100, globals::NPHIXSPOINTS);
-  const double delta_log_thermal_offset = std::log1p(nu_range / thermal_width) / interval_count;
-  // d(nu) = thermal_width * exp(log_thermal_offset) d(log_thermal_offset). The constant factor cancels.
-  const auto emissivity_per_log_thermal_offset = [&](const double log_thermal_offset) {
-    const double nu_minus_nu_edge = thermal_width * std::expm1(log_thermal_offset);
-    return alpha_sp_E_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs) * std::exp(log_thermal_offset);
-  };
-  // Simpson integral of the emissivity over one interval. The constant factor delta_log_thermal_offset / 6 cancels.
-  const auto emissivity_integral_of_interval = [&](const int interval) {
-    return emissivity_per_log_thermal_offset(interval * delta_log_thermal_offset) +
-           (4. * emissivity_per_log_thermal_offset((interval + 0.5) * delta_log_thermal_offset)) +
-           emissivity_per_log_thermal_offset((interval + 1) * delta_log_thermal_offset);
+  // Each table interval has subintervals that are equal in log(1 + h * (nu - nu_low) / kT_e), where nu_low is the
+  // lower end of the table interval. They resolve the thermal width above each table point.
+  const double log_thermal_offset_max = std::log1p(table_step_over_thermal_width);
+  const int subinterval_count = std::max(1, static_cast<int>(std::ceil(log_thermal_offset_max / 0.2)));
+  const double delta_log_thermal_offset = log_thermal_offset_max / subinterval_count;
+
+  // Upper limit of the emissivity integral above a table point, divided by the Boltzmann factor of that point.
+  // The emissivity integrals omit the constant factor thermal_width * delta_log_thermal_offset / 6.
+  const double emissivity_integral_limit =
+      (6. / delta_log_thermal_offset) * std::ranges::max(photoion_xs) * pow3(nu_threshold * last_phixs_nuovernuedge);
+
+  // Add the Simpson integrals of the subintervals in order of frequency, until the sum reaches emissivity_target.
+  // Give nu - nu_threshold at the target and the sum below the last subinterval.
+  const auto integrate_to_target = [&](const double emissivity_target) -> std::pair<double, double> {
+    double emissivity_sum = 0.;
+    int table_interval = 0;
+    for (; table_interval < table_interval_count; table_interval++) {
+      const double boltzmann_factor_low = std::exp(-table_interval * table_step_over_thermal_width);
+      if (boltzmann_factor_low * emissivity_integral_limit < 1e-12 * emissivity_sum) {
+        break;  // the emission above this table point is negligible
+      }
+      const double sigma_bf_low = photoion_xs[table_interval];
+      const double sigma_bf_high = PHIXS_CLASSIC_NO_INTERPOLATION ? sigma_bf_low : photoion_xs[table_interval + 1];
+      const double nu_low = nu_threshold + (table_interval * nu_table_step);
+      // d(nu) = thermal_width * exp(log_thermal_offset) d(log_thermal_offset)
+      const auto emissivity_per_log_thermal_offset = [&](const double log_thermal_offset) {
+        const double thermal_offset = std::expm1(log_thermal_offset);
+        const double sigma_bf =
+            sigma_bf_low + ((sigma_bf_high - sigma_bf_low) * thermal_offset / table_step_over_thermal_width);
+        return boltzmann_factor_low * sigma_bf * pow3(nu_low + (thermal_width * thermal_offset)) *
+               std::exp(log_thermal_offset - thermal_offset);
+      };
+
+      double emissivity_low = emissivity_per_log_thermal_offset(0.);
+      for (int subinterval = 0; subinterval < subinterval_count; subinterval++) {
+        const double emissivity_mid = emissivity_per_log_thermal_offset((subinterval + 0.5) * delta_log_thermal_offset);
+        const double emissivity_high = emissivity_per_log_thermal_offset((subinterval + 1) * delta_log_thermal_offset);
+        const double emissivity_integral = emissivity_low + (4. * emissivity_mid) + emissivity_high;
+        if (emissivity_sum + emissivity_integral > emissivity_target) {
+          // Invert the integral of an emissivity that is linear between the two ends of the subinterval.
+          const double integral_fraction = (emissivity_target - emissivity_sum) / emissivity_integral;
+          const double relative_emissivity_low = emissivity_low / emissivity_integral;
+          const double relative_emissivity_high = emissivity_high / emissivity_integral;
+          const double subinterval_fraction =
+              integral_fraction * (relative_emissivity_low + relative_emissivity_high) /
+              (relative_emissivity_low +
+               std::sqrt(pow2(relative_emissivity_low) +
+                         (integral_fraction * (pow2(relative_emissivity_high) - pow2(relative_emissivity_low)))));
+          const double log_thermal_offset = (subinterval + subinterval_fraction) * delta_log_thermal_offset;
+          return {(table_interval * nu_table_step) +
+                      std::min(thermal_width * std::expm1(log_thermal_offset), nu_table_step),
+                  emissivity_sum};
+        }
+        emissivity_sum += emissivity_integral;
+        emissivity_low = emissivity_high;
+      }
+    }
+    return {table_interval * nu_table_step, emissivity_sum};
   };
 
-  double emissivity_integral = 0.;
-  for (int interval = 0; interval < interval_count; interval++) {
-    emissivity_integral += emissivity_integral_of_interval(interval);
-  }
-  assert_testmodeonly(std::isfinite(emissivity_integral));
-  assert_testmodeonly(emissivity_integral > 0.);
-  if (!(emissivity_integral > 0.) || !std::isfinite(emissivity_integral)) {
+  const double emissivity_total = integrate_to_target(std::numeric_limits<double>::max()).second;
+  assert_testmodeonly(std::isfinite(emissivity_total));
+  assert_testmodeonly(emissivity_total > 0.);
+  if (!(emissivity_total > 0.) || !std::isfinite(emissivity_total)) {
     return nu_threshold;
   }
-
-  // Find the interval that holds the target, then interpolate linearly inside it.
-  const double emissivity_target = cumulative_probability * emissivity_integral;
-  double cumulative_emissivity = 0.;
-  for (int interval = 0; interval < interval_count; interval++) {
-    const double emissivity_integral_interval = emissivity_integral_of_interval(interval);
-    if (cumulative_emissivity + emissivity_integral_interval > emissivity_target) {
-      const double log_thermal_offset =
-          (interval + ((emissivity_target - cumulative_emissivity) / emissivity_integral_interval)) *
-          delta_log_thermal_offset;
-      return nu_threshold + std::min(thermal_width * std::expm1(log_thermal_offset), nu_range);
-    }
-    cumulative_emissivity += emissivity_integral_interval;
-  }
-  return nu_threshold + nu_range;
+  return nu_threshold + integrate_to_target(cumulative_probability * emissivity_total).first;
 }
 
 DEVICE_FUNC auto select_continuum_nu(const int element, const int lowerion, const int lower, const int phixstargetindex,
