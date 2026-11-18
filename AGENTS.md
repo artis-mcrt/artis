@@ -282,6 +282,9 @@ write access to the repository, and the branch must be in `artis-mcrt/artis`.
 Without these, ask a maintainer to start the workflow. Do not start the workflow
 if all of the CI tests pass. The stored checksums are then correct.
 
+These steps are for the author of the change. They are not a subject for a
+review comment (see "Review guidelines").
+
 1. Wait until the CI run of the head commit is complete.
 2. Make sure that each failed test job failed only at a checksum step, with no
    crash and no failed assertion.
@@ -674,12 +677,26 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
 
 These rules apply to an automated review of a pull request, e.g. by Codex.
 
-- Do not comment that the checksums of the tests can change or must be
-  regenerated. CI compares the checksums and shows each mismatch. The author of
-  the pull request then regenerates them with `updatechecksums.yml` (see
-  "Tests").
-- Do not comment that a stored checksum file comes from an older commit or
-  does not agree with a later change. The same CI step finds this.
+Write no comment about the reference checksums (`results_md5_job0.txt` and
+`results_md5_final.txt`). This rule has no exception and applies to each
+priority, also to P1. CI compares the checksums in every run and shows each
+mismatch, so such a comment tells the author nothing new. The author regenerates
+the checksums with `updatechecksums.yml` after the CI run of the head commit
+(see "Tests"), so the files are frequently out of date at the time of the
+review.
+
+Do not write a comment that says one of these things:
+
+- The change alters the results, and the commit does not change the checksum
+  files.
+- The checksums must be regenerated, or the test jobs fail until they are.
+- A stored checksum file comes from an older commit or does not agree with a
+  later change.
+- A merge or a later commit makes the stored checksums out of date.
+
+The checksum steps of "Tests" and of "Pull requests" are instructions for the
+author. Do not use them as criteria for a review, and do not cite them in a
+comment.
 
 ## Pull requests
 
