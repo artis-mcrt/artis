@@ -587,7 +587,7 @@ void compton_scatter(Packet& pkt) {
 // doi:10.6028/NBS.NSRDS.29. Multiply by Z^2 * 1e-27 for a cross section in cm^2. The factor is zero at and below
 // the 1.022 MeV threshold.
 [[nodiscard]] constexpr auto get_sigma_pair_prod_factor(const double nu_cmf) -> double {
-  const double hnu_over_1MeV = nu_cmf * H / MEV;
+  const double hnu_over_1MeV = nu_cmf / nu_1mev;
   if (nu_cmf > nu_1p5mev) {
     return 0.0481 + (0.301 * (hnu_over_1MeV - 1.5));
   }
