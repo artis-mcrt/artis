@@ -617,11 +617,15 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
           const double integral_fraction = (emissivity_target - emissivity_sum) / emissivity_integral;
           const double relative_emissivity_low = emissivity_low / emissivity_integral;
           const double relative_emissivity_high = emissivity_high / emissivity_integral;
+          const double denominator =
+              relative_emissivity_low +
+              std::sqrt(pow2(relative_emissivity_low) +
+                        (integral_fraction * (pow2(relative_emissivity_high) - pow2(relative_emissivity_low))));
+          // The denominator is zero for a target at the lower end where the emissivity is zero.
           const double subinterval_fraction =
-              integral_fraction * (relative_emissivity_low + relative_emissivity_high) /
-              (relative_emissivity_low +
-               std::sqrt(pow2(relative_emissivity_low) +
-                         (integral_fraction * (pow2(relative_emissivity_high) - pow2(relative_emissivity_low)))));
+              (denominator > 0.)
+                  ? integral_fraction * (relative_emissivity_low + relative_emissivity_high) / denominator
+                  : integral_fraction;
           const double log_thermal_offset = (subinterval + subinterval_fraction) * delta_log_thermal_offset;
           return {(table_interval * nu_table_step) +
                       std::min(thermal_width * std::expm1(log_thermal_offset), nu_table_step),
