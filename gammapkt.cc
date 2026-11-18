@@ -70,11 +70,6 @@ constexpr int xcom_max_atomic_number = GAMMA_USE_XCOM_PHOTOION ? 100 : 0;
 
 std::array<std::vector<ElementPhotoionData>, xcom_max_atomic_number> photoion_data;
 
-// Reference frequencies [Hz] of the photoelectric and pair-production cross-section fits below
-constexpr double nu_100kev = 0.1 * MEV / H;
-constexpr double nu_1mev = MEV / H;
-constexpr double nu_1p5mev = 1.5 * MEV / H;
-
 // The rest mass energy of an electron-positron pair [erg] and the pair-production threshold frequency [Hz]
 constexpr double pair_rest_mass_energy = 1.022 * MEV;
 constexpr double nu_pair_production_threshold = pair_rest_mass_energy / H;
@@ -514,7 +509,7 @@ void compton_scatter(Packet& pkt) {
     // Cross sections from equation 2 of Ambwani & Sutherland (1988), ApJ, 325, 820-827, doi:10.1086/166052, after
     // Veigele (1973), Atomic Data and Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4
 
-    const double hnu_over_100kev = nu_cmf / nu_100kev;
+    const double hnu_over_100kev = nu_cmf / (0.1 * MEV / H);
 
     const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
 
@@ -531,7 +526,7 @@ void compton_scatter(Packet& pkt) {
     return (chi_cmf_fe * ffegrp) + (chi_cmf_si * (1. - ffegrp));
   }
 
-  const double hnu_over_1MeV = nu_cmf / nu_1mev;
+  const double hnu_over_1MeV = nu_cmf / (MEV / H);
   const double log10_hnu_over_1MeV = log10(hnu_over_1MeV);
   double chi_cmf{0.};
   for (int i = 0; i < get_nelements(); i++) {
@@ -587,8 +582,8 @@ void compton_scatter(Packet& pkt) {
 // doi:10.6028/NBS.NSRDS.29. Multiply by Z^2 * 1e-27 for a cross section in cm^2. The factor is zero at and below
 // the 1.022 MeV threshold.
 [[nodiscard]] constexpr auto get_sigma_pair_prod_factor(const double nu_cmf) -> double {
-  const double hnu_over_1MeV = nu_cmf / nu_1mev;
-  if (nu_cmf > nu_1p5mev) {
+  const double hnu_over_1MeV = nu_cmf / (MEV / H);
+  if (hnu_over_1MeV > 1.5) {
     return 0.0481 + (0.301 * (hnu_over_1MeV - 1.5));
   }
   // the coefficient below 1.5 MeV is 0.10063, not the 1.0063 printed in the paper: the latter makes
@@ -601,8 +596,10 @@ static_assert(get_sigma_pair_prod_factor(0.999 * nu_pair_production_threshold) =
 static_assert(get_sigma_pair_prod_factor(1.001 * nu_pair_production_threshold) > 0.);
 
 // the two branches of the fit agree at 1.5 MeV to the precision of the coefficients
-static_assert((get_sigma_pair_prod_factor(nu_1p5mev * (1. + 1e-12)) - get_sigma_pair_prod_factor(nu_1p5mev)) < 2e-6);
-static_assert((get_sigma_pair_prod_factor(nu_1p5mev) - get_sigma_pair_prod_factor(nu_1p5mev * (1. + 1e-12))) < 2e-6);
+static_assert((get_sigma_pair_prod_factor(1.5000001 * MEV / H) - get_sigma_pair_prod_factor(1.4999999 * MEV / H)) <
+              2e-6);
+static_assert((get_sigma_pair_prod_factor(1.4999999 * MEV / H) - get_sigma_pair_prod_factor(1.5000001 * MEV / H)) <
+              2e-6);
 
 // calculate the absorption coefficient [cm^-1] for pair production in the comoving frame
 [[nodiscard]] auto get_chi_pair_prod_cmf(const int nonemptymgi, const double ffegrp, const double nu_cmf) -> double {
