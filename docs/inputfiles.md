@@ -233,10 +233,10 @@ The values start at hydrogen and continue through the atomic numbers. A row can 
 model needs. A value must not be negative. `sn3d` sets a negative value above -1e-6 to 0, and a value at or below
 that limit stops the run.
 
-For a 1D spherical or a 2D cylindrical model, `sn3d` divides the values of each cell by their sum, so the values can
-also be proportional to the mass fractions, e.g. element densities. For a 3D Cartesian, a 2D spherical, or a 3D
-spherical model, `sn3d` uses the values without normalisation. A cell of such a model whose values do not sum to 1
-within 2 percent gets a warning in the log.
+`sn3d` uses the values without normalisation, so they must be true mass fractions. The sum of the values of a cell
+can be less than 1. The sum includes each value of the cell, also the value of an element that is not in
+`compositiondata.txt`. For a cell with a density above zero, a sum above 1 stops the run. `sn3d` permits an excess of
+0.001 for the rounding of the values.
 
 The mass fraction of an element must not be less than the sum of the mass fractions of its nuclides in `model.txt`.
 `sn3d` permits a difference of 0.01 for the rounding of the values.
