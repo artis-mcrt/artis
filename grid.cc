@@ -713,7 +713,6 @@ void map_modeltogrid_direct() {
 // cells that became empty.
 auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
   printlnlog("reading abundances.txt...");
-  const bool threedimensional = (get_modelgridtype() == GridType::CARTESIAN3D);
   const int nelements = get_nelements();
 
   // abundances.txt holds one line for each model cell, also for an empty cell. Each line gives the cell number and
@@ -730,8 +729,6 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
     std::string line;
 
     // Every log line gets a timestamp and a flush, so a large 3D model must not warn per cell.
-    // The count gives one summary line after the loop instead.
-    int ncells_abund_unnormalised = 0;
     std::set<int> atomic_numbers_without_atomic_data;  // elements with mass in the cells that became empty
     constexpr int max_warnings = 10;
 
@@ -748,11 +745,9 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
       }
 
       // the abundances.txt file specifies the elemental mass fractions for each model cell.
-      // A 1D or 2D file may hold values proportional to the mass fractions, e.g. element densities,
-      // because those get normalised below. A 3D file must hold true mass fractions, because the 3D
-      // path applies no normalisation.
+      // The values are true mass fractions and get no normalisation. Their sum can be below one.
       // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
-      double normfactor = 0.;
+      double elem_massfrac_sum = 0.;
       std::array<float, max_atomic_number> elem_massfracs_in{};
       double abund_in = 0.;
       for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
@@ -766,7 +761,7 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
           abund_in = 0.;
         }
         elem_massfracs_in[elem_z_index] = static_cast<float>(abund_in);
-        normfactor += elem_massfracs_in[elem_z_index];
+        elem_massfrac_sum += elem_massfracs_in[elem_z_index];
       }
 
       // parse_next_token() gives false at the end of the row and also for a token that is not a
@@ -778,19 +773,11 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
       }
 
       if (get_rho_tmin(mgi) > 0.) {
-        if (normfactor > 0. && threedimensional && std::abs(normfactor - 1.) > 0.02) {
-          // a 3D file holds true mass fractions and gets no normalisation, so a sum far from one is
-          // a sign of a file that holds proportional values, e.g. densities
-          ncells_abund_unnormalised++;
-          if (ncells_abund_unnormalised <= max_warnings) {
-            printlnlog(
-                "[warning] read_elem_abundances: 3D cell {} has element mass fractions that sum to {:g}. The values "
-                "are used without normalisation.",
-                mgi, normfactor);
-          }
-        }
-        if (normfactor <= 0. || threedimensional) {
-          normfactor = 1.;
+        // a sum above one is not physical, e.g. a file that holds element densities. The limit permits the
+        // rounding of the values in the file.
+        if (elem_massfrac_sum > 1. + 1e-3) {
+          fatal_crash("abundances.txt cell {} has element mass fractions that sum to {:g}, which is more than 1", mgi,
+                      elem_massfrac_sum);
         }
 
         bool has_mass_in_composition_elements = false;
@@ -800,7 +787,7 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
         for (int element = 0; element < nelements; element++) {
           // set the mass fraction of each element that the atomic data includes
           const int atomic_number = get_atomicnumber(element);
-          const auto elemmassfrac = static_cast<float>(elem_massfracs_in[atomic_number - 1] / normfactor);
+          const float elemmassfrac = elem_massfracs_in[atomic_number - 1];
           assert_always(elemmassfrac >= 0.);
 
           // read_ejecta_model() has already set the nuclide mass fractions. Check here, while
@@ -842,12 +829,6 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
       }
     }
 
-    if (ncells_abund_unnormalised > max_warnings) {
-      printlnlog(
-          "[warning] read_elem_abundances: {} cells in total have element mass fractions that do not sum to one. The "
-          "first {} are listed above.",
-          ncells_abund_unnormalised, max_warnings);
-    }
     if (!atomic_numbers_without_atomic_data.empty()) {
       std::string atomic_numbers_text;
       for (const int atomic_number : atomic_numbers_without_atomic_data) {
