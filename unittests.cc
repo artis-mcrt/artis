@@ -485,18 +485,48 @@ void test_spherical_grid_boundary_distance() {
   const std::vector<double> phi_edges_with_wide_cell{0., 1.0, 4.5, 2 * PI};
 
   struct SphericalGridCase {
-    GridType gridtype;
+    GridType gridtype{GridType::SPHERICAL3D};
     std::vector<double> vel_r_edges;
     std::vector<double> theta_edges;
     std::vector<double> phi_edges;
   };
   const std::vector<SphericalGridCase> gridcases{
-      {GridType::SPHERICAL3D, get_uniform_edges(vmax, 6), get_uniform_edges(PI, 5), get_uniform_edges(2 * PI, 16)},
-      {GridType::SPHERICAL3D, vel_r_edges_not_uniform, theta_edges_with_equator, get_uniform_edges(2 * PI, 2)},
-      {GridType::SPHERICAL3D, vel_r_edges_not_uniform, theta_edges_without_equator, phi_edges_with_wide_cell},
-      {GridType::SPHERICAL3D, get_uniform_edges(vmax, 1), get_uniform_edges(PI, 1), get_uniform_edges(2 * PI, 1)},
-      {GridType::SPHERICAL2D, vel_r_edges_not_uniform, theta_edges_with_equator, {}},
-      {GridType::SPHERICAL2D, get_uniform_edges(vmax, 8), theta_edges_without_equator, {}},
+      {
+          .gridtype = GridType::SPHERICAL3D,
+          .vel_r_edges = get_uniform_edges(vmax, 6),
+          .theta_edges = get_uniform_edges(PI, 5),
+          .phi_edges = get_uniform_edges(2 * PI, 16),
+      },
+      {
+          .gridtype = GridType::SPHERICAL3D,
+          .vel_r_edges = vel_r_edges_not_uniform,
+          .theta_edges = theta_edges_with_equator,
+          .phi_edges = get_uniform_edges(2 * PI, 2),
+      },
+      {
+          .gridtype = GridType::SPHERICAL3D,
+          .vel_r_edges = vel_r_edges_not_uniform,
+          .theta_edges = theta_edges_without_equator,
+          .phi_edges = phi_edges_with_wide_cell,
+      },
+      {
+          .gridtype = GridType::SPHERICAL3D,
+          .vel_r_edges = get_uniform_edges(vmax, 1),
+          .theta_edges = get_uniform_edges(PI, 1),
+          .phi_edges = get_uniform_edges(2 * PI, 1),
+      },
+      {
+          .gridtype = GridType::SPHERICAL2D,
+          .vel_r_edges = vel_r_edges_not_uniform,
+          .theta_edges = theta_edges_with_equator,
+          .phi_edges = {},
+      },
+      {
+          .gridtype = GridType::SPHERICAL2D,
+          .vel_r_edges = get_uniform_edges(vmax, 8),
+          .theta_edges = theta_edges_without_equator,
+          .phi_edges = {},
+      },
   };
 
   rngstate_type rngstate{3141};

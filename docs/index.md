@@ -16,7 +16,7 @@ Go to the page for your task:
 
 ### Geometry
 
-ARTIS puts the ejecta on a 1D spherical, a 2D cylindrical, or a 3D Cartesian grid
+ARTIS puts the ejecta on a 1D spherical, a 2D cylindrical, a 3D Cartesian, a 2D spherical, or a 3D spherical grid
 ([GRID_TYPE_OVERRIDE](options.md#grid_type_override)), so a model can be asymmetric. The output holds the light curve
 and the spectrum of each observer direction (see [Output files](outputfiles.md)).
 

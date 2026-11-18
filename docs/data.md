@@ -77,8 +77,8 @@ A run needs two model files, and some runs need more:
 
 artistools also writes `gridcontributions.txt` for a kilonova model, but `sn3d` does not read that file.
 
-The `tests/*_inputfiles` folders hold small models of each type: 1D spherical, 2D cylindrical, and 3D Cartesian. They
-are the quickest examples of the format.
+The `tests/*_inputfiles` folders hold small models of each type: 1D spherical, 2D cylindrical, 3D Cartesian, 2D
+spherical, and 3D spherical. They are the quickest examples of the format.
 
 [artistools](https://github.com/artis-mcrt/artistools) makes an ARTIS model from the output of a hydrodynamic
 simulation or of a nuclear network. `artistools inputmodel` lists the converters, e.g. from CMFGEN, from the tracer

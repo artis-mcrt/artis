@@ -124,7 +124,7 @@ or above the rank count. [Running sn3d](running.md) describes the threads.
 ## The grid
 
 Each model grid cell that contains matter needs one solution of the gas state at each timestep. The packets move
-through the {term}`propagation cells <propagation cell>`. With [GRID_TYPE_OVERRIDE](options.md#grid_type_override), a 1D or a 2D model goes on a
+through the {term}`propagation cells <propagation cell>`. With [GRID_TYPE_OVERRIDE](options.md#grid_type_override), a 1D, a 2D, or a 3D spherical model goes on a
 3D Cartesian grid, and [CUBOID_NCOORDGRID_X](options.md#cuboid_ncoordgrid_x) and the two other values set the size of
 that grid. The number of solutions of the gas state stays the same, because more than one propagation cell then
 shares one model grid cell. A model grid cell that holds the centre of no propagation cell is the exception. It

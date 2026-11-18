@@ -37,7 +37,7 @@ This builds the code and runs a small 1D kilonova model in two jobs, and then po
 
 ## Key features
 
-- **Multi-dimensional geometry**: 1D spherical, 2D cylindrical, and 3D Cartesian ejecta, with polarised radiative transfer through real and virtual packets.
+- **Multi-dimensional geometry**: 1D spherical, 2D cylindrical, 3D Cartesian, 2D spherical, and 3D spherical ejecta, with polarised radiative transfer through real and virtual packets.
 - **Physics**: line-by-line Sobolev opacities, the Lucy macroatom, non-LTE level populations with a multibin radiation field model, a Spencer-Fano solver for the non-thermal electrons, and alpha, beta, and fission decays.
 - **Both phases**: the presets cover the photospheric phase and the nebular phase of a transient.
 - **High-performance computing**: modern C++ with MPI, shared-memory windows inside a node, optional OpenMP or C++ standard parallelism, and GPU builds with nvc++ or hipcc.

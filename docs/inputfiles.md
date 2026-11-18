@@ -82,8 +82,10 @@ At the start of a new simulation, `sn3d` writes `input.txt` again with a comment
 
 ## model.txt
 
-`model.txt` holds the grid, the density of each cell, and the mass fractions of the nuclides. `sn3d` finds the number
-of dimensions from the first lines of the file.
+`model.txt` holds the grid, the density of each cell, and the mass fractions of the nuclides. `sn3d` finds the
+coordinates of the grid from the first lines of the file. A 1D spherical, a 2D cylindrical, and a 3D Cartesian model
+have a header of numbers. A 2D spherical and a 3D spherical model have a header of keys (see
+[Spherical 2D and 3D models](#spherical-2d-and-3d-models)).
 
 A 1D model has spherical shells:
 
@@ -167,6 +169,55 @@ More rules for the cells:
   the column for the initial temperature and for the initial packets.
 - A column with a different name gets a warning in the log, and `sn3d` does not use it.
 
+### Spherical 2D and 3D models
+
+A 2D spherical model has cells in the radius r and the polar angle theta, with rotational symmetry around the z axis.
+A 3D spherical model also has cells in the azimuthal angle phi. The header of such a model gives one key on each
+line, and then the edges of the cells on each axis:
+
+```text
+coordinates spherical3d
+t_model_init_days <t_model in days>
+vel_r_edges_kmps <n_r + 1 radial velocities in km/s>
+theta_edges_rad <n_theta + 1 polar angles in radians>
+phi_edges_rad <n_phi + 1 azimuthal angles in radians>
+#inputcellid rho X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48
+<one row for each cell>
+```
+
+A 2D spherical model has `coordinates spherical2d` and no `phi_edges_rad` line.
+
+The header:
+
+- The key `coordinates` is on the first line that is not a comment. Its value is `spherical2d` or `spherical3d`.
+- The keys come in the sequence above. A comment line can come before each key line and before the line of the
+  column names. A key line can end with a comment that starts with `#`.
+- Each list of edges has one value more than the number of cells on that axis, and it must have two or more values.
+  The first value must be 0, and each value must be larger than the value before. Thus the cells of one axis can have
+  different widths.
+- The last value of `vel_r_edges_kmps` is `vmax`, which must be less than the speed of light.
+- The last value of `theta_edges_rad` must be pi, and the last value of `phi_edges_rad` must be 2 pi. `sn3d` accepts
+  a difference of 1e-8 and then uses the exact value. It does the same for a polar edge at pi / 2. Write the angles
+  with 17 significant digits.
+- theta is the angle from the +z axis. phi is the angle atan2(y, x) in the range from 0 to 2 pi. Thus
+  x = r sin(theta) cos(phi), y = r sin(theta) sin(phi), and z = r cos(theta).
+- The line of the column names is necessary. It starts with `#inputcellid`, and `rho` is the second column. A model
+  of these types has no position column, thus a column `vel_r_max_kmps`, `logrho`, or `pos_...` stops the run.
+
+The cells:
+
+- Each cell has one line.
+- The cells go through the r index first, then the theta index, and then the phi index. The cell with the indices
+  i_r, i_theta, and i_phi is cell number i_r + n_r * (i_theta + n_theta * i_phi) of the file, counted from 0.
+- The header has no number of cells. `sn3d` stops if the file does not have exactly n_r * n_theta * n_phi cells.
+- The columns `rho`, `X_Fegroup`, `X_<nuclide>`, `Ye`, and `q` have the meaning of the table above.
+
+Without [GRID_TYPE_OVERRIDE](options.md#grid_type_override), the propagation grid has the cells of the model. A
+boundary of theta is a cone around the z axis, and a boundary of phi is a half of a plane through the z axis. These
+boundaries have constant velocity coordinates, thus they do not move in the homologous expansion. The cells near the
+centre and near the z axis are small. A packet path within 10 cm of the centre changes its cell there in one step.
+Thus `sn3d` stops if the outer radius of the first radial shell is not above 1e5 cm at the start time.
+
 ## abundances.txt
 
 `abundances.txt` holds the mass fractions of the elements of each cell. These include the elements whose nuclide mass
@@ -182,9 +233,10 @@ The values start at hydrogen and continue through the atomic numbers. A row can 
 model needs. A value must not be negative. `sn3d` sets a negative value above -1e-6 to 0, and a value at or below
 that limit stops the run.
 
-For a 1D or a 2D model, `sn3d` divides the values of each cell by their sum, so the values can also be proportional to
-the mass fractions, e.g. element densities. For a 3D model, `sn3d` uses the values without normalisation. A 3D cell
-whose values do not sum to 1 within 2 percent gets a warning in the log.
+For a 1D spherical or a 2D cylindrical model, `sn3d` divides the values of each cell by their sum, so the values can
+also be proportional to the mass fractions, e.g. element densities. For a 3D Cartesian, a 2D spherical, or a 3D
+spherical model, `sn3d` uses the values without normalisation. A cell of such a model whose values do not sum to 1
+within 2 percent gets a warning in the log.
 
 The mass fraction of an element must not be less than the sum of the mass fractions of its nuclides in `model.txt`.
 `sn3d` permits a difference of 0.01 for the rounding of the values.

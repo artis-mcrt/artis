@@ -180,6 +180,13 @@ constexpr auto get_num_length_axes(const GridType gridtype) -> int {
   fatal_crash("Unknown grid type {}", static_cast<int>(gridtype));
 }
 
+// maximum out-of-cell position error (in cm) attributable to floating-point rounding of the
+// packet position updates. The tolerance scales with the coordinate magnitude because
+// rounding errors are proportional to ulp(pos), e.g. about 8 cm at 4e16 cm.
+[[nodiscard]] constexpr auto cellbound_tolerance(const double boundarypos) -> double {
+  return std::max(10., std::abs(boundarypos) * 1e-12);
+}
+
 constexpr auto has_spherical_angle_axes(const GridType gridtype) -> bool {
   return gridtype == GridType::SPHERICAL2D || gridtype == GridType::SPHERICAL3D;
 }
@@ -1626,8 +1633,15 @@ void setup_grid_spherical() {
   assert_always(ngrid == get_npts_model());
 
   // The centre of the grid is a point of every polar cell and every azimuthal cell of the first shell. A packet
-  // path through the centre changes cell there, and the tolerance of that event must be small against the shell.
-  assert_always(coord_pos_min_tmin[0].size() == 1 || coord_pos_min_tmin[0][1] > 1e6);
+  // path within cellbound_tolerance(0.) of the centre changes its cell there in one event, thus that distance must
+  // be small against the first shell.
+  const double first_shell_outer_radius = (ncoordgrid[0] > 1) ? coord_pos_min_tmin[0][1] : globals::rmax;
+  if (!(first_shell_outer_radius > 1e4 * cellbound_tolerance(0.))) {
+    fatal_crash(
+        "model.txt: the first radial shell of the spherical grid has the outer radius {:g} [cm] at tmin, but it must "
+        "be above {:g} [cm]",
+        first_shell_outer_radius, 1e4 * cellbound_tolerance(0.));
+  }
 
   // the cosine and the sine at an edge on an axis or in the equatorial plane are exact numbers
   const auto set_cos_sin_of_edges = [](const std::span<const double> angles, std::vector<double>& cos_of_edges,
@@ -1759,13 +1773,6 @@ auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element)
   // to avoid catastrophic cancellation when t_crossing ≈ tstart
   return CLIGHT_PROP * (pktposgridcoord - (cellboundarypos / globals::tmin * tstart)) /
          ((cellboundarypos / globals::tmin) - pktvelgridcoord);
-}
-
-// maximum out-of-cell position error (in cm) attributable to floating-point rounding of the
-// packet position updates. The tolerance scales with the coordinate magnitude because
-// rounding errors are proportional to ulp(pos), e.g. about 8 cm at 4e16 cm.
-[[nodiscard]] constexpr auto cellbound_tolerance(const double boundarypos) -> double {
-  return std::max(10., std::abs(boundarypos) * 1e-12);
 }
 
 // Check if the packet is at or (within rounding-error tolerance) past a cell boundary that it
@@ -2324,12 +2331,16 @@ void do_MPI_Bcast_nlte_solution_ranges(const ptrdiff_t nstart_nonempty, const pt
   return kappa_float;
 }
 
+namespace {
+
 // Set the cell counts of a 2D spherical or a 3D spherical model from its cell edges. The third count of a 2D model
 // is zero, as for a 2D cylindrical model.
 void set_spherical_model_cell_counts(const GridType spherical_model_type) {
   ncoord_model = {
-      static_cast<int>(std::ssize(model_vel_r_edges)) - 1, static_cast<int>(std::ssize(model_theta_edges)) - 1,
-      (spherical_model_type == GridType::SPHERICAL3D) ? static_cast<int>(std::ssize(model_phi_edges)) - 1 : 0};
+      static_cast<int>(std::ssize(model_vel_r_edges)) - 1,
+      static_cast<int>(std::ssize(model_theta_edges)) - 1,
+      (spherical_model_type == GridType::SPHERICAL3D) ? static_cast<int>(std::ssize(model_phi_edges)) - 1 : 0,
+  };
   npts_model = static_cast<ptrdiff_t>(ncoord_model[0]) * ncoord_model[1] * std::max(1, ncoord_model[2]);
   if (npts_model > std::numeric_limits<int>::max()) {
     fatal_crash("model.txt: the cell edges give {} cells, which is more than the largest cell index", npts_model);
@@ -2467,6 +2478,8 @@ auto read_model_keyword_header(ModelFileReader& fmodel, const std::string& coord
   set_spherical_model_cell_counts(detected_model_type);
   return detected_model_type;
 }
+
+}  // anonymous namespace
 
 // read the input ejecta model from model.txt, auto-detecting its dimensionality (1D spherical,
 // 2D cylindrical, 3D Cartesian, 2D spherical, or 3D spherical) and reading the per-cell densities,
