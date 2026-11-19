@@ -436,6 +436,15 @@ constexpr bool POL_ON;
 // and the walk over the binned opacities then use a linear interpolation of the frequency along the path.
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 
+// Select how sn3d samples the frequency of a free-bound photon. The distribution is the energy-weighted
+// emissivity sigma_bf(nu) nu^3 exp(-h (nu - nu_edge) / (k T_e)) on the range of the photoionisation cross-section
+// table. sn3d first selects an interval of the table with the exact integral of this function over each interval.
+// - false: a uniform frequency inside the table interval. Where the table step is larger than k T_e / h, the
+//   emissivity falls steeply inside the interval, and the mean photon energy is then too high.
+// - true: the frequency from the inversion of the same integral inside the table interval, with a Newton
+//   iteration. The samples then follow the emissivity at each T_e. One sample takes about two times as long.
+constexpr bool FREEBOUND_NU_EMISSIVITY_INVERSION;
+
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering
 // with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted
 // with the true absorption opacity. That opacity is the sum of P times the binned opacity, the free-free

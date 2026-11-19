@@ -92,12 +92,16 @@ cooling rate of each process of the cell, and it samples one of them. That proce
 radiation or into a macro atom. The cooling processes are the free-free emission, the free-bound emission, the
 collisional excitation, and the collisional ionisation.
 
-- Options: [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](options.md#rpkt_boundbound_thermalisation_probability)
-  replaces the macro atom for an absorption in a line when it has a value (see
-  [the binned opacities](#the-binned-opacities-and-the-thermalisation-probability)). A bound-free absorption then
-  still activates a macro atom. A k-packet does not: with a value of this option, each k-packet emits an r-packet
-  directly from the thermal emission of the cell. The thermal balance has no term for this line thermalisation, so
-  a nonzero value needs LTE timesteps only (`num_lte_timesteps` of `input.txt`).
+- Options:
+    - [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](options.md#rpkt_boundbound_thermalisation_probability) replaces
+      the macro atom for an absorption in a line when it has a value (see
+      [the binned opacities](#the-binned-opacities-and-the-thermalisation-probability)). A bound-free absorption
+      then still activates a macro atom. A k-packet does not: with a value of this option, each k-packet emits an
+      r-packet directly from the thermal emission of the cell. The thermal balance has no term for this line
+      thermalisation, so a nonzero value needs LTE timesteps only (`num_lte_timesteps` of `input.txt`).
+    - [FREEBOUND_NU_EMISSIVITY_INVERSION](options.md#freebound_nu_emissivity_inversion) selects how the code
+      samples the frequency of a free-bound emission inside an interval of the photoionisation cross-section table.
+      Without it, the frequency is uniform inside the interval.
 - References: Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 and Lucy (2003), A&A, 403, 261-275,
   doi:10.1051/0004-6361:20030357.
 
