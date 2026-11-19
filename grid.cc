@@ -1161,7 +1161,9 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
     remainder = std::string_view{line};
   }
 
-  if (!keepcell) {
+  // A line of an empty cell of format version 2 must also have one value for each column. Thus a line that lost its
+  // end stops the run, and it does not count as a cell line for the key cell_line_count.
+  if (!keepcell && model_format_version != 2) {
     return;
   }
 
@@ -1171,6 +1173,9 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
     double valuein = 0.;  // a mass fraction or another column value, e.g. Ye or q
     if (!parse_next_token(remainder, valuein)) {
       fatal_crash("model.txt cell {} has no readable value for the column {}", mgi, colnames[i]);
+    }
+    if (!keepcell) {
+      continue;
     }
 
     if (nucindexlist[i] >= 0) {
@@ -1721,6 +1726,17 @@ void setup_grid_spherical() {
     radius_inner_tmin *= globals::tmin;
   }
   coord_pos_max_of_grid_tmin = {globals::rmax, PI, 2 * PI};
+  // The reader checks the edges as velocities. Two edges that differ in the last bit can become equal radii at tmin,
+  // and the shell between them then has no volume.
+  for (int n_r = 0; n_r < ncoordgrid[0]; n_r++) {
+    const double radius_outer_tmin = (n_r < ncoordgrid[0] - 1) ? coord_pos_min_tmin[0][n_r + 1] : globals::rmax;
+    if (!(radius_outer_tmin > coord_pos_min_tmin[0][n_r])) {
+      fatal_crash(
+          "model.txt: the radial shell {} of the spherical grid has the inner radius {:.17g} [cm] and the outer radius "
+          "{:.17g} [cm] at tmin. The values of vel_r_edges_kmps must give radii that increase",
+          n_r, coord_pos_min_tmin[0][n_r], radius_outer_tmin);
+    }
+  }
 
   ngrid = static_cast<ptrdiff_t>(ncoordgrid[0]) * ncoordgrid[1] * ncoordgrid[2];
   assert_always(ngrid == get_npts_model());
