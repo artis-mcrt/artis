@@ -709,8 +709,8 @@ void test_continuum_quantiles_structured_table() {
   for (const float T_e : {100.F, 1000.F, 10000.F, 100000.F}) {
     // midpoint integral of the energy-weighted emissivity from the threshold, with a maximum step of 0.005 times the
     // thermal width and a minimum of 1000 steps in each table interval
+    const double nu_table_step = nu_threshold * globals::NPHIXSNUINCREMENT;
     const auto emissivity_integral_below = [&](const double nu_minus_nu_threshold_max) {
-      const double nu_table_step = nu_threshold * globals::NPHIXSNUINCREMENT;
       const double delta_nu = nu_table_step / std::max(1000., std::ceil(200. * HOVERKB * nu_table_step / T_e));
       double emissivity_integral = 0.;
       for (int step = 0; step * delta_nu < nu_minus_nu_threshold_max; step++) {
@@ -729,10 +729,17 @@ void test_continuum_quantiles_structured_table() {
           get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, cumulative_probability);
       check(sampled_nu >= nu_threshold && sampled_nu <= nu_threshold * last_phixs_nuovernuedge * (1. + 1e-15),
             "the free-bound quantile is inside the table");
-      const double integral_probability = emissivity_integral_below(sampled_nu - nu_threshold) / emissivity_total;
-      // the largest difference here is 7e-7, and it comes from the midpoint integral
-      check(std::abs(integral_probability - cumulative_probability) < 3e-6,
-            "the free-bound quantile agrees with the integral of the emissivity");
+      // The table interval has the probability of the integral, and the frequency is uniform inside it.
+      const double table_intervals_below = (sampled_nu - nu_threshold) / nu_table_step;
+      const int table_interval = static_cast<int>(std::floor(table_intervals_below + 1e-9));
+      const double probability_low = emissivity_integral_below(table_interval * nu_table_step) / emissivity_total;
+      const double probability_high =
+          emissivity_integral_below((table_interval + 1) * nu_table_step) / emissivity_total;
+      const double uniform_probability =
+          probability_low + ((table_intervals_below - table_interval) * (probability_high - probability_low));
+      // the largest difference here is 8e-8, and it comes from the midpoint integral
+      check(std::abs(uniform_probability - cumulative_probability) < 1e-6,
+            "the free-bound quantile is uniform inside the table interval of the integral");
     }
     const int first_table_interval_with_emission = PHIXS_CLASSIC_NO_INTERPOLATION ? 10 : 9;
     check_close(get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, 0.),

@@ -576,25 +576,6 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
   const int table_interval_count =
       static_cast<int>(std::floor(((last_phixs_nuovernuedge - 1.) / globals::NPHIXSNUINCREMENT) + 0.5));
 
-  // In the table interval with the lower end nu_low, the energy-weighted emissivity is proportional to
-  // exp(-h * (nu_low - nu_threshold) / kT_e) * q(t) * exp(-t), where t = h * (nu - nu_low) / kT_e, and q(t) is the
-  // polynomial (sigma_bf_low + sigma_bf_slope * t) * (h * nu_low / kT_e + t)^3. Give the coefficients of q.
-  const auto get_emissivity_polynomial = [&](const int table_interval) -> std::array<double, 5> {
-    const double sigma_bf_low = photoion_xs[table_interval];
-    const double sigma_bf_slope = PHIXS_CLASSIC_NO_INTERPOLATION ? 0.
-                                                                 : (photoion_xs[table_interval + 1] - sigma_bf_low) /
-                                                                       table_step_over_thermal_width;
-    const double nu_low_over_thermal_width =
-        (nu_threshold / thermal_width) + (table_interval * table_step_over_thermal_width);
-    return {
-        sigma_bf_low * pow3(nu_low_over_thermal_width),
-        (3. * sigma_bf_low * pow2(nu_low_over_thermal_width)) + (sigma_bf_slope * pow3(nu_low_over_thermal_width)),
-        (3. * sigma_bf_low * nu_low_over_thermal_width) + (3. * sigma_bf_slope * pow2(nu_low_over_thermal_width)),
-        sigma_bf_low + (3. * sigma_bf_slope * nu_low_over_thermal_width),
-        sigma_bf_slope,
-    };
-  };
-
   // Give the integrals of t^power * exp(-t) from 0 to thermal_offset, divided by thermal_offset^(power + 1).
   const auto get_power_integrals = [](const double thermal_offset,
                                       const double exp_minus_thermal_offset) -> std::array<double, 5> {
@@ -620,25 +601,44 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
     return power_integrals;
   };
 
-  // Give the integral of q(t) * exp(-t) from 0 to thermal_offset.
-  const auto integral_below = [](const std::array<double, 5>& polynomial, const std::array<double, 5>& power_integrals,
-                                 const double thermal_offset) {
-    double integral = 0.;
-    for (int power = 4; power >= 0; power--) {
-      integral = thermal_offset * ((polynomial[power] * power_integrals[power]) + integral);
+  // Integrals of t^power * exp(-t) over one table step. All table intervals have the same step.
+  auto table_step_moments = get_power_integrals(table_step_over_thermal_width, exp_minus_table_step);
+  double table_step_to_power = 1.;
+  for (auto& table_step_moment : table_step_moments) {
+    table_step_to_power *= table_step_over_thermal_width;
+    table_step_moment *= table_step_to_power;
+  }
+
+  // In the table interval with the lower end nu_low, the energy-weighted emissivity is proportional to
+  // exp(-h * (nu_low - nu_threshold) / kT_e) * q(t) * exp(-t), where t = h * (nu - nu_low) / kT_e, and q(t) is the
+  // polynomial (sigma_bf_low + sigma_bf_slope * t) * (h * nu_low / kT_e + t)^3.
+  // Give the integral of q(t) * exp(-t) over the table interval.
+  const auto get_table_interval_integral = [&](const int table_interval) {
+    const double sigma_bf_low = photoion_xs[table_interval];
+    const double nu_low_over_thermal_width =
+        (nu_threshold / thermal_width) + (table_interval * table_step_over_thermal_width);
+    double integral =
+        sigma_bf_low * ((((((table_step_moments[0] * nu_low_over_thermal_width) + (3. * table_step_moments[1])) *
+                           nu_low_over_thermal_width) +
+                          (3. * table_step_moments[2])) *
+                         nu_low_over_thermal_width) +
+                        table_step_moments[3]);
+    if constexpr (!PHIXS_CLASSIC_NO_INTERPOLATION) {
+      const double sigma_bf_slope = (photoion_xs[table_interval + 1] - sigma_bf_low) / table_step_over_thermal_width;
+      integral +=
+          sigma_bf_slope * ((((((table_step_moments[1] * nu_low_over_thermal_width) + (3. * table_step_moments[2])) *
+                               nu_low_over_thermal_width) +
+                              (3. * table_step_moments[3])) *
+                             nu_low_over_thermal_width) +
+                            table_step_moments[4]);
     }
     return integral;
   };
 
-  // All table intervals have the same step, and thus the same power integrals.
-  const auto power_integrals_table_step = get_power_integrals(table_step_over_thermal_width, exp_minus_table_step);
-
   double emissivity_total = 0.;
   double boltzmann_factor_low = 1.;
   for (int table_interval = 0; table_interval < table_interval_count; table_interval++) {
-    emissivity_total +=
-        boltzmann_factor_low * integral_below(get_emissivity_polynomial(table_interval), power_integrals_table_step,
-                                              table_step_over_thermal_width);
+    emissivity_total += boltzmann_factor_low * get_table_interval_integral(table_interval);
     boltzmann_factor_low *= exp_minus_table_step;
   }
   assert_testmodeonly(std::isfinite(emissivity_total));
@@ -654,9 +654,7 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
   boltzmann_factor_low = 1.;
   int table_interval = 0;
   for (; table_interval < table_interval_count; table_interval++) {
-    const double emissivity_integral =
-        boltzmann_factor_low * integral_below(get_emissivity_polynomial(table_interval), power_integrals_table_step,
-                                              table_step_over_thermal_width);
+    const double emissivity_integral = boltzmann_factor_low * get_table_interval_integral(table_interval);
     if (emissivity_below + emissivity_integral > emissivity_target) {
       integral_fraction = std::min((emissivity_target - emissivity_below) / emissivity_integral, 1.);
       break;
@@ -664,52 +662,9 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
     emissivity_below += emissivity_integral;
     boltzmann_factor_low *= exp_minus_table_step;
   }
-  const double nu_low = nu_threshold + (table_interval * nu_table_step);
-  if (table_interval == table_interval_count || !(integral_fraction > 0.)) {
-    return nu_low;
-  }
 
-  // Solve integral_below(thermal_offset) = integral_target with a Newton iteration inside a bracket.
-  const auto polynomial = get_emissivity_polynomial(table_interval);
-  const double integral_target =
-      integral_fraction * integral_below(polynomial, power_integrals_table_step, table_step_over_thermal_width);
-  double thermal_offset_low = 0.;
-  double thermal_offset_high = table_step_over_thermal_width;
-  // The first value is exact for a constant q. The lower limit of the argument keeps it finite.
-  double thermal_offset = std::min(-std::log1p(std::max(integral_fraction * std::expm1(-table_step_over_thermal_width),
-                                                        -1. + std::numeric_limits<double>::epsilon())),
-                                   table_step_over_thermal_width);
-  for (int iteration = 0; iteration < 50; iteration++) {
-    const double exp_minus_thermal_offset = std::exp(-thermal_offset);
-    const double residual =
-        integral_below(polynomial, get_power_integrals(thermal_offset, exp_minus_thermal_offset), thermal_offset) -
-        integral_target;
-    if (residual > 0.) {
-      thermal_offset_high = thermal_offset;
-    } else {
-      thermal_offset_low = thermal_offset;
-    }
-    double emissivity = 0.;
-    for (int power = 4; power >= 0; power--) {
-      emissivity = polynomial[power] + (thermal_offset * emissivity);
-    }
-    emissivity *= exp_minus_thermal_offset;
-    // Bisect the bracket where the emissivity is zero or the Newton value is outside the bracket.
-    double thermal_offset_next = 0.5 * (thermal_offset_low + thermal_offset_high);
-    if (emissivity > 0.) {
-      const double thermal_offset_newton = thermal_offset - (residual / emissivity);
-      if (thermal_offset_newton > thermal_offset_low && thermal_offset_newton < thermal_offset_high) {
-        thermal_offset_next = thermal_offset_newton;
-      }
-    }
-    const bool converged = std::abs(thermal_offset_next - thermal_offset) <= 1e-10 * thermal_offset_next;
-    thermal_offset = thermal_offset_next;
-    if (converged) {
-      break;
-    }
-  }
-  assert_testmodeonly(thermal_offset >= 0. && thermal_offset <= table_step_over_thermal_width);
-  return nu_low + std::min(thermal_width * thermal_offset, nu_table_step);
+  // The frequency is uniform inside the table interval.
+  return nu_threshold + ((table_interval + integral_fraction) * nu_table_step);
 }
 
 DEVICE_FUNC auto select_continuum_nu(const int element, const int lowerion, const int lower, const int phixstargetindex,
