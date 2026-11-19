@@ -22,10 +22,11 @@ void ratecoefficients_init();
 
 void setup_photoion_luts();
 
-// Invert the energy-weighted free-bound emissivity on the photoionisation table range.
-[[nodiscard]] DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(double nu_threshold, float T_e,
-                                                                            std::span<const float> photoion_xs,
-                                                                            double cumulative_probability) -> double;
+// Give the frequency of free-bound emission at a cumulative probability of the energy-weighted emissivity, on the
+// range of the photoionisation table. FREEBOUND_NU_EMISSIVITY_INVERSION describes the two methods.
+[[nodiscard]] DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(
+    double nu_threshold, float T_e, std::span<const float> photoion_xs, double cumulative_probability,
+    bool invert_emissivity_inside_table_interval) -> double;
 
 [[nodiscard]] DEVICE_FUNC auto select_continuum_nu(int element, int lowerion, int lower, int phixstargetindex,
                                                    float T_e, rngstate_type& rngstate) -> double;

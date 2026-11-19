@@ -790,6 +790,18 @@ Use the full relativistic Doppler factor instead of the first-order 1 - n.v/c. T
 
 **Preset values:** classic `false`, kilonova_lte `true`, nltenebular `false`, nltephotospheric `false`
 
+### FREEBOUND_NU_EMISSIVITY_INVERSION
+
+`bool FREEBOUND_NU_EMISSIVITY_INVERSION`
+
+Select how sn3d samples the frequency of a free-bound photon. The distribution is the energy-weighted emissivity sigma_bf(nu) nu^3 exp(-h (nu - nu_edge) / (k T_e)) on the range of the photoionisation cross-section table. sn3d first selects an interval of the table with the exact integral of this function over each interval.
+
+- false: a uniform frequency inside the table interval. Where the table step is larger than k T_e / h, the emissivity falls steeply inside the interval, and the mean photon energy is then too high.
+
+- true: the frequency from the inversion of the same integral inside the table interval, with a Newton iteration. The samples then follow the emissivity at each T_e. One sample takes about two times as long.
+
+**Every preset:** `false`
+
 ### RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY
 
 `std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY`

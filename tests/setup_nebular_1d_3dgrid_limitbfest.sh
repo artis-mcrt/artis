@@ -36,6 +36,8 @@ setoption DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP '7'
 
 setoption SF_AUGER_CONTRIBUTION_ON 'false'
 
+setoption FREEBOUND_NU_EMISSIVITY_INVERSION 'true'
+
 setoption DETAILED_BF_ESTIMATORS_LEVEL_SELECTED '{ return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage); }'
 
 cd -

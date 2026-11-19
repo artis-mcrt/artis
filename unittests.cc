@@ -725,8 +725,17 @@ void test_continuum_quantiles_structured_table() {
     };
     const double emissivity_total = emissivity_integral_below(nu_threshold * (last_phixs_nuovernuedge - 1.));
     for (const double cumulative_probability : {0., 0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999}) {
+      const double inverted_nu =
+          get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, cumulative_probability, true);
+      check(inverted_nu >= nu_threshold && inverted_nu <= nu_threshold * last_phixs_nuovernuedge * (1. + 1e-15),
+            "the free-bound quantile of the inversion is inside the table");
+      const double integral_probability = emissivity_integral_below(inverted_nu - nu_threshold) / emissivity_total;
+      // the largest difference here is 7e-7, and it comes from the midpoint integral
+      check(std::abs(integral_probability - cumulative_probability) < 3e-6,
+            "the free-bound quantile of the inversion agrees with the integral of the emissivity");
+
       const double sampled_nu =
-          get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, cumulative_probability);
+          get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, cumulative_probability, false);
       check(sampled_nu >= nu_threshold && sampled_nu <= nu_threshold * last_phixs_nuovernuedge * (1. + 1e-15),
             "the free-bound quantile is inside the table");
       // The table interval has the probability of the integral, and the frequency is uniform inside it.
@@ -742,9 +751,12 @@ void test_continuum_quantiles_structured_table() {
             "the free-bound quantile is uniform inside the table interval of the integral");
     }
     const int first_table_interval_with_emission = PHIXS_CLASSIC_NO_INTERPOLATION ? 10 : 9;
-    check_close(get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, 0.),
-                nu_threshold * (1. + (first_table_interval_with_emission * globals::NPHIXSNUINCREMENT)), 1e-12,
-                "the zero quantile is the lowest frequency with emission");
+    for (const bool invert_emissivity_inside_table_interval : {false, true}) {
+      check_close(get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, 0.,
+                                                               invert_emissivity_inside_table_interval),
+                  nu_threshold * (1. + (first_table_interval_with_emission * globals::NPHIXSNUINCREMENT)), 1e-12,
+                  "the zero quantile is the lowest frequency with emission");
+    }
   }
 }
 
