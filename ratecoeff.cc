@@ -686,7 +686,7 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
       sigma_bf_slope,
   };
 
-  // Find the thermal offset t that has the integral integral_target of q(t) * exp(-t) below it. Use a Newton
+  // Find the thermal offset t that has the integral integral_target of q(t) * exp(-t) below it. Use a Halley
   // iteration inside a bracket.
   const double integral_target = integral_fraction * get_table_interval_integral(table_interval);
   double thermal_offset_low = 0.;
@@ -699,28 +699,34 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
     const double exp_minus_thermal_offset = std::exp(-thermal_offset);
     const auto power_integrals = get_power_integrals(thermal_offset, exp_minus_thermal_offset);
     double integral_below = 0.;
-    double emissivity = 0.;
+    double polynomial_value = 0.;
+    double polynomial_slope = 0.;
     for (int power = 4; power >= 0; power--) {
       integral_below = thermal_offset * ((emissivity_polynomial[power] * power_integrals[power]) + integral_below);
-      emissivity = emissivity_polynomial[power] + (thermal_offset * emissivity);
+      polynomial_slope = polynomial_value + (thermal_offset * polynomial_slope);
+      polynomial_value = emissivity_polynomial[power] + (thermal_offset * polynomial_value);
     }
-    emissivity *= exp_minus_thermal_offset;
     if (integral_below > integral_target) {
       thermal_offset_high = thermal_offset;
     } else {
       thermal_offset_low = thermal_offset;
     }
-    // Bisect the bracket where the emissivity is zero or the Newton value is outside the bracket.
+    // Bisect the bracket where the emissivity is zero or the next value is outside the bracket.
     double thermal_offset_next = 0.5 * (thermal_offset_low + thermal_offset_high);
-    if (emissivity > 0.) {
-      const double thermal_offset_newton = thermal_offset - ((integral_below - integral_target) / emissivity);
-      if (std::abs(thermal_offset_newton - thermal_offset) <= 1e-8 * thermal_offset) {
-        // The error after this Newton step is of the order of the square of the step.
-        thermal_offset = std::max(thermal_offset_low, std::min(thermal_offset_newton, thermal_offset_high));
+    if (polynomial_value > 0.) {
+      // The first derivative of the integral is q * exp(-t), and the second is (dq/dt - q) * exp(-t).
+      const double newton_step = (integral_below - integral_target) / (polynomial_value * exp_minus_thermal_offset);
+      // relative size of the second-order term of the integral at the Newton step
+      const double halley_correction = 0.5 * newton_step * ((polynomial_slope / polynomial_value) - 1.);
+      // A Halley step is not valid where this term is large, e.g. near a zero of the emissivity.
+      const double step = (std::abs(halley_correction) < 0.5) ? newton_step / (1. - halley_correction) : newton_step;
+      if (std::abs(step) <= 1e-5 * thermal_offset && std::abs(halley_correction) <= 1e-4) {
+        // The relative error after this Halley step is of the order of 1e-5 * halley_correction^2.
+        thermal_offset = std::max(thermal_offset_low, std::min(thermal_offset - step, thermal_offset_high));
         break;
       }
-      if (thermal_offset_newton > thermal_offset_low && thermal_offset_newton < thermal_offset_high) {
-        thermal_offset_next = thermal_offset_newton;
+      if (thermal_offset - step > thermal_offset_low && thermal_offset - step < thermal_offset_high) {
+        thermal_offset_next = thermal_offset - step;
       }
     }
     thermal_offset = thermal_offset_next;

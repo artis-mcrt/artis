@@ -798,7 +798,7 @@ Select how sn3d samples the frequency of a free-bound photon. The distribution i
 
 - false: a uniform frequency inside the table interval. Where the table step is larger than k T_e / h, the emissivity falls steeply inside the interval, and the mean photon energy is then too high.
 
-- true: the frequency from the inversion of the same integral inside the table interval, with a Newton iteration. The samples then follow the emissivity at each T_e. One sample takes about two times as long.
+- true: the frequency from the inversion of the same integral inside the table interval, with a Halley iteration. The samples then follow the emissivity at each T_e. One sample takes about two times as long.
 
 **Every preset:** `false`
 

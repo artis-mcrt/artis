@@ -441,7 +441,7 @@ constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 // table. sn3d first selects an interval of the table with the exact integral of this function over each interval.
 // - false: a uniform frequency inside the table interval. Where the table step is larger than k T_e / h, the
 //   emissivity falls steeply inside the interval, and the mean photon energy is then too high.
-// - true: the frequency from the inversion of the same integral inside the table interval, with a Newton
+// - true: the frequency from the inversion of the same integral inside the table interval, with a Halley
 //   iteration. The samples then follow the emissivity at each T_e. One sample takes about two times as long.
 constexpr bool FREEBOUND_NU_EMISSIVITY_INVERSION;
 
