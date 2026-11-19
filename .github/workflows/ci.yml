@@ -145,6 +145,11 @@ jobs:
               id: inputcheck
               run: tests/runtest.sh ${{ matrix.testname }} inputcheck
 
+            # sn3d -c reads small 1D and 2D models of format version 2, and it must stop for damaged copies of them
+            - name: Check the reader of model.txt of format version 2
+              if: matrix.testname == 'classicmode_3d_formatversion2'
+              run: tests/runtest.sh ${{ matrix.testname }} formatcheck
+
             - name: Run test job0 start
               id: run_job0
               if: always()

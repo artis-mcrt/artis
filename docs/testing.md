@@ -32,7 +32,10 @@ these steps:
    no other build at that time. The script then moves your `artisoptions.h` back. The `sn3d` and `exspec` symlinks of
    the repository folder then point at the build of the test.
 3. It checks the input with `sn3d -c` (see [Running sn3d](running.md)). Then it starts a new simulation and compares
-   the checksums of the output files with `tests/kilonova_1d_inputfiles/results_md5_job0.txt`.
+   the checksums of the output files with `tests/kilonova_1d_inputfiles/results_md5_job0.txt`. For the test
+   `classicmode_3d_formatversion2`, the step `formatcheck` comes between the two. It runs `sn3d -c` on the small 1D
+   and 2D models of format version 2 in the folder `formatcheck_models` of the input files, and on damaged copies of
+   them. `sn3d` must read each model and must stop with the correct message for each damaged copy.
 4. It checks the input and the {term}`restart files <restart file>` with `sn3d -c`, and it resumes the simulation from the restart files. It
    then removes the restart files and runs `exspec`.
 5. It compares the checksums of the output files with `results_md5_final.txt`.

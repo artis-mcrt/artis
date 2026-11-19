@@ -28,6 +28,8 @@ Without a step, the script runs these steps in order. It stops at the first step
   setup            remove tests/<testname>_testrun and make it again with tests/setup_<testname>.sh
   build            build sn3d and exspec from the artisoptions.h of the model folder, and copy them into it
   inputcheck       check the input of the new simulation with sn3d -c
+  formatcheck      check the reader of model.txt of format version 2 with sn3d -c, for the small models in
+                   tests/<testname>_inputfiles/formatcheck_models. A test with no such folder checks nothing
   job0             start a new simulation
   checksums_job0   compare the checksums of the output files with results_md5_job0.txt (only directly after job0)
   resume           check the input and the restart files with sn3d -c, then resume the simulation
@@ -74,7 +76,7 @@ run_inputcheck() {
 
 case $step in
     all)
-        for step_name in setup build inputcheck job0 checksums_job0 resume exspec checksums_final; do
+        for step_name in setup build inputcheck formatcheck job0 checksums_job0 resume exspec checksums_final; do
             if ! "$testsdir/runtest.sh" "$testname" "$step_name"; then
                 echo "[error] The step $step_name of the test $testname failed." >&2
                 exit 1
@@ -113,6 +115,87 @@ case $step in
         # without input.txt, the check reads input-newrun.txt
         rm -f input.txt
         run_inputcheck 2
+        ;;
+
+    formatcheck)
+        checkmodels="$testsdir/${testname}_inputfiles/formatcheck_models"
+        if [ ! -d "$checkmodels" ]; then
+            echo "The test $testname has no folder formatcheck_models. The step checks nothing."
+            exit 0
+        fi
+        # each case runs in its own folder outside the model folder, thus the model folder gets no new file
+        checkroot=$(mktemp -d)
+        trap 'rm -rf "$checkroot"' EXIT
+
+        # Run sn3d -c for one case. $1 is the name of the case, and $2 is its model.txt. $3 is "complete" for a model
+        # that sn3d must read, or the text of the stop message for a model that sn3d must reject. Each other
+        # argument is a text that the output must also have, or a file name with "file:" before it, which the case
+        # folder gets with the content 0.
+        run_formatcheck_case() {
+            local casename=$1 modelfile=$2 expected=$3
+            shift 3
+            local casefolder="$checkroot/$casename" path status=0 text
+            mkdir "$casefolder"
+            for path in "$modelpath"/*; do
+                case ${path##*/} in
+                    model.txt* | input.txt | inputcheck | formatcheck_models) ;;
+                    *) ln -s "$path" "$casefolder/" ;;
+                esac
+            done
+            cp "$modelfile" "$casefolder/model.txt"
+            local texts=()
+            for text in "$@"; do
+                if [ "${text#file:}" != "$text" ]; then
+                    echo 0 > "$casefolder/${text#file:}"
+                else
+                    texts+=("$text")
+                fi
+            done
+            (cd "$casefolder" && "${mpirun_command[@]}" -np 2 ./sn3d -c) > "$casefolder/sn3d_check.log" 2>&1 || status=$?
+            if [ "$expected" = complete ]; then
+                texts+=("input check: complete")
+                if [ "$status" != 0 ]; then
+                    tail -n 20 "$casefolder/sn3d_check.log" >&2
+                    echo "[error] formatcheck $casename: sn3d -c stopped, but it must read this model." >&2
+                    exit 1
+                fi
+            else
+                texts+=("$expected")
+                if [ "$status" = 0 ]; then
+                    echo "[error] formatcheck $casename: sn3d -c read this model, but it must stop." >&2
+                    exit 1
+                fi
+            fi
+            for text in "${texts[@]}"; do
+                if ! grep -rqF -- "$text" "$casefolder/sn3d_check.log" "$casefolder/inputcheck"; then
+                    tail -n 20 "$casefolder/sn3d_check.log" >&2
+                    echo "[error] formatcheck $casename: the output of sn3d -c does not have the text '$text'." >&2
+                    exit 1
+                fi
+            done
+            echo "formatcheck $casename: correct"
+        }
+
+        model1d="$checkmodels/spherical1d_nofegroup_model.txt"
+        model2d="$checkmodels/cylindrical2d_model.txt"
+        run_formatcheck_case spherical1d_nofegroup "$model1d" complete "model.txt has no column X_Fegroup"
+        run_formatcheck_case cylindrical2d "$model2d" complete
+
+        # damaged copies of the 2D model, which sn3d must reject
+        celllinecount=$(grep -c '^[0-9]' "$model2d")
+        sed "s/^cell_line_count .*/cell_line_count $((celllinecount - 1))/" "$model2d" > "$checkroot/wrongcount.txt"
+        run_formatcheck_case wrongcount "$checkroot/wrongcount.txt" \
+            "the key cell_line_count gives $((celllinecount - 1)) cell lines, but the file has $celllinecount"
+        # a file that lost its last three lines
+        sed -e '$d' "$model2d" | sed -e '$d' | sed -e '$d' > "$checkroot/cutlines.txt"
+        run_formatcheck_case cutlines "$checkroot/cutlines.txt" \
+            "the key cell_line_count gives $celllinecount cell lines, but the file has $((celllinecount - 3))"
+        # a cell line that lost its end
+        sed -e '$s/ [^ ]*$//' "$model2d" > "$checkroot/cutvalue.txt"
+        run_formatcheck_case cutvalue "$checkroot/cutvalue.txt" "has no readable value for the column"
+        run_formatcheck_case yefile "$model2d" "Ye.txt is present, but model.txt has format version 2" file:Ye.txt
+        run_formatcheck_case abundancefile "$model2d" \
+            "abundances.txt is present, but model.txt has format version 2" file:abundances.txt
         ;;
 
     job0)
