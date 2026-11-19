@@ -1300,7 +1300,7 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
 
   parse_model_headerline(headerline, zlist, alist, colnames);
 
-  if (std::ranges::find(colnames, "X_Fegroup") == colnames.end()) {
+  if (std::ranges::none_of(colnames, [](const std::string& colname) { return colname == "X_Fegroup"; })) {
     printlnlog(
         "model.txt has no column X_Fegroup, thus the Fe-group mass fraction of each cell is 0. This mass fraction "
         "sets the photoelectric opacity and the pair production opacity of the gamma rays, and the grey opacity of "
