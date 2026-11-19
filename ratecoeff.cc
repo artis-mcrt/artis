@@ -711,21 +711,22 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
     } else {
       thermal_offset_low = thermal_offset;
     }
-    // Bisect the bracket where the emissivity is zero or the Halley value is outside the bracket.
+    // Bisect the bracket where the emissivity is zero or the next value is outside the bracket.
     double thermal_offset_next = 0.5 * (thermal_offset_low + thermal_offset_high);
     if (polynomial_value > 0.) {
       // The first derivative of the integral is q * exp(-t), and the second is (dq/dt - q) * exp(-t).
       const double newton_step = (integral_below - integral_target) / (polynomial_value * exp_minus_thermal_offset);
-      const double halley_step =
-          newton_step / std::max(1. - (0.5 * newton_step * ((polynomial_slope / polynomial_value) - 1.)), 0.5);
-      const double thermal_offset_halley = thermal_offset - halley_step;
-      if (std::abs(halley_step) <= 1e-5 * thermal_offset) {
-        // The error after this Halley step is of the order of the cube of the step.
-        thermal_offset = std::max(thermal_offset_low, std::min(thermal_offset_halley, thermal_offset_high));
+      // relative size of the second-order term of the integral at the Newton step
+      const double halley_correction = 0.5 * newton_step * ((polynomial_slope / polynomial_value) - 1.);
+      // A Halley step is not valid where this term is large, e.g. near a zero of the emissivity.
+      const double step = (std::abs(halley_correction) < 0.5) ? newton_step / (1. - halley_correction) : newton_step;
+      if (std::abs(step) <= 1e-5 * thermal_offset && std::abs(halley_correction) <= 1e-4) {
+        // The relative error after this Halley step is of the order of 1e-5 * halley_correction^2.
+        thermal_offset = std::max(thermal_offset_low, std::min(thermal_offset - step, thermal_offset_high));
         break;
       }
-      if (thermal_offset_halley > thermal_offset_low && thermal_offset_halley < thermal_offset_high) {
-        thermal_offset_next = thermal_offset_halley;
+      if (thermal_offset - step > thermal_offset_low && thermal_offset - step < thermal_offset_high) {
+        thermal_offset_next = thermal_offset - step;
       }
     }
     thermal_offset = thermal_offset_next;
