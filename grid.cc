@@ -72,6 +72,10 @@ std::vector<int> model_otherstable_atomic_numbers;
 std::vector<float> model_otherstable_massfracs;
 constexpr std::string_view otherstable_suffix = "_otherstable";
 
+// The count of the cell lines that the optional key cell_line_count of a model.txt of format version 2 gives. A
+// cell with no line is empty, thus only this count finds a file that lost lines at its end.
+std::optional<ptrdiff_t> model_cell_line_count;
+
 ptrdiff_t npts_model = 0;  // number of model grid cells
 ptrdiff_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
@@ -240,6 +244,11 @@ void set_initelectronfrac(const int modelgridindex, const float electronfrac) {
 }
 
 void read_possible_yefile() {
+  if (model_format_version == 2 && inputfile_exists("Ye.txt")) {
+    fatal_crash(
+        "Ye.txt is present, but model.txt has format version 2. The column Ye of such a model.txt gives the electron "
+        "fraction. Remove Ye.txt");
+  }
   if (!inputfile_exists("Ye.txt")) {
     printlnlog("Ye.txt is not present, so the model keeps the electron fractions of model.txt");
     return;
@@ -1290,6 +1299,13 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
   }
 
   parse_model_headerline(headerline, zlist, alist, colnames);
+
+  if (std::ranges::find(colnames, "X_Fegroup") == colnames.end()) {
+    printlnlog(
+        "model.txt has no column X_Fegroup, thus the Fe-group mass fraction of each cell is 0. This mass fraction "
+        "sets the photoelectric opacity and the pair production opacity of the gamma rays, and the grey opacity of "
+        "FEGROUP_APPROX");
+  }
 
   // a column that is not a nuclide has Z = -1, and the decay network does not hold the neutron (Z = 0)
   std::vector<int> nuclide_columns_z;
@@ -2368,8 +2384,8 @@ void do_MPI_Bcast_nlte_solution_ranges(const ptrdiff_t nstart_nonempty, const pt
       const auto Ye = modelgrid_input[mgi].initelectronfrac;
       if (Ye <= 0.) {
         fatal_crash(
-            "model cell {} has no electron fraction. TANAKA2020_ELECTRONFRAC needs a Ye column in model.txt or "
-            "a Ye.txt",
+            "model cell {} has no electron fraction. TANAKA2020_ELECTRONFRAC needs a Ye column in model.txt, or "
+            "a Ye.txt for a model.txt of format version 1",
             mgi);
       }
 
@@ -2613,7 +2629,7 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
   }
   for (const auto& keyline : keylines) {
     const std::string_view key = keyline.first;
-    if (key == "coordinates" || key == "t_model_init_days" || key == "columns") {
+    if (key == "coordinates" || key == "t_model_init_days" || key == "cell_line_count" || key == "columns") {
       continue;
     }
     if (std::ranges::find(edge_keys, key) == edge_keys.end()) {
@@ -2696,6 +2712,19 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
   }
   if (npts_model > std::numeric_limits<int>::max()) {
     fatal_crash("model.txt: the cell edges give {} cells, which is more than the largest cell index", npts_model);
+  }
+
+  model_cell_line_count.reset();
+  if (find_key("cell_line_count") != keylines.end()) {
+    const auto counts = get_numbers_of_key("cell_line_count");
+    if (counts.size() != 1 || counts[0] != std::floor(counts[0]) || counts[0] < 1 ||
+        counts[0] > static_cast<double>(npts_model)) {
+      fatal_crash(
+          "model.txt: the key cell_line_count must have one integer from 1 to {}, which is the count of the cells "
+          "that the cell edges give, but its text is '{}'",
+          npts_model, get_text_of_key("cell_line_count"));
+    }
+    model_cell_line_count = static_cast<ptrdiff_t>(counts[0]);
   }
 
   const auto columns = get_text_of_key("columns");
@@ -2862,6 +2891,7 @@ void read_ejecta_model() {
     if (model_format_version == 2) {
       first_input_cellid = 0;
     }
+    ptrdiff_t cell_lines_read = 0;
     int mgi = 0;
     while (mgi < get_npts_model() && fmodel.getline(line)) {
       auto remainder = std::string_view{line};
@@ -3007,6 +3037,7 @@ void read_ejecta_model() {
 
       read_model_radioabundances(fmodel, remainder, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
 
+      cell_lines_read++;
       mgi++;
     }
 
@@ -3027,6 +3058,12 @@ void read_ejecta_model() {
           fatal_crash("model.txt has more than {} cells, but the cell edges of its header give {} cells",
                       get_npts_model(), get_npts_model());
         }
+      }
+      if (model_cell_line_count.has_value() && cell_lines_read != model_cell_line_count.value()) {
+        fatal_crash(
+            "model.txt: the key cell_line_count gives {} cell lines, but the file has {}. The file is possibly not "
+            "complete",
+            model_cell_line_count.value(), cell_lines_read);
       }
     }
 

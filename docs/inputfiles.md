@@ -19,7 +19,7 @@ exist.
 | [transitiondata.txt](#transitiondatatxt) | yes | the lines of each ion |
 | [phixsdata_v2.txt or phixsdata.txt](#phixsdata_v2txt-and-phixsdatatxt) | one of them | the photoionisation cross-sections |
 | [vpkt.txt](#vpkttxt) | with `VPKT_ON` | the observer directions of the virtual packets |
-| [Ye.txt](#yetxt) | with `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, if `model.txt` has no `Ye` column | the electron fraction of each cell |
+| [Ye.txt](#yetxt) | with `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, if a `model.txt` of format version 1 has no `Ye` column | the electron fraction of each cell |
 | [recombrates.txt](#recombratestxt) | no | the recombination rate coefficients for the calibration |
 | [autoion.txt](#autoiontxt) | no | the autoionisation rates |
 | [gamma_*.txt](#the-gamma-ray-line-files) | for seven nuclides | the gamma-ray lines of each nuclide, which come with the source in `artis/data` |
@@ -188,12 +188,13 @@ t_model_init_days <t_model in days>
 vel_r_edges_kmps <n_r + 1 radial velocities in km/s>
 theta_edges_radians <n_theta + 1 polar angles in radians>
 phi_edges_radians <n_phi + 1 azimuthal angles in radians>
-columns inputcellid rho X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48
+cell_line_count <number of cell lines>
+columns inputcellid rho X_Fegroup X_Ni56 X_Ni_otherstable Ye
 <one row for each cell that is not empty>
 ```
 
-The columns can also hold `X_<element>_otherstable`, e.g. `X_Fe_otherstable` (see
-[The element mass fractions](#the-element-mass-fractions)).
+Only the columns `inputcellid` and `rho` are necessary. The columns can also hold `X_<element>_otherstable`, e.g.
+`X_Ni_otherstable` (see [The element mass fractions](#the-element-mass-fractions)).
 
 The key `coordinates` gives the grid, and each grid has its own keys for the edges, in the sequence of its axes:
 
@@ -215,6 +216,10 @@ The header:
   time.
 - The keys `coordinates`, `t_model_init_days`, `columns`, and the edge keys of the coordinates are necessary. An edge
   key of different coordinates stops the run, e.g. `phi_edges_radians` in a `spherical2d` model.
+- The key `cell_line_count` is optional. It gives the number of the cell lines of the file, as one integer from 1 to
+  the number of cells of the grid. `sn3d` stops if the file has a different number of cell lines. A file that lost
+  lines at its end has more empty cells and no other sign of the loss. Only this key finds such a file. Thus write
+  the key in each file.
 - `sn3d` gives a warning in the log for a key that it does not know, and it does not use that key. Thus a later
   version of ARTIS can add a key, and an older `sn3d` still reads the file.
 - Each list of edges has one value more than the number of cells on that axis, and it must have two or more values.
@@ -245,11 +250,17 @@ The cells:
   has rcyl.
 - The cell ids must increase through the file. A cell with no line is an empty cell. Thus the file needs a line only
   for a cell that is not empty, and it must have one cell line or more.
-- The header has no number of cells. `sn3d` calculates it as the product of the numbers of cells on the axes. `sn3d`
-  stops if a cell id is equal to or larger than this number, or if the file has more cell lines than this number.
-- `Ye.txt` of the model must also have cell ids from 0.
+- `sn3d` calculates the number of cells as the product of the numbers of cells on the axes. `sn3d` stops if a cell id
+  is equal to or larger than this number, or if the file has more cell lines than this number.
+- A model of format version 2 has no `Ye.txt`, and `sn3d` stops if that file is present. The column `Ye` gives the
+  electron fraction.
 - The columns `rho`, `X_Fegroup`, `X_<nuclide>`, `Ye`, and `q` have the meaning of the table above. Each model of
   format version 2 holds `rho`, and no model holds `logrho`.
+- Each column after `rho` is optional and has no fixed place. A nuclide with no column has the mass fraction 0, also
+  `X_Ni56`, `X_Co56`, `X_Fe52`, and `X_Cr48`.
+- A file with no column `X_Fegroup` gives each cell the value 0, and the log has a line for this. `sn3d` uses this
+  mass fraction for the photoelectric opacity and the pair production opacity of the gamma rays, and for the grey
+  opacity of `RPKT_GREY_TYPE = FEGROUP_APPROX`.
 
 A 1D spherical, a 2D cylindrical, or a 3D Cartesian model gives the same grid in format version 1 and in format
 version 2. The density of a 1D cell can differ in the last digits, because version 1 holds its logarithm.
@@ -495,6 +506,10 @@ spectra.
 ## Ye.txt
 
 An optional file with the electron fraction of the cells. It replaces the values of the `Ye` column of `model.txt`.
+Only a model with a `model.txt` of format version 1 can have this file. `sn3d` stops if the file is present with a
+`model.txt` of [format version 2](#format-version-2), because the column `Ye` of that `model.txt` gives the electron
+fraction.
+
 Each value must be in the range from 0 to 1, and `sn3d` accepts a value up to 1.001 for the rounding. With
 `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, each cell with matter
 needs an electron fraction above 0 from this file or from that column, or the run stops. The file can have no comment lines.

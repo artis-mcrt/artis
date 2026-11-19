@@ -73,7 +73,8 @@ A run needs two model files, and some runs need more:
 - `model.txt`: the grid, the density of each cell, and the nuclear composition;
 - `abundances.txt`: the elemental mass fractions of each cell. A model with a `model.txt` of format version 2 has no
   such file, because that `model.txt` gives them;
-- `Ye.txt`: the electron fraction of a kilonova model;
+- `Ye.txt`: the electron fraction of a kilonova model. A model with a `model.txt` of format version 2 has no such
+  file, because the column `Ye` of that `model.txt` gives it;
 - `recombrates.txt`: the tabulated recombination rates, e.g. for the nebular test.
 
 artistools also writes `gridcontributions.txt` for a kilonova model, but `sn3d` does not read that file.
