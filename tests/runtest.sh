@@ -128,9 +128,9 @@ case $step in
         trap 'rm -rf "$checkroot"' EXIT
 
         # Run sn3d -c for one case. $1 is the name of the case, and $2 is its model.txt. $3 is "complete" for a model
-        # that sn3d must read, or the text of the stop message for a model that sn3d must reject. Each other
-        # argument is a text that the output must also have, or a file name with "file:" before it, which the case
-        # folder gets with the content 0.
+        # that sn3d must read, or the text of the stop message for a model that sn3d must stop for. Each other
+        # argument is a text that the output must also have. An argument "file:name" makes the file name in the case
+        # folder, with the content 0.
         run_formatcheck_case() {
             local casename=$1 modelfile=$2 expected=$3
             shift 3
@@ -151,7 +151,8 @@ case $step in
                     texts+=("$text")
                 fi
             done
-            (cd "$casefolder" && "${mpirun_command[@]}" -np 2 ./sn3d -c) > "$casefolder/sn3d_check.log" 2>&1 || status=$?
+            (cd "$casefolder" && "${mpirun_command[@]}" -np 2 ./sn3d -c) > "$casefolder/sn3d_check.log" 2>&1 \
+                || status=$?
             if [ "$expected" = complete ]; then
                 texts+=("input check: complete")
                 if [ "$status" != 0 ]; then
@@ -181,7 +182,7 @@ case $step in
         run_formatcheck_case spherical1d_nofegroup "$model1d" complete "model.txt has no column X_Fegroup"
         run_formatcheck_case cylindrical2d "$model2d" complete
 
-        # damaged copies of the 2D model, which sn3d must reject
+        # damaged copies of the 2D model, for which sn3d must stop
         celllinecount=$(grep -c '^[0-9]' "$model2d")
         sed "s/^cell_line_count .*/cell_line_count $((celllinecount - 1))/" "$model2d" > "$checkroot/wrongcount.txt"
         run_formatcheck_case wrongcount "$checkroot/wrongcount.txt" \

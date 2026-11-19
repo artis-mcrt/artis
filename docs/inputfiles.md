@@ -244,8 +244,8 @@ The header:
 The cells:
 
 - Each cell that is not empty has one line. A comment line or an empty line can come before each cell line.
-- Each cell line must have one value for each name of the key `columns`. This also applies to the line of a cell
-  with a density of zero. `sn3d` stops for a line with fewer values or with more values.
+- Each cell line must have one value for each name of the key `columns`. This also applies to the line of an empty
+  cell. `sn3d` stops for a line with fewer values or with more values.
 - The cell id is the index of the cell in the grid of the edges, and the first index is 0. The index of the first
   axis changes fastest. For example, the cell of a 3D spherical model with the indices i_r, i_theta, and i_phi has
   the id i_r + n_r * (i_theta + n_theta * i_phi). A Cartesian model has x as its first axis, and a cylindrical model
