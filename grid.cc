@@ -1671,6 +1671,21 @@ void setup_grid_cartesian_3d() {
   coord_pos_max_of_grid_tmin = {globals::rmax, globals::rmax, globals::rmax};
 }
 
+// The readers of model.txt check the radial edges as velocities. Two edges that differ in the last bit can give the
+// same radius at tmin, and the shell between them then has no volume. Thus a grid of radial shells gets this check
+// after the multiplication by tmin.
+void require_increasing_shell_radii_at_tmin() {
+  for (int n_r = 0; n_r < ncoordgrid[0]; n_r++) {
+    const double radius_outer_tmin = (n_r < ncoordgrid[0] - 1) ? coord_pos_min_tmin[0][n_r + 1] : globals::rmax;
+    if (!(radius_outer_tmin > coord_pos_min_tmin[0][n_r])) {
+      fatal_crash(
+          "model.txt: the radial shell {} of the grid has the inner radius {:.17g} [cm] and the outer radius {:.17g} "
+          "[cm] at tmin. The radial velocities of model.txt must give radii that increase",
+          n_r, coord_pos_min_tmin[0][n_r], radius_outer_tmin);
+    }
+  }
+}
+
 void setup_grid_spherical_1d() {
   assert_always(get_modelgridtype() == GridType::SPHERICAL1D);
 
@@ -1686,6 +1701,7 @@ void setup_grid_spherical_1d() {
     coord_pos_min_tmin[0][cellindex] = v_inner * globals::tmin;
   }
   coord_pos_max_of_grid_tmin = {globals::rmax, globals::rmax, globals::rmax};
+  require_increasing_shell_radii_at_tmin();
 }
 
 void setup_grid_cylindrical_2d() {
@@ -1726,17 +1742,7 @@ void setup_grid_spherical() {
     radius_inner_tmin *= globals::tmin;
   }
   coord_pos_max_of_grid_tmin = {globals::rmax, PI, 2 * PI};
-  // The reader checks the edges as velocities. Two edges that differ in the last bit can become equal radii at tmin,
-  // and the shell between them then has no volume.
-  for (int n_r = 0; n_r < ncoordgrid[0]; n_r++) {
-    const double radius_outer_tmin = (n_r < ncoordgrid[0] - 1) ? coord_pos_min_tmin[0][n_r + 1] : globals::rmax;
-    if (!(radius_outer_tmin > coord_pos_min_tmin[0][n_r])) {
-      fatal_crash(
-          "model.txt: the radial shell {} of the spherical grid has the inner radius {:.17g} [cm] and the outer radius "
-          "{:.17g} [cm] at tmin. The values of vel_r_edges_kmps must give radii that increase",
-          n_r, coord_pos_min_tmin[0][n_r], radius_outer_tmin);
-    }
-  }
+  require_increasing_shell_radii_at_tmin();
 
   ngrid = static_cast<ptrdiff_t>(ncoordgrid[0]) * ncoordgrid[1] * ncoordgrid[2];
   assert_always(ngrid == get_npts_model());
@@ -2569,6 +2575,15 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
     require_valid_edges(edges, key, first_edge_is_zero, std::nullopt);
     for (auto& edge : edges) {
       edge *= 1.e5;  // km/s to cm/s
+    }
+    // two values in km/s that differ in the last bit can give the same velocity in cm/s
+    for (auto i = 1Z; i < std::ssize(edges); i++) {
+      if (!(edges[i] > edges[i - 1])) {
+        fatal_crash(
+            "model.txt: the values of {} at the indices {} and {} give the velocities {:.17g} and {:.17g} [cm/s]. The "
+            "values must also increase in cm/s",
+            key, i - 1, i, edges[i - 1], edges[i]);
+      }
     }
     return edges;
   };

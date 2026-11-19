@@ -197,6 +197,10 @@ case $step in
         run_formatcheck_case yefile "$model2d" "Ye.txt is present, but model.txt has format version 2" file:Ye.txt
         run_formatcheck_case abundancefile "$model2d" \
             "abundances.txt is present, but model.txt has format version 2" file:abundances.txt
+        # two radial edges of the 1D model that differ in km/s and give the same velocity in cm/s
+        sed 's/^vel_r_edges_kmps 0.0 /vel_r_edges_kmps 0.0 1000.0000000000002 1000.0000000000003 /' "$model1d" \
+            > "$checkroot/equaledges.txt"
+        run_formatcheck_case equaledges "$checkroot/equaledges.txt" "The values must also increase in cm/s"
         ;;
 
     job0)

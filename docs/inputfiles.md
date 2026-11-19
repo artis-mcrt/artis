@@ -223,7 +223,8 @@ The header:
 - `sn3d` gives a warning in the log for a key that it does not know, and it does not use that key. Thus a later
   version of ARTIS can add a key, and an older `sn3d` still reads the file.
 - Each list of edges has one value more than the number of cells on that axis, and it must have two or more values.
-  Each value must be larger than the value before.
+  Each value must be larger than the value before. A list of velocities must also increase after the conversion to
+  cm/s, and the radii of the shells must increase at the start time.
 - A list of r, rcyl, theta, or phi starts at 0. The last value of the list of the first axis is `vmax`. For the
   spherical coordinates, `vmax` must be less than the speed of light.
 - A cylindrical or a Cartesian grid has cells of equal width, because `sn3d` holds no other grid of these types. The
