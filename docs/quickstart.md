@@ -45,11 +45,11 @@ This is the quickest complete simulation of the repository. The script downloads
 15 MB), builds `sn3d` and `exspec`, and makes the model folder `tests/kilonova_1d_testrun`. It then runs the
 simulation in two jobs, and it compares the checksums of the output files with the stored checksums.
 
-A different compiler or CPU type can give different checksums, and the script then stops at the comparison. The
-output files of the first job are complete at that point, so the next section still works. [Testing](testing.md)
-describes the steps and how you run one step by name.
+A different compiler or CPU type can give different checksums. The script then runs the other steps, and at the end it
+lists the files that differ and exits with an error status. The output files are complete, so the next section still
+works. [Testing](testing.md) describes the steps and how you run one step by name.
 
-`tests/runtest.sh` without arguments lists the other test models.
+`tests/runtest.sh --list` lists the other test models.
 
 ## 4. Look at the results
 
@@ -123,7 +123,8 @@ cp input-newrun.txt input.txt
 The script makes the folder, a symlink `artis` to the clone, and an `input.txt` from `scripts/input-template.txt`.
 The last command replaces that `input.txt` with the file of the test model.
 
-For a production run, clone the branch `release` into the model folder in place of the symlink (see [Runs on a cluster](clusters.md)).
+For a production run, clone the branch `release` into the model folder in place of the symlink (see
+[Which version to use](clusters.md#which-version-to-use)).
 
 The atomic data of the test covers only a few elements, with few levels. [Atomic and model data](data.md) says where a larger dataset and other models come from.
 
@@ -171,6 +172,15 @@ log file. [Running sn3d](running.md) describes the command-line options, the log
 
 ## Next steps
 
-- [Option presets](presets.md) and [Compile-time options](options.md): the physics of the run.
-- [Input files](inputfiles.md): the format of `model.txt`, `abundances.txt`, and the atomic data files.
-- [Runs on a cluster](clusters.md): the Slurm job scripts and the wall-time mechanism.
+These pages follow the Quickstart, in this order:
+
+1. [Example: a nebular spectrum](example.md): a complete {term}`NLTE` run of a small model, with the checks and a spectrum.
+2. [Make your own model](ownmodel.md): the model files of a new model, and a first run of it.
+3. [Plan a simulation](planning.md): the values that set the cost, the memory, and the noise of a run.
+4. [Runs on a cluster](clusters.md): the version for a production run, and the Slurm job scripts.
+5. [Analyse the results](analysis.md): the artistools command for each task.
+
+[Option presets](presets.md), [Compile-time options](options.md), and [Input files](inputfiles.md) give the options
+and the formats.
+
+Next: [Example: a nebular spectrum](example.md).

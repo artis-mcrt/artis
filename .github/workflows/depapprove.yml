@@ -8,7 +8,7 @@ jobs:
             contents: write
             pull-requests: write
         timeout-minutes: 10
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-26.04-arm
         if: github.event.pull_request.user.login == 'dependabot[bot]' || github.event.pull_request.user.login == 'pre-commit-ci[bot]'
         steps:
             - name: Enable auto-merge for Dependabot PRs
