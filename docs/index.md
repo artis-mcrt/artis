@@ -8,7 +8,7 @@ describes the packets, and [How a simulation works](simulation.md) describes the
 Go to the page for your task:
 
 - **A first run.** The [Quickstart](quickstart.md) gives a first simulation and a plot on a laptop. Then
-  [Example: a nebular spectrum](example.md) takes a small model through a complete non-LTE run.
+  [Example: a nebular spectrum](example.md) takes a small model through a complete {term}`NLTE` run.
 - **A production run.** Start with [Make your own model](ownmodel.md), [Plan a simulation](planning.md), and
   [Runs on a cluster](clusters.md). Then use [Analyse the results](analysis.md).
 - **A change of the code.** Start with [Development setup](development.md) and the [Code map](codemap.md).

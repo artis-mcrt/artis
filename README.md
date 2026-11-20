@@ -13,11 +13,28 @@ ARTIS is a 3D Monte Carlo radiative transfer code for ejecta in homologous expan
 
 The full documentation is at [artis-mcrt.readthedocs.io](https://artis-mcrt.readthedocs.io/). It comes from the [docs](docs) folder of this repository.
 
-- Tutorials: [Quickstart](https://artis-mcrt.readthedocs.io/en/latest/quickstart.html), [Example: a nebular spectrum](https://artis-mcrt.readthedocs.io/en/latest/example.html), and [Make your own model](https://artis-mcrt.readthedocs.io/en/latest/ownmodel.html).
-- Guides: [Installation](https://artis-mcrt.readthedocs.io/en/latest/installation.html), [Atomic and model data](https://artis-mcrt.readthedocs.io/en/latest/data.html), [Plan a simulation](https://artis-mcrt.readthedocs.io/en/latest/planning.html), [Runs on a cluster](https://artis-mcrt.readthedocs.io/en/latest/clusters.html), [Analyse the results](https://artis-mcrt.readthedocs.io/en/latest/analysis.html), and [Troubleshooting](https://artis-mcrt.readthedocs.io/en/latest/troubleshooting.html).
-- Concepts: [How a simulation works](https://artis-mcrt.readthedocs.io/en/latest/simulation.html) and [Methods and references](https://artis-mcrt.readthedocs.io/en/latest/methods.html).
-- Reference: [Option presets](https://artis-mcrt.readthedocs.io/en/latest/presets.html), [Compile-time options](https://artis-mcrt.readthedocs.io/en/latest/options.html), [Input files](https://artis-mcrt.readthedocs.io/en/latest/inputfiles.html), and [Output files](https://artis-mcrt.readthedocs.io/en/latest/outputfiles.html).
-- Development: [Development setup](https://artis-mcrt.readthedocs.io/en/latest/development.html) and [Testing](https://artis-mcrt.readthedocs.io/en/latest/testing.html).
+- Tutorials:
+  - [Quickstart](https://artis-mcrt.readthedocs.io/en/latest/quickstart.html)
+  - [Example: a nebular spectrum](https://artis-mcrt.readthedocs.io/en/latest/example.html)
+  - [Make your own model](https://artis-mcrt.readthedocs.io/en/latest/ownmodel.html)
+- Guides:
+  - [Installation](https://artis-mcrt.readthedocs.io/en/latest/installation.html)
+  - [Atomic and model data](https://artis-mcrt.readthedocs.io/en/latest/data.html)
+  - [Plan a simulation](https://artis-mcrt.readthedocs.io/en/latest/planning.html)
+  - [Runs on a cluster](https://artis-mcrt.readthedocs.io/en/latest/clusters.html)
+  - [Analyse the results](https://artis-mcrt.readthedocs.io/en/latest/analysis.html)
+  - [Troubleshooting](https://artis-mcrt.readthedocs.io/en/latest/troubleshooting.html)
+- Concepts:
+  - [How a simulation works](https://artis-mcrt.readthedocs.io/en/latest/simulation.html)
+  - [Methods and references](https://artis-mcrt.readthedocs.io/en/latest/methods.html)
+- Reference:
+  - [Option presets](https://artis-mcrt.readthedocs.io/en/latest/presets.html)
+  - [Compile-time options](https://artis-mcrt.readthedocs.io/en/latest/options.html)
+  - [Input files](https://artis-mcrt.readthedocs.io/en/latest/inputfiles.html)
+  - [Output files](https://artis-mcrt.readthedocs.io/en/latest/outputfiles.html)
+- Development:
+  - [Development setup](https://artis-mcrt.readthedocs.io/en/latest/development.html)
+  - [Testing](https://artis-mcrt.readthedocs.io/en/latest/testing.html)
 
 The links above go to the version `latest`, which describes the branch `main`. The version [stable](https://artis-mcrt.readthedocs.io/en/stable/) describes the newest release tag, and the branch `release` holds the same code ([Runs on a cluster](https://artis-mcrt.readthedocs.io/en/latest/clusters.html#which-version-to-use) says which one to use).
 

@@ -9,9 +9,11 @@ and the inner shells hold Ni56. It is a test of the method and not a model of a 
 
 ## 1. Make the model folder
 
-Run these commands in a clone of the repository. The script makes the model folder and clones the branch `release`
-into its subfolder `artis`, so that the options of section 4 belong to this model only. The `git` command then
-checks out the commit of your clone in place of `release`. The `cp` command copies the template of `input.txt` of
+Run these commands in a clone of `https://github.com/artis-mcrt/artis.git`, e.g. the clone of the Quickstart. The
+commit of that clone must be on GitHub, because the script clones from the URL of `origin`.
+
+The script makes the model folder and clones the branch `release` into its subfolder `artis`, so that the options of
+section 4 belong to this model only. The `git` command then checks out the commit of your clone in place of `release`. The `cp` command copies the template of `input.txt` of
 that commit, because the lines of `input.txt` can change between versions. The last two commands download the atomic
 data of the tests and unpack it:
 
@@ -139,7 +141,7 @@ make
 cd ..
 ```
 
-`artisoptions.h` is a symlink, so `git restore artisoptions_classic.h` in the clone removes the change.
+`artisoptions.h` is a symlink, so `git -C artis restore artisoptions_classic.h` in the model folder removes the change.
 
 Change these lines of `input.txt`, and keep the comment of each line:
 

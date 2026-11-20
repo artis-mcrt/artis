@@ -431,7 +431,8 @@ whose virtual packet escaped in one direction or more:
 
 `zstdcat` writes the text of a `.zst` file to the standard output, e.g. `zstdcat spec.out.zst | head`. It writes a
 plain file without a change, so the same command reads both forms. This Python script reads the spectra and the light
-curve of the model folder with numpy (see [The spectra](#the-spectra) and [The light curves](#the-light-curves)):
+curve of the model folder with numpy (see [The spectra](#the-spectra) and [The light curves](#the-light-curves)). Put
+it into the model folder as `read_spectra.py`:
 
 ```python
 import subprocess
@@ -453,7 +454,8 @@ lightcurve_times_days = lightcurve[:, 0]
 luminosity_rest_frame_lsun = lightcurve[:, 1]
 ```
 
-Run the script in the model folder. For a build without libzstd, give the plain file names, e.g. `spec.out`. If your
+Run the script in the model folder with `python3 read_spectra.py`. For a build without libzstd, give the plain file
+names, e.g. `spec.out`. The script needs the command `zstdcat` of the package `zstd`, also for a plain file. If your
 Python has no numpy, run the script with uv, e.g. `uv run --with numpy read_spectra.py`.
 
 ## A new simulation removes the files of the previous one

@@ -174,7 +174,7 @@ log file. [Running sn3d](running.md) describes the command-line options, the log
 
 These pages follow the Quickstart, in this order:
 
-1. [Example: a nebular spectrum](example.md): a complete non-LTE run of a small model, with the checks and a spectrum.
+1. [Example: a nebular spectrum](example.md): a complete {term}`NLTE` run of a small model, with the checks and a spectrum.
 2. [Make your own model](ownmodel.md): the model files of a new model, and a first run of it.
 3. [Plan a simulation](planning.md): the values that set the cost, the memory, and the noise of a run.
 4. [Runs on a cluster](clusters.md): the version for a production run, and the Slurm job scripts.

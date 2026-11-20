@@ -51,13 +51,13 @@ A check differs from a run in these points:
 To split a long simulation across several queued jobs, run `sn3d` with `-w WALLTIMELIMITHOURS`. From the second
 timestep of a job, `sn3d` writes the restart files and updates `input.txt` after the grid update of each timestep. Then it
 tests the remaining wall time. When too little wall time remains to complete another timestep, the job stops cleanly, and the
-log then ends with `RESTART_NEEDED`. The bundled cluster job scripts detect that text and submit a
+log then has the line `RESTART_NEEDED` before its last line. The bundled cluster job scripts detect that text and submit a
 continuation job, and they pass the remaining Slurm allocation time automatically (see
 [Runs on a cluster](clusters.md)).
 
 Run `artis/sn3d -h` to list all command-line options.
 
-## Is the run healthy?
+## Check a run
 
 Examine these points during and after a run:
 
