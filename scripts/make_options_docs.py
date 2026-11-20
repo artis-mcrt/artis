@@ -14,8 +14,9 @@ It also checks that the presets and artisoptions_doc.md name the same options, i
 doc does not describe, and an option that a preset does not declare, both stop the script. Both checks cover every
 tracked preset, also a preset that PRESETS_NOT_ON_PAGE keeps off the page.
 
-The script gives the status 0 when it wrote the page or when the page was already current, and 1 for an error. The
-pre-commit hook fails when the script changes the page, so that the commit holds the new content.
+The script gives the status 0 when it wrote the page or when the page was already current, 2 for an incorrect
+argument, and 1 for all other errors. The pre-commit hook fails when the script changes the page, so that the commit
+holds the new content.
 """
 
 import argparse

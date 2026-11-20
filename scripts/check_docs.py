@@ -10,7 +10,7 @@ The script makes three checks:
 - each log message that docs/troubleshooting.md quotes is in the source;
 - the table of docs/inputfiles.md has the lines of inputlinecomments in input.cc that are not unused.
 
-The script gives the status 0 when each check passes, and 1 otherwise.
+The script gives the status 0 when each check passes, 2 for an incorrect argument, and 1 otherwise.
 """
 
 import argparse

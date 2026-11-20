@@ -1,6 +1,7 @@
 #!/bin/bash -x
 
-if [ $# -gt 0 ]; then
+# A job script sources this file, and a sourced file sees the arguments of the job script.
+if [ "${BASH_SOURCE:-$0}" = "$0" ] && [ $# -gt 0 ]; then
     echo "Usage: artis/scripts/artis-virgo-submit.sh with no argument, in the model folder. The script submits the ARTIS job on Virgo with sbatch." >&2
     exit 1
 fi

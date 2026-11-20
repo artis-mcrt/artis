@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Remove the files that a simulation writes into the current model folder. The input files stay.
+# Remove the files that a simulation writes into the current model folder. Then copy input-newrun.txt to input.txt.
 
 if [ $# -gt 1 ] || { [ $# -eq 1 ] && [ "$1" != -y ]; }; then
   echo "Usage: artis/scripts/clean.sh [-y], in the model folder. With -y, the script asks no question." >&2
