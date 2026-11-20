@@ -24,6 +24,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "mpi_logging.h"
 #include "packet.h"
 #include "sn3d.h"
@@ -62,10 +63,23 @@ auto main(int argc, char* argv[]) -> int {
   read_parameterfile({});
 
   // nprocs_exspec is the number of packet files, one for each sn3d rank
-  assert_always(globals::nprocs_exspec > 0);
+  if (globals::nprocs_exspec <= 0) {
+    fatal_crash("input.txt gives nprocs_exspec = {}, but it must be the positive count of the packet files",
+                globals::nprocs_exspec);
+  }
   if (globals::nprocs > globals::nprocs_exspec) {
     fatal_crash("exspec runs with {} ranks but there are only {} packet files", globals::nprocs,
                 globals::nprocs_exspec);
+  }
+  // the check comes before the long reads of the atomic data and the model
+  for (int sn3d_rank = 0; sn3d_rank < globals::nprocs_exspec; sn3d_rank++) {
+    const auto packetfilename = std::format("packets/packets{:02d}_{:04d}.out", 0, sn3d_rank);
+    if (!inputfile_exists(packetfilename)) {
+      fatal_crash(
+          "{} is absent. exspec reads one packet file for each of the {} sn3d ranks that nprocs_exspec in input.txt "
+          "gives. sn3d writes the packet files at the end of the last requested timestep",
+          packetfilename, globals::nprocs_exspec);
+    }
   }
 
   read_atomicdata();

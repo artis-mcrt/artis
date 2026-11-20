@@ -200,6 +200,9 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
   std::string phixsline;
   const auto phixstargetstart = static_cast<int>(tmpallphixstargets.size());
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
+  const auto* const phixs_filename = phixsdata_filenames[phixs_file_version];
+  const int atomic_number = get_atomicnumber(element);
+  const int lower_ionstage = get_ionstage(element, lowerion);
   if (levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex] != -1 &&
       levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex] != phixstargetstart) {
     fatal_crash("Z={} ionstage {} level {} has two photoionisation tables in the phixsdata files",
@@ -208,7 +211,10 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
   levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex] = phixstargetstart;
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - phixs_groundstate_index_in;
-    assert_always(upperlevel >= 0);
+    if (upperlevel < 0) {
+      fatal_crash("{}: Z={} ionstage {} level {} has the target level {}, but the file numbers the levels from {}",
+                  phixs_filename, atomic_number, lower_ionstage, lowerlevel, upperlevel_in, phixs_groundstate_index_in);
+    }
     assert_always(levelbuilders.nphixstargets[lowerionlower_uniquelevelindex] == 0 ||
                   levelbuilders.nphixstargets[lowerionlower_uniquelevelindex] == 1);
     levelbuilders.nphixstargets[lowerionlower_uniquelevelindex] = 1;
@@ -221,9 +227,14 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
     tmpallphixstargets.push_back({.probability = 1., .levelindex = upperlevel});
   } else {  // upperlevel < 0, indicating that a table of upper levels and their probabilities will follow
     int in_nphixstargets = 0;
-    assert_always(get_noncommentline(phixsfile, phixsline));
-    assert_always(std::stringstream(phixsline) >> in_nphixstargets);
-    assert_always(in_nphixstargets > 0);
+    if (!get_noncommentline(phixsfile, phixsline)) {
+      fatal_crash("{} ends before the target count of Z={} ionstage {} level {}", phixs_filename, atomic_number,
+                  lower_ionstage, lowerlevel);
+    }
+    if (!(std::stringstream(phixsline) >> in_nphixstargets) || in_nphixstargets <= 0) {
+      fatal_crash("{}: Z={} ionstage {} level {} has the line '{}', but the target count must be a positive integer",
+                  phixs_filename, atomic_number, lower_ionstage, lowerlevel, phixsline);
+    }
     // read in a table of target states and probabilities and store them
     if (!SINGLE_LEVEL_TOP_ION || upperion < get_nions(element) - 1)  // in case the top ion has nlevelsmax = 1
     {
@@ -234,10 +245,18 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
       double probability_sum = 0.;
       for (int i = 0; i < in_nphixstargets; i++) {
         double phixstargetprobability{NAN};
-        assert_always(get_noncommentline(phixsfile, phixsline));
-        assert_always(std::stringstream(phixsline) >> upperlevel_in >> phixstargetprobability);
+        if (!get_noncommentline(phixsfile, phixsline)) {
+          fatal_crash("{} ends after {} of the {} targets of Z={} ionstage {} level {}", phixs_filename, i,
+                      in_nphixstargets, atomic_number, lower_ionstage, lowerlevel);
+        }
+        if (!(std::stringstream(phixsline) >> upperlevel_in >> phixstargetprobability) ||
+            !(phixstargetprobability > 0)) {
+          fatal_crash(
+              "{}: Z={} ionstage {} level {} has the target line '{}', but it must give a level and a positive "
+              "probability",
+              phixs_filename, atomic_number, lower_ionstage, lowerlevel, phixsline);
+        }
         const int upperlevel = upperlevel_in - phixs_groundstate_index_in;
-        assert_always(phixstargetprobability > 0);
         tmpallphixstargets.push_back({.probability = phixstargetprobability, .levelindex = upperlevel});
 
         probability_sum += phixstargetprobability;
@@ -268,7 +287,10 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
       levelbuilders.nphixstargets[lowerionlower_uniquelevelindex] = 1;
 
       for (int i = 0; i < in_nphixstargets; i++) {
-        assert_always(get_noncommentline(phixsfile, phixsline));
+        if (!get_noncommentline(phixsfile, phixsline)) {
+          fatal_crash("{} ends after {} of the {} targets of Z={} ionstage {} level {}", phixs_filename, i,
+                      in_nphixstargets, atomic_number, lower_ionstage, lowerlevel);
+        }
       }
 
       // send it to the ground state of the top ion
@@ -294,8 +316,13 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
 
   const auto levelphixstable = std::span{tmpallphixs}.subspan(tmpphixsstart, globals::NPHIXSPOINTS);
   if (phixs_file_version == 1) {
-    assert_always(levelbuilders.nphixstargets[lowerionlower_uniquelevelindex] == 1);
-    assert_always(tmpallphixstargets[levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex]].levelindex == 0);
+    if (levelbuilders.nphixstargets[lowerionlower_uniquelevelindex] != 1 ||
+        tmpallphixstargets[levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex]].levelindex != 0) {
+      fatal_crash(
+          "phixsdata.txt: Z={} ionstage {} level {} has a target other than the ground state of the upper ion. This "
+          "file format permits only the ground state as target",
+          atomic_number, lower_ionstage, lowerlevel);
+    }
 
     const double nu_edge = (epsilon(element, upperion, 0) - epsilon(element, lowerion, lowerlevel)) / H;
 
@@ -305,10 +332,16 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
     for (int i = 0; i < nphixspoints_inputtable; i++) {
       double energy = -1.;
       double phixs = -1.;
-      assert_always(get_noncommentline(phixsfile, phixsline));
-      assert_always(std::stringstream(phixsline) >> energy >> phixs);
-      assert_always(energy >= 0);
-      assert_always(phixs >= 0);
+      if (!get_noncommentline(phixsfile, phixsline)) {
+        fatal_crash("phixsdata.txt ends after {} of the {} points of the table of Z={} ionstage {} level {}", i,
+                    nphixspoints_inputtable, atomic_number, lower_ionstage, lowerlevel);
+      }
+      if (!(std::stringstream(phixsline) >> energy >> phixs) || !(energy >= 0) || !(phixs >= 0)) {
+        fatal_crash(
+            "phixsdata.txt: the table of Z={} ionstage {} level {} has the line '{}', but each line must give an "
+            "energy and a cross-section that are zero or positive",
+            atomic_number, lower_ionstage, lowerlevel, phixsline);
+      }
       nugrid_in[i] = nu_edge + ((energy * 13.6 * EV) / H);
       // the photoionisation cross-sections in the database are given in Mbarn=1e6 * 1e-28m^2
       // to convert to cgs units multiply by 1e-18
@@ -324,7 +357,12 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
       if (nu >= nu_max) {
         levelphixstable[i] = static_cast<float>(phixs_in[nphixspoints_inputtable - 1] * pow3(nu_max / nu));
       } else {
-        assert_always(nu >= nugrid_in[0]);
+        if (nu < nugrid_in[0]) {
+          fatal_crash(
+              "phixsdata.txt: the table of Z={} ionstage {} level {} starts {:g} Ry above the threshold, above the "
+              "first points of the interpolation. The table must start at the threshold, with the energy 0",
+              atomic_number, lower_ionstage, lowerlevel, (nugrid_in[0] - nu_edge) * H / (13.6 * EV));
+        }
         const auto index_above =
             static_cast<std::ptrdiff_t>(std::ranges::upper_bound(nugrid_in, nu) - nugrid_in.begin());
         assert_always(index_above < nphixspoints_inputtable);
@@ -339,8 +377,12 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
   } else {
     for (int i = 0; i < globals::NPHIXSPOINTS; i++) {
       float phixs{NAN};
-      assert_always(phixsfile >> phixs);
-      assert_always(phixs >= 0);
+      if (!(phixsfile >> phixs) || !(phixs >= 0)) {
+        fatal_crash(
+            "phixsdata_v2.txt: the table of Z={} ionstage {} level {} ends or has an unreadable or negative value at "
+            "point {} of {}",
+            atomic_number, lower_ionstage, lowerlevel, i, globals::NPHIXSPOINTS);
+      }
 
       // the photoionisation cross-sections in the database are given in Mbarn = 1e6 * 1e-28m^2
       // to convert to cgs units multiply by 1e-18
@@ -374,9 +416,10 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
 void read_phixs_file(const int phixs_file_version, const int phixs_groundstate_index_in,
                      std::vector<float>& tmpallphixs, std::vector<PhotoionTarget>& tmpallphixstargets,
                      std::vector<int>& ion_minphixslevel_infile, const PhixsLevelBuilders& levelbuilders) {
-  printlnlog("reading phixs data from {}", phixsdata_filenames[phixs_file_version]);
+  const auto* const phixs_filename = phixsdata_filenames[phixs_file_version];
+  printlnlog("reading phixs data from {}", phixs_filename);
 
-  auto phixsfile = istream_required(phixsdata_filenames[phixs_file_version]);
+  auto phixsfile = istream_required(phixs_filename);
   std::string phixsline;
   std::istringstream ssline;
   auto mem_usage_phixs = 0ZU;
@@ -394,10 +437,13 @@ void read_phixs_file(const int phixs_file_version, const int phixs_groundstate_i
     printlnlog("using NPHIXSPOINTS = {} and NPHIXSNUINCREMENT = {:g} set in input.cc", globals::NPHIXSPOINTS,
                globals::NPHIXSNUINCREMENT);
   } else {
-    assert_always(phixsfile >> globals::NPHIXSPOINTS);
-    assert_always(globals::NPHIXSPOINTS > 0);
-    assert_always(phixsfile >> globals::NPHIXSNUINCREMENT);
-    assert_always(globals::NPHIXSNUINCREMENT > 0.);
+    if (!(phixsfile >> globals::NPHIXSPOINTS >> globals::NPHIXSNUINCREMENT) || globals::NPHIXSPOINTS <= 0 ||
+        !(globals::NPHIXSNUINCREMENT > 0.)) {
+      fatal_crash(
+          "phixsdata_v2.txt must start with a positive point count NPHIXSPOINTS and a positive increment "
+          "NPHIXSNUINCREMENT, but the values are {} and {:g}",
+          globals::NPHIXSPOINTS, globals::NPHIXSNUINCREMENT);
+    }
     last_phixs_nuovernuedge = (1.0 + (globals::NPHIXSNUINCREMENT * (globals::NPHIXSPOINTS - 1)));
   }
 
@@ -414,20 +460,22 @@ void read_phixs_file(const int phixs_file_version, const int phixs_groundstate_i
     }
     ssline.clear();
     ssline.str(phixsline);
-    if (phixs_file_version == 1) {
-      assert_always(ssline >> Z >> upperionstage >> upperlevel_in >> lowerionstage >> lowerlevel_in >>
-                    nphixspoints_inputtable);
-      assert_always(nphixspoints_inputtable > 0);
-    } else {
-      assert_always(ssline >> Z >> upperionstage >> upperlevel_in >> lowerionstage >> lowerlevel_in >>
-                    phixs_threshold_ev);
+    const bool header_read_ok = (phixs_file_version == 1)
+                                    ? static_cast<bool>(ssline >> Z >> upperionstage >> upperlevel_in >>
+                                                        lowerionstage >> lowerlevel_in >> nphixspoints_inputtable)
+                                    : static_cast<bool>(ssline >> Z >> upperionstage >> upperlevel_in >>
+                                                        lowerionstage >> lowerlevel_in >> phixs_threshold_ev);
+    if (phixs_file_version != 1) {
       nphixspoints_inputtable = globals::NPHIXSPOINTS;
     }
-    assert_always(Z > 0);
-    assert_always(upperionstage >= 2);
-    assert_always(lowerionstage >= 1);
     // the continuum is stored for the lower ion, and its upper ion is always the next ion
-    assert_always(upperionstage == lowerionstage + 1);
+    if (!header_read_ok || nphixspoints_inputtable <= 0 || Z <= 0 || lowerionstage < 1 ||
+        upperionstage != lowerionstage + 1) {
+      fatal_crash(
+          "{} has the table header '{}'. A header needs Z > 0, lowerionstage >= 1, upperionstage = lowerionstage + 1, "
+          "and a positive point count",
+          phixs_filename, phixsline);
+    }
 
     const int element = get_elementindex(Z);
 
@@ -439,7 +487,10 @@ void read_phixs_file(const int phixs_file_version, const int phixs_groundstate_i
       const int upperion = upperionstage - get_ionstage(element, 0);
       const int lowerion = lowerionstage - get_ionstage(element, 0);
       const int lowerlevel = lowerlevel_in - phixs_groundstate_index_in;
-      assert_always(lowerlevel >= 0);
+      if (lowerlevel < 0) {
+        fatal_crash("{} has a table for Z={} ionstage {} level {}, but the file numbers the levels from {}",
+                    phixs_filename, Z, lowerionstage, lowerlevel_in, phixs_groundstate_index_in);
+      }
 
       // record the lowest level the file supplies a table for in each included ion, before any filtering on
       // retained levels, so that mismatched level numbering can be detected even if the misnumbered table would
@@ -462,25 +513,30 @@ void read_phixs_file(const int phixs_file_version, const int phixs_groundstate_i
 
     if (skip_this_phixs_table) {  // for ions or elements that are not part of the current model atom, proceed through
                                   // the table and throw away the data
+      bool table_read_ok = true;
       if (upperlevel_in < 0) {  // a table of target states and probabilities will follow, so read past those lines
         int nphixstargets = 0;
-        assert_always(get_noncommentline(phixsfile, phixsline));
+        table_read_ok = get_noncommentline(phixsfile, phixsline);
         ssline.clear();
         ssline.str(phixsline);
-        assert_always(ssline >> nphixstargets);
-        for (int i = 0; i < nphixstargets; i++) {
-          assert_always(get_noncommentline(phixsfile, phixsline));
+        table_read_ok = table_read_ok && static_cast<bool>(ssline >> nphixstargets);
+        for (int i = 0; table_read_ok && i < nphixstargets; i++) {
+          table_read_ok = get_noncommentline(phixsfile, phixsline);
         }
       }
       // skip through cross section list
-      for (int i = 0; i < nphixspoints_inputtable; i++) {
+      for (int i = 0; table_read_ok && i < nphixspoints_inputtable; i++) {
         if (phixs_file_version == 1) {
-          assert_always(get_noncommentline(phixsfile, phixsline));
+          table_read_ok = get_noncommentline(phixsfile, phixsline);
         } else {
           // one day we might want to put all of the cross section points onto a single line, so don't use getline here
           float phixs = 0;
-          assert_always(phixsfile >> phixs);
+          table_read_ok = static_cast<bool>(phixsfile >> phixs);
         }
+      }
+      if (!table_read_ok) {
+        fatal_crash("{} ends or has an unreadable value in the table of Z={} ionstage {} level {}", phixs_filename, Z,
+                    lowerionstage, lowerlevel_in);
       }
     }
   }
@@ -496,25 +552,46 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
   // The count nlevels_ionising covers the first levels of the ion, so it is only correct when the level energies
   // increase with the level index. A level with a lower energy than the previous level gives a warning.
   double prev_levelenergy_ev = -std::numeric_limits<double>::infinity();
+  const int atomic_number = get_atomicnumber(element);
+  const int ionstage = get_ionstage(element, ion);
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in = 0;
     double levelenergy_ev{NAN};
     float statweight{NAN};
     int ntransitions = 0;
-    assert_always(get_noncommentline(adata, line));
+    if (!get_noncommentline(adata, line)) {
+      fatal_crash("adata.txt ends after {} of the {} levels of Z={} ionstage {}", level, nlevels, atomic_number,
+                  ionstage);
+    }
     ssline.clear();
     ssline.str(line);
-    assert_always(ssline >> levelindex_in >> levelenergy_ev >> statweight >> ntransitions);
+    if (!(ssline >> levelindex_in >> levelenergy_ev >> statweight >> ntransitions)) {
+      fatal_crash(
+          "adata.txt: Z={} ionstage {} has the level line '{}', but a level line needs the level number, the energy, "
+          "the statistical weight, and the transition count",
+          atomic_number, ionstage, line);
+    }
     if (groundstate_index_in < 0) {
       // this is the first level line of the whole file, so level == 0 and levelindex_in is the ground state index
-      assert_always(levelindex_in == 0 || levelindex_in == 1);
+      if (levelindex_in != 0 && levelindex_in != 1) {
+        fatal_crash("adata.txt: the first level of Z={} ionstage {} has the number {}, but it must be 0 or 1",
+                    atomic_number, ionstage, levelindex_in);
+      }
       groundstate_index_in = levelindex_in;
       printlnlog("adata.txt: autodetected level numbering starting from {}", groundstate_index_in);
     }
-    assert_always(levelindex_in == level + groundstate_index_in);
+    if (levelindex_in != level + groundstate_index_in) {
+      fatal_crash(
+          "adata.txt: Z={} ionstage {} has the level number {} where the number {} is next. The ion header must give "
+          "the correct level count",
+          atomic_number, ionstage, levelindex_in, level + groundstate_index_in);
+    }
 
     if (level < nlevelsmax) {
-      assert_always(statweight > 0.);
+      if (!(statweight > 0.)) {
+        fatal_crash("adata.txt: Z={} ionstage {} level {} has the statistical weight {:g}, but it must be positive",
+                    atomic_number, ionstage, level, statweight);
+      }
       const double levelepsilon = (energyoffset_ev + levelenergy_ev) * EV;
       assert_always(std::ssize(temp_alllevels) == get_ionuniquelevelindexstart(element, ion) + level);
       temp_alllevels.push_back({
@@ -535,7 +612,7 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
             "[warning] adata.txt: Z={} ionstage {}: level {} has energy {:g} eV, below the previous level energy {:g} "
             "eV. The count of ionising levels needs energies that increase with the level index. The code ignores "
             "each transition whose upper level has an energy equal to or below the energy of its lower level",
-            get_atomicnumber(element), get_ionstage(element, ion), level, levelenergy_ev, prev_levelenergy_ev);
+            atomic_number, ionstage, level, levelenergy_ev, prev_levelenergy_ev);
       }
       prev_levelenergy_ev = levelenergy_ev;
     }
@@ -561,7 +638,10 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
     float A = 0;
     float coll_str = -1.;
     int intforbidden = 0;
-    assert_always(getline(ftransitiondata, line));
+    if (!getline(ftransitiondata, line)) {
+      fatal_crash("transitiondata.txt ends after {} of the {} transitions of Z={} ionstage {}", i,
+                  ion_transition_count_in_file, atomicnumber, ionstage);
+    }
     if (i == 0) {
       int column_count = 0;
       auto remainder = std::string_view{line};
@@ -569,23 +649,37 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
       while (parse_next_token(remainder, dummy)) {
         column_count++;
       }
-      assert_always(column_count == 4 || column_count == 5);
+      if (column_count != 4 && column_count != 5) {
+        fatal_crash(
+            "transitiondata.txt: the first transition of Z={} ionstage {} has {} columns in the line '{}', but a "
+            "transition line must have 4 or 5 columns",
+            atomicnumber, ionstage, column_count, line);
+      }
       oldtransitionformat = (column_count == 4);
     }
     auto remainder = std::string_view{line};
+    bool transition_read_ok = false;
     if (!oldtransitionformat) {
-      assert_always(parse_next_token(remainder, lower_in) && parse_next_token(remainder, upper_in) &&
-                    parse_next_token(remainder, A) && parse_next_token(remainder, coll_str) &&
-                    parse_next_token(remainder, intforbidden));
+      transition_read_ok = parse_next_token(remainder, lower_in) && parse_next_token(remainder, upper_in) &&
+                           parse_next_token(remainder, A) && parse_next_token(remainder, coll_str) &&
+                           parse_next_token(remainder, intforbidden);
     } else {
       int transindex = 0;  // not used
-      assert_always(parse_next_token(remainder, transindex) && parse_next_token(remainder, lower_in) &&
-                    parse_next_token(remainder, upper_in) && parse_next_token(remainder, A));
+      transition_read_ok = parse_next_token(remainder, transindex) && parse_next_token(remainder, lower_in) &&
+                           parse_next_token(remainder, upper_in) && parse_next_token(remainder, A);
+    }
+    if (!transition_read_ok) {
+      fatal_crash("transitiondata.txt: Z={} ionstage {} has the unreadable transition line '{}'", atomicnumber,
+                  ionstage, line);
     }
     const int lower = lower_in - groundstate_index_in;
     const int upper = upper_in - groundstate_index_in;
-    assert_always(lower >= 0);
-    assert_always(lower < upper);
+    if (lower < 0 || lower >= upper) {
+      fatal_crash(
+          "transitiondata.txt: Z={} ionstage {} has the transition line '{}'. The lower level must be at least {} and "
+          "below the upper level",
+          atomicnumber, ionstage, line, groundstate_index_in);
+    }
     found_groundstate_lower = found_groundstate_lower || (lower == 0);
     if (upper >= nlevels_in_file) {
       fatal_crash(
@@ -691,7 +785,12 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
       // absorption oscillator strength f_lu from A_ul via f_lu = (g_u/g_l) * m_e c^3 / (8 pi^2 e^2 nu^2) * A_ul
       const auto g_ratio = static_cast<double>(ion_levels[upperlevel].stat_weight) / ion_levels[lowerlevel].stat_weight;
       const auto f_lu = static_cast<float>(g_ratio * ME * pow3(CLIGHT) / (8 * pow2(QE * nu_trans * PI)) * transition.A);
-      assert_always(std::isfinite(f_lu));
+      if (!std::isfinite(f_lu)) {
+        fatal_crash(
+            "transitiondata.txt: Z={} ionstage {} has the transition {} -> {} with A = {:g}, which gives the "
+            "oscillator strength {:g}. The value must be finite",
+            get_atomicnumber(element), get_ionstage(element, ion), lowerlevel, upperlevel, transition.A, f_lu);
+      }
 
       if (!is_duplicate) {
         prev_lower = lowerlevel;
@@ -1047,14 +1146,16 @@ void read_autoion_data() {
       int lowerionstage = -1;
       int lowerlevel_in = -1;
       double autoion_A = -1;
-      assert_always(std::istringstream(autoionline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >>
-                    lowerlevel_in >> autoion_A);
+      if (!(std::istringstream(autoionline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >> lowerlevel_in >>
+            autoion_A) ||
+          Z <= 0 || lowerionstage < 1 || upperionstage <= lowerionstage || lowerlevel_in < 0 || upperlevel_in < 0) {
+        fatal_crash(
+            "autoion.txt has the line '{}'. A line needs Z > 0, an upper ion stage above the lower ion stage >= 1, "
+            "level numbers that are zero or positive, and the rate",
+            autoionline);
+      }
       autoion_transitions_read++;
 
-      assert_always(Z > 0);
-      assert_always(upperionstage >= 2);
-      assert_always(lowerionstage >= 1);
-      assert_always(lowerlevel_in >= 0 && upperlevel_in >= 0);
       has_level_number_zero = has_level_number_zero || lowerlevel_in == 0 || upperlevel_in == 0;
 
       const int element = get_elementindex(Z);
@@ -1065,7 +1166,6 @@ void read_autoion_data() {
         const int lowerion = lowerionstage - get_ionstage(element, 0);
         // store only for ions that are part of the current model atom
         if (lowerion >= 0 && upperion < get_nions(element)) {
-          assert_always(upperion > lowerion);
           const auto lower_uniqueionindex = get_uniqueionindex(element, lowerion);
           ion_max_autoionlevel_in[lower_uniqueionindex] =
               std::max(ion_max_autoionlevel_in[lower_uniqueionindex], lowerlevel_in);
@@ -1143,7 +1243,11 @@ void read_autoion_data() {
       });
     }
 
-    assert_always(allautoion_levels_are_not_nlte || allautoion_levels_are_nlte);
+    if (!allautoion_levels_are_not_nlte && !allautoion_levels_are_nlte) {
+      fatal_crash(
+          "autoion.txt: some autoionising levels are NLTE levels and others are LTE levels, but they must be all NLTE "
+          "or all LTE. The NLTE options of artisoptions.h, e.g. ION_NLEVELS_EXCITED_NLTE, select the NLTE levels");
+    }
 
     printlnlog("autoion.txt: read {} autoionisation transitions, stored {} for the included ions",
                autoion_transitions_read, temp_allautoion.size());
@@ -1179,7 +1283,12 @@ void read_autoion_data() {
 
           nautoiondowntrans_sum += get_nautoiondowntrans(element, ion, level);
           // once we have found one autoionizing level, all higher levels should also be autoionizing
-          assert_always(level_is_autoionizing || nlevels_autoion == 0);
+          if (!level_is_autoionizing && nlevels_autoion > 0) {
+            fatal_crash(
+                "autoion.txt: Z={} ionstage {} level {} has no autoionisation transition, but a lower level has one. "
+                "The autoionising levels of an ion must be its highest levels",
+                get_atomicnumber(element), get_ionstage(element, ion), level);
+          }
           if (level_is_autoionizing) {
             nlevels_autoion++;
           }
@@ -1474,7 +1583,10 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
     for (int ion = 0; ion < nions; ion++) {
       const int ionstage = globals::elements[element].lowest_ionstage + ion;
       // calculate the current levels ground level energy
-      assert_always(ionpot_ev >= 0);
+      if (ionpot_ev < 0) {
+        fatal_crash("adata.txt gives the negative ionisation potential {:g} eV for Z={} ionstage {}", ionpot_ev,
+                    atomicnumber, ionstage - 1);
+      }
       energyoffset_ev += ionpot_ev;
 
       // read information for the elements next ionstage
@@ -1519,7 +1631,12 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
         printlnlog("[info] read_levels_and_transitions: reduce number of levels from {} to {} for Z {:2} ionstage {}",
                    nlevels_in_file, nlevelskept, adata_Z_in, adata_ionstage_in);
       }
-      assert_always(nlevelskept > 0);
+      if (nlevelskept <= 0) {
+        fatal_crash(
+            "Z={} ionstage {} has {} levels in adata.txt and keeps {} levels, but an ion needs at least one level. "
+            "compositiondata.txt gives the maximum count of levels of each element",
+            atomicnumber, ionstage, nlevels_in_file, nlevelskept);
+      }
 
       // read the data for the levels and set up the list of possible transitions for each level
       // store the ion data and then read its levels
@@ -1547,7 +1664,10 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
       while (transdata_Z_in != atomicnumber || transdata_ionstage_in != ionstage) {
         // skip over table
         for (int i = 0; i < ion_transition_count_in_file; i++) {
-          assert_always(getline(ftransitiondata, line));
+          if (!getline(ftransitiondata, line)) {
+            fatal_crash("transitiondata.txt ends after {} of the {} transitions of Z={} ionstage {}", i,
+                        ion_transition_count_in_file, transdata_Z_in, transdata_ionstage_in);
+          }
         }
         // get_noncommentline to skip over blank lines
         if (!get_noncommentline(ftransitiondata, line)) {
@@ -1566,13 +1686,19 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
 
       printlnlog("transitiondata.txt: Z {} ionstage {} tottransitions {}", transdata_Z_in, transdata_ionstage_in,
                  ion_transition_count_in_file);
-      assert_always(ion_transition_count_in_file >= 0);
+      if (ion_transition_count_in_file < 0) {
+        fatal_crash("transitiondata.txt gives the negative transition count {} for Z={} ionstage {}",
+                    ion_transition_count_in_file, atomicnumber, ionstage);
+      }
 
       // load transition table for the current ion to temporary memory
       if (nlevelskept <= 1) {
         // we will not read in any transitions, just skip past these lines in the file
         for (int i = 0; i < ion_transition_count_in_file; i++) {
-          assert_always(getline(ftransitiondata, line));
+          if (!getline(ftransitiondata, line)) {
+            fatal_crash("transitiondata.txt ends after {} of the {} transitions of Z={} ionstage {}", i,
+                        ion_transition_count_in_file, atomicnumber, ionstage);
+          }
         }
       } else {
         // first nlevels_requiretransitions levels will be fully connected with higher levels
@@ -2066,7 +2192,12 @@ void read_parameterfile(std::span<Packet> packets) {
     // reproducible (they also accumulate to shared memory in a non-deterministic order)
     const auto rngseed = pre_zseed + static_cast<std::int64_t>(13 * globals::my_rank * get_max_threads());
     // the generator takes a 32-bit seed, so a larger seed stops the run instead of a silent truncation
-    assert_always(std::in_range<std::uint32_t>(rngseed));
+    if (!std::in_range<std::uint32_t>(rngseed)) {
+      fatal_crash(
+          "the seed {} of input.txt gives rank {} the seed {}, which is outside the 32-bit range of the generator. "
+          "Give a smaller seed",
+          pre_zseed, globals::my_rank, rngseed);
+    }
     get_rngstate().seed(static_cast<std::uint32_t>(rngseed));
     for (int n = 0; n < 100; n++) {
       rng_uniform(get_rngstate());
@@ -2403,11 +2534,19 @@ auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, con
     case TimeStepSizeMethod::LOGARITHMIC_THEN_CONSTANT: {
       assert_always(transition_time_days.has_value() && constant_max_width_days.has_value());
       const double t_transition = *transition_time_days * DAY;
-      assert_always(t_transition > tmin);
-      assert_always(t_transition < tmax);
+      if (t_transition <= tmin || t_transition >= tmax) {
+        fatal_crash(
+            "TIMESTEP_SIZE_TRANSITION_TIME_DAYS is {:g} days, but it must be between tmin {:g} and tmax {:g} days",
+            *transition_time_days, tmin / DAY, tmax / DAY);
+      }
       const int nts_constant = ceil((tmax - t_transition) / (*constant_max_width_days * DAY));
-      assert_always(nts_constant > 0);
-      assert_always(nts_constant < ntimesteps);
+      if (nts_constant <= 0 || nts_constant >= ntimesteps) {
+        fatal_crash(
+            "the constant timesteps from TIMESTEP_SIZE_TRANSITION_TIME_DAYS = {:g} to tmax {:g} days need {} of the {} "
+            "timesteps, but the count must be above 0 and below the total. Increase ntimesteps in input.txt or "
+            "TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS",
+            *transition_time_days, tmax / DAY, nts_constant, ntimesteps);
+      }
       const int nts_log = ntimesteps - nts_constant;
       // NOLINTBEGIN(readability-suspicious-call-argument)
       fill_logarithmic(0, nts_log, tmin, t_transition);
@@ -2419,11 +2558,19 @@ auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, con
     case TimeStepSizeMethod::CONSTANT_THEN_LOGARITHMIC: {
       assert_always(transition_time_days.has_value() && constant_max_width_days.has_value());
       const double t_transition = *transition_time_days * DAY;
-      assert_always(t_transition > tmin);
-      assert_always(t_transition < tmax);
+      if (t_transition <= tmin || t_transition >= tmax) {
+        fatal_crash(
+            "TIMESTEP_SIZE_TRANSITION_TIME_DAYS is {:g} days, but it must be between tmin {:g} and tmax {:g} days",
+            *transition_time_days, tmin / DAY, tmax / DAY);
+      }
       const int nts_constant = ceil((t_transition - tmin) / (*constant_max_width_days * DAY));
-      assert_always(nts_constant > 0);
-      assert_always(nts_constant < ntimesteps);
+      if (nts_constant <= 0 || nts_constant >= ntimesteps) {
+        fatal_crash(
+            "the constant timesteps from tmin {:g} days to TIMESTEP_SIZE_TRANSITION_TIME_DAYS = {:g} need {} of the {} "
+            "timesteps, but the count must be above 0 and below the total. Increase ntimesteps in input.txt or "
+            "TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS",
+            tmin / DAY, *transition_time_days, nts_constant, ntimesteps);
+      }
       // NOLINTBEGIN(readability-suspicious-call-argument)
       fill_constant(0, nts_constant, tmin, (t_transition - tmin) / nts_constant);
       fill_logarithmic(nts_constant, ntimesteps - nts_constant, t_transition, tmax);

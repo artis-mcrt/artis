@@ -13,12 +13,13 @@
 #include <istream>
 #include <memory>
 #include <streambuf>
+#include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 
 #ifdef USE_ZSTD
 #include <iterator>
-#include <string>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -123,8 +124,11 @@ class InputFileStream : public std::istream {
     fatal_crash("Cannot open file with empty filename.");
   }
 
+  std::string searched_paths;
   for (const auto& datadir : datafolders) {
     const auto datafolderfilename = std::format("{}{}{}", globals::path_to_modelfolder, datadir, filename);
+    searched_paths +=
+        std::format("{}'{}', '{}.zst'", searched_paths.empty() ? "" : ", ", datafolderfilename, datafolderfilename);
     auto filebuf = std::make_unique<std::filebuf>();
     if (filebuf->open(datafolderfilename, std::ios::in) != nullptr) {
       return InputFileStream(std::move(filebuf));
@@ -145,7 +149,13 @@ class InputFileStream : public std::istream {
 #endif
   }
 
-  fatal_crash("Could not open file '{}'", filename);
+  std::error_code current_path_error;
+  const auto working_folder = std::filesystem::current_path(current_path_error);
+  fatal_crash("Could not open file '{}'. The search tried {} in the folder '{}'.{}", filename, searched_paths,
+              working_folder.string(),
+              filename == "input.txt" ? " Without input.txt, sn3d and exspec read input-newrun.txt, but that file is "
+                                        "also absent."
+                                      : "");
 }
 
 // True if istream_required() can find the input file, in plain or in compressed form. The search

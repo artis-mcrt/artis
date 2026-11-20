@@ -813,7 +813,9 @@ void read_betaminus_decaydata() {
       nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = Q_betadecay_mev * MEV;
       nuclides.back().endecay_electron = e_elec_mev * MEV;
       nuclides.back().endecay_gamma = e_gamma_mev * MEV;
-      assert_always(e_elec_mev >= 0.);
+      if (!(e_elec_mev >= 0.)) {
+        fatal_crash("betaminusdecays.txt gives the negative electron energy {:g} MeV for Z={} A={}", e_elec_mev, z, a);
+      }
     }
   }
 }
@@ -938,12 +940,19 @@ void read_fissionproduct_data() {
   while (get_noncommentline(ffission_products, line)) {
     int z_parent = -1;
     int a_parent = -1;
-    assert_always(std::stringstream(line) >> z_parent >> a_parent);
-    assert_always(get_noncommentline(ffission_products, line));
+    if (!(std::stringstream(line) >> z_parent >> a_parent)) {
+      fatal_crash("fissionproducts_GEF_100keV.txt has the unreadable parent line '{}'", line);
+    }
     double num_neutrons = 0;
     int tablesize = 0;
     double q_fission_mev = 0.;
-    assert_always(std::stringstream(line) >> num_neutrons >> tablesize >> q_fission_mev);
+    if (!get_noncommentline(ffission_products, line) ||
+        !(std::stringstream(line) >> num_neutrons >> tablesize >> q_fission_mev) || tablesize < 0) {
+      fatal_crash(
+          "fissionproducts_GEF_100keV.txt: the parent Z={} A={} needs a line with the neutron count, the table size, "
+          "and the Q value",
+          z_parent, a_parent);
+    }
     const int nucindex = get_nucindex_or_neg_one(z_parent, a_parent);
     const bool keep_table = (nucindex >= 0) && (nuclides[nucindex].branchprobs[DECAYTYPE_SPONTFISSION] > 0.);
     if (keep_table) {
@@ -958,14 +967,20 @@ void read_fissionproduct_data() {
 
     double daughter_yield_sum = 0.;
     for (int i = 0; i < tablesize; i++) {
-      assert_always(get_noncommentline(ffission_products, line));
+      if (!get_noncommentline(ffission_products, line)) {
+        fatal_crash("fissionproducts_GEF_100keV.txt ends after {} of the {} daughters of Z={} A={}", i, tablesize,
+                    z_parent, a_parent);
+      }
       if (keep_table) {
         int daughter_a = -1;
         int daughter_z = -1;
         double yieldpercent_before_neutron_emission = 0.;
         double yieldpercent = 0.;
-        assert_always(std::stringstream(line) >> daughter_a >> daughter_z >> yieldpercent_before_neutron_emission >>
-                      yieldpercent);
+        if (!(std::stringstream(line) >> daughter_a >> daughter_z >> yieldpercent_before_neutron_emission >>
+              yieldpercent)) {
+          fatal_crash("fissionproducts_GEF_100keV.txt: the parent Z={} A={} has the unreadable daughter line '{}'",
+                      z_parent, a_parent, line);
+        }
         // the table lists yields as a percentage per fission, so convert to the expected number of
         // these daughter nuclei produced per fission
         const double yield_per_fission = yieldpercent / 100.;

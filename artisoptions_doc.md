@@ -41,7 +41,7 @@ constexpr std::optional<double> TIMESTEP_SIZE_TRANSITION_TIME_DAYS;
 constexpr std::optional<GridType> GRID_TYPE_OVERRIDE;
 
 // The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets the size, and the code ignores
-// these values.
+// these values. The three values must be equal and positive, because the code assumes cubic cells.
 constexpr int CUBOID_NCOORDGRID_X;
 constexpr int CUBOID_NCOORDGRID_Y;
 constexpr int CUBOID_NCOORDGRID_Z;
@@ -191,7 +191,7 @@ constexpr bool NLTE_USE_GTH_SOLVER;
 //
 // The "cooling:" line of the estimators file does not contain c_heatcapacity, because that file keeps its
 // format. The heating and the cooling of that file therefore do not balance with this option. The rank log
-// gives c_heatcapacity and the k-packet energy factor of each cell.
+// gives c_heatcapacity and the k-packet energy factor of each cell. A value must be zero or positive.
 constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP;
 
 // Reject an NLTE solution with one of these faults:
@@ -209,13 +209,13 @@ constexpr bool STRICT_POPULATION_CHECKING;
 constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL;
 
 // The same ratio above which the solver logs a warning. This value has an effect only with
-// STRICT_POPULATION_CHECKING.
+// STRICT_POPULATION_CHECKING. It must be 1 or more, and below STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL.
 constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING;
 
 // After a failed NLTE solution of an element, remove the highest ion, or the lowest ion when the highest ion
 // cannot go, and solve again. An ion can go only when its ground population, each NLTE excited population, and its
 // superlevel population are each below this fraction of the element population. With no value, or when no ion can go,
-// the whole element falls back to LTE.
+// the whole element falls back to LTE. A value must be below 1e-4 (NLTE_SIGNIFICANT_ION_FRACTION in nltepop.h).
 constexpr std::optional<double> NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION;
 
 // Include the charge transfer reactions in the NLTE population solver. The published fits come from

@@ -83,7 +83,7 @@ Set GridType::CARTESIAN3D to map a 1D or a 2D model onto a 3D Cartesian grid. No
 
 `int CUBOID_NCOORDGRID_X`
 
-The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets the size, and the code ignores these values.
+The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets the size, and the code ignores these values. The three values must be equal and positive, because the code assumes cubic cells.
 
 **Preset values:** classic `100`, kilonova_lte `50`, nltenebular `50`, nltephotospheric `50`
 
@@ -91,7 +91,7 @@ The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets th
 
 `int CUBOID_NCOORDGRID_Y`
 
-The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets the size, and the code ignores these values.
+The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets the size, and the code ignores these values. The three values must be equal and positive, because the code assumes cubic cells.
 
 **Preset values:** classic `100`, kilonova_lte `50`, nltenebular `50`, nltephotospheric `50`
 
@@ -99,7 +99,7 @@ The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets th
 
 `int CUBOID_NCOORDGRID_Z`
 
-The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets the size, and the code ignores these values.
+The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets the size, and the code ignores these values. The three values must be equal and positive, because the code assumes cubic cells.
 
 **Preset values:** classic `100`, kilonova_lte `50`, nltenebular `50`, nltephotospheric `50`
 
@@ -389,7 +389,7 @@ A time-dependent timestep always uses the LU solver, because the time term break
 
 The k-packets carry the same energy budget. Each time a k-packet selects a cooling process, its energy gets the factor 1 - (c_adiabatic + c_heatcapacity) / heating of its cell, limited to [0, 100] (see kpkt.cc). A cell without heating uses the factor 1. The factor applies in every timestep with a thermal balance, also without this option. With this option, the stored thermal energy also stays out of the radiation field. A gas that cools releases its stored energy into the packets, and the factor is then above 1. The code removes no k-packet.
 
-The "cooling:" line of the estimators file does not contain c_heatcapacity, because that file keeps its format. The heating and the cooling of that file therefore do not balance with this option. The rank log gives c_heatcapacity and the k-packet energy factor of each cell.
+The "cooling:" line of the estimators file does not contain c_heatcapacity, because that file keeps its format. The heating and the cooling of that file therefore do not balance with this option. The rank log gives c_heatcapacity and the k-packet energy factor of each cell. A value must be zero or positive.
 
 **Every preset:** `std::nullopt`
 
@@ -423,7 +423,7 @@ The population of a level per statistical weight, relative to the same ratio of 
 
 `float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING`
 
-The same ratio above which the solver logs a warning. This value has an effect only with STRICT_POPULATION_CHECKING.
+The same ratio above which the solver logs a warning. This value has an effect only with STRICT_POPULATION_CHECKING. It must be 1 or more, and below STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL.
 
 **Preset values:** classic `10.`, kilonova_lte `2.`, nltenebular `2.`, nltephotospheric `2.`
 
@@ -431,7 +431,7 @@ The same ratio above which the solver logs a warning. This value has an effect o
 
 `std::optional<double> NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION`
 
-After a failed NLTE solution of an element, remove the highest ion, or the lowest ion when the highest ion cannot go, and solve again. An ion can go only when its ground population, each NLTE excited population, and its superlevel population are each below this fraction of the element population. With no value, or when no ion can go, the whole element falls back to LTE.
+After a failed NLTE solution of an element, remove the highest ion, or the lowest ion when the highest ion cannot go, and solve again. An ion can go only when its ground population, each NLTE excited population, and its superlevel population are each below this fraction of the element population. With no value, or when no ion can go, the whole element falls back to LTE. A value must be below 1e-4 (NLTE_SIGNIFICANT_ION_FRACTION in nltepop.h).
 
 **Preset values:** classic `no value`, kilonova_lte `1e-9`, nltenebular `1e-9`, nltephotospheric `1e-9`
 
