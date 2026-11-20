@@ -14,7 +14,8 @@
 // Read all rows of one ion. Return the low-n and total rates at log_Te_estimate.
 // Use an exact temperature match, or interpolate between the nearest rows on each side.
 // Return no value when the table has neither an exact match nor both adjacent temperatures.
-[[nodiscard]] auto read_recombination_rate_rows(std::istream& recombrate_file, int tablerows, double log_Te_estimate)
+[[nodiscard]] auto read_recombination_rate_rows(std::istream& recombrate_file, int atomicnumber, int upperionstage,
+                                                int tablerows, double log_Te_estimate)
     -> std::optional<std::pair<double, double>>;
 
 void ratecoefficients_init();
