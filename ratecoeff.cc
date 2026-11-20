@@ -587,6 +587,27 @@ void setup_photoion_luts() {
       mem_usage_photoionluts / 1024. / 1024.);
 }
 
+// Sample the frequency of a free-bound photon with the inversion method: the result is the frequency below which
+// the integral of the probability density is cumulative_probability times the integral over the whole range.
+//
+// The probability density is the energy-weighted emissivity
+//   j(nu) = sigma_bf(nu) * nu^3 * exp(-h * (nu - nu_threshold) / kT_e),
+// without constant factors. The thermal width kT_e / h is the frequency scale of the exponential.
+//
+// The table gives sigma_bf at points with a constant step in frequency. Between two points, sigma_bf is linear, or
+// constant with PHIXS_CLASSIC_NO_INTERPOLATION. Take one table interval with the lower end nu_low, and measure the
+// frequency above nu_low in thermal widths: t = h * (nu - nu_low) / kT_e. In this interval,
+//   j = exp(-h * (nu_low - nu_threshold) / kT_e) * q(t) * exp(-t), again without constant factors, and
+//   q(t) = (sigma_bf_low + sigma_bf_slope * t) * (a + t)^3 with a = h * nu_low / kT_e.
+// q is a polynomial of degree 4 in t, and the integral of t^n * exp(-t) is an elementary function. The integral of
+// j over a part of a table interval thus needs no numerical integration.
+//
+// The function has four steps:
+// 1. Calculate the integrals M_n of t^n * exp(-t) over one table step, for n = 0 to 4.
+// 2. Add the integrals of j over the table intervals to get the integral over the whole range.
+// 3. Add them again in order of frequency, until the sum is above the target. This gives the table interval of
+//    the sample and the fraction of its integral that is below the target.
+// 4. Inside this table interval, solve for the t that has this fraction of the integral below it.
 DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_threshold, const float T_e,
                                                               const std::span<const float> photoion_xs,
                                                               const double cumulative_probability) -> double {
@@ -600,12 +621,16 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
   const int table_interval_count =
       static_cast<int>(std::floor(((last_phixs_nuovernuedge - 1.) / globals::NPHIXSNUINCREMENT) + 0.5));
 
-  // Give the integrals of t^power * exp(-t) from 0 to thermal_offset, divided by thermal_offset^(power + 1).
+  // Give g_n = M_n(t) / t^(n + 1) for n = 0 to 4, where M_n(t) is the integral of t'^n * exp(-t') from 0 to
+  // t = thermal_offset. The division by t^(n + 1) keeps the values finite for a small t: g_n goes to 1 / (n + 1).
+  // An integration by parts gives M_n = n * M_(n-1) - t^n * exp(-t), and thus g_n = (n * g_(n-1) - exp(-t)) / t.
   constexpr auto get_power_integrals = [](const double thermal_offset,
                                           const double exp_minus_thermal_offset) -> std::array<double, 5> {
     std::array<double, 5> power_integrals{};
     if (thermal_offset < 1.) {
-      // The series for the highest power and the downward recurrence have no cancellation for a small offset.
+      // For a small t, the recurrence in the direction of increasing n subtracts two almost equal numbers. Use the
+      // series g_4 = exp(-t) * (1/5 + t/(5*6) + t^2/(5*6*7) + ...) and the recurrence in the other direction,
+      // g_(n-1) = (t * g_n + exp(-t)) / n, which only adds positive numbers.
       double series_term = 1. / 5.;
       double series_sum = 0.;
       for (int term = 1; series_term > 1e-17 * series_sum; term++) {
@@ -626,7 +651,8 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
   };
   static_assert(get_power_integrals(0., 1.)[0] == 1. && get_power_integrals(0., 1.)[4] == 0.2);
 
-  // Integrals of t^power * exp(-t) over one table step. All table intervals have the same step.
+  // Step 1: M_n = g_n * s^(n + 1) for the table step s in thermal widths. All table intervals have the same step,
+  // so these five numbers are the same for each table interval.
   auto table_step_moments = get_power_integrals(table_step_over_thermal_width, boltzmann_factor_table_step);
   double table_step_to_power = 1.;
   for (auto& table_step_moment : table_step_moments) {
@@ -634,10 +660,10 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
     table_step_moment *= table_step_to_power;
   }
 
-  // In the table interval with the lower end nu_low, the energy-weighted emissivity is proportional to
-  // exp(-h * (nu_low - nu_threshold) / kT_e) * q(t) * exp(-t), where t = h * (nu - nu_low) / kT_e, and q(t) is the
-  // polynomial (sigma_bf_low + sigma_bf_slope * t) * (h * nu_low / kT_e + t)^3.
-  // Give the integral of q(t) * exp(-t) over the table interval.
+  // Give the integral of q(t) * exp(-t) over one table interval. With (a + t)^3 = a^3 + 3 a^2 t + 3 a t^2 + t^3,
+  // the integral is
+  //   sigma_bf_low * (a^3 M_0 + 3 a^2 M_1 + 3 a M_2 + M_3) + sigma_bf_slope * (a^3 M_1 + 3 a^2 M_2 + 3 a M_3 + M_4).
+  // The code writes each bracket as a nested product in a = nu_low_over_thermal_width.
   const auto get_table_interval_integral = [&](const int table_interval) {
     const double sigma_bf_low = photoion_xs[table_interval];
     const double nu_low_over_thermal_width =
@@ -660,6 +686,8 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
     return integral;
   };
 
+  // Step 2: the integral of j over the whole range. boltzmann_factor_low is exp(-h * (nu_low - nu_threshold) / kT_e)
+  // of the table interval. It falls by the same factor from one table interval to the next.
   double emissivity_total = 0.;
   double boltzmann_factor_low = 1.;
   for (int table_interval = 0; table_interval < table_interval_count; table_interval++) {
@@ -672,7 +700,7 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
     return nu_threshold;
   }
 
-  // Find the table interval that holds the target, and the fraction of its emissivity integral below the target.
+  // Step 3: find the table interval that holds the target, and the fraction of its integral below the target.
   const double emissivity_target = cumulative_probability * emissivity_total;
   double emissivity_below = 0.;
   double integral_fraction = 0.;
@@ -702,7 +730,7 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
                                     : (photoion_xs[table_interval + 1] - sigma_bf_low) / table_step_over_thermal_width;
   const double nu_low_over_thermal_width =
       (nu_threshold / thermal_width) + (table_interval * table_step_over_thermal_width);
-  // coefficients of the polynomial q(t)
+  // the coefficients q_0 to q_4 of the polynomial q(t) = q_0 + q_1 t + ... + q_4 t^4 of this table interval
   const std::array<double, 5> emissivity_polynomial{
       sigma_bf_low * pow3(nu_low_over_thermal_width),
       (3. * sigma_bf_low * pow2(nu_low_over_thermal_width)) + (sigma_bf_slope * pow3(nu_low_over_thermal_width)),
@@ -711,20 +739,26 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
       sigma_bf_slope,
   };
 
-  // Find the thermal offset t that has the integral integral_target of q(t) * exp(-t) below it. Use a Halley
-  // iteration inside a bracket.
+  // Step 4: solve F(t) = integral_target for t, where F(t) is the integral of q(t') * exp(-t') from 0 to t.
+  // F rises from 0 to the integral of the table interval, so the solution is between 0 and the table step. The
+  // two limits thermal_offset_low and thermal_offset_high always have the solution between them.
   const double integral_target = integral_fraction * table_interval_integral;
   double thermal_offset_low = 0.;
   double thermal_offset_high = table_step_over_thermal_width;
-  // The first value is exact for a constant q, because table_step_moments[0] is 1 - exp(-table step). The lower
-  // limit of the argument keeps it finite.
+  // First value: for a constant q, F(t) is proportional to 1 - exp(-t), and the solution is
+  // t = -ln(1 - integral_fraction * (1 - exp(-s))). table_step_moments[0] is 1 - exp(-s). The lower limit of the
+  // argument keeps the logarithm finite.
   double thermal_offset = std::min(
       -std::log1p(std::max(-integral_fraction * table_step_moments[0], -1. + std::numeric_limits<double>::epsilon())),
       table_step_over_thermal_width);
-  // The value stays inside the bracket, and 50 bisections reduce the bracket to 1e-15 of the table step.
+  // Each iteration calculates F and its first two derivatives at the current t, and then takes a Halley step. This
+  // is a Newton step with a correction from the second derivative. Two iterations are usually sufficient. The
+  // maximum of 50 is a safety limit: 50 bisections reduce the distance of the two limits to 1e-15 of the table step.
   for (int iteration = 0; iteration < 50; iteration++) {
     const double exp_minus_thermal_offset = std::exp(-thermal_offset);
     const auto power_integrals = get_power_integrals(thermal_offset, exp_minus_thermal_offset);
+    // integral_below is F(t) = sum of q_n * g_n * t^(n + 1). polynomial_value is q(t), and polynomial_slope is
+    // dq/dt. The loop calculates all three as nested products.
     double integral_below = 0.;
     double polynomial_value = 0.;
     double polynomial_slope = 0.;
@@ -738,19 +772,20 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
     } else {
       thermal_offset_low = thermal_offset;
     }
-    // Bisect the bracket where the emissivity is zero or the next value is outside the bracket.
+    // Take the middle of the two limits where the emissivity is zero or where the step goes outside the limits.
     double thermal_offset_next = 0.5 * (thermal_offset_low + thermal_offset_high);
     if (polynomial_value > 0.) {
-      // The first derivative of the integral is q * exp(-t), and the second is (dq/dt - q) * exp(-t).
+      // dF/dt = q * exp(-t) and d2F/dt2 = (dq/dt - q) * exp(-t). The Newton step is (F - target) / (dF/dt). The
+      // Halley step is the Newton step divided by 1 - halley_correction, with
+      // halley_correction = (Newton step) * (d2F/dt2) / (2 * dF/dt).
       const double newton_step = (integral_below - integral_target) / (polynomial_value * exp_minus_thermal_offset);
-      // relative size of the second-order term of the integral at the Newton step
       const double halley_correction = 0.5 * newton_step * ((polynomial_slope / polynomial_value) - 1.);
-      // A Halley step is not valid where this term is large, e.g. near a zero of the emissivity. The limit of 0.5
-      // only selects the type of step. It does not change the converged value.
+      // The Halley step is not valid where halley_correction is large, e.g. near a zero of the emissivity. The
+      // limit of 0.5 only selects the type of step. It does not change the solution.
       const double step = (std::abs(halley_correction) < 0.5) ? newton_step / (1. - halley_correction) : newton_step;
       const double thermal_offset_after_step = thermal_offset - step;
       if (std::abs(step) <= 1e-5 * thermal_offset && std::abs(halley_correction) <= 1e-4) {
-        // The relative error after this Halley step is of the order of 1e-5 * halley_correction^2.
+        // Converged: the relative error after this Halley step is of the order of 1e-5 * halley_correction^2.
         thermal_offset = std::max(thermal_offset_low, std::min(thermal_offset_after_step, thermal_offset_high));
         break;
       }

@@ -92,6 +92,44 @@ cooling rate of each process of the cell, and it samples one of them. That proce
 radiation or into a macro atom. The cooling processes are the free-free emission, the free-bound emission, the
 collisional excitation, and the collisional ionisation.
 
+A free-bound emission makes an r-packet. Its frequency follows the energy-weighted emissivity of the continuum:
+
+$$
+j(\nu) \propto \sigma_\mathrm{bf}(\nu) \, \nu^3 \exp\left( -\frac{h (\nu - \nu_\mathrm{edge})}{k T_e} \right)
+$$
+
+$\sigma_\mathrm{bf}$ is the photoionisation cross section, and the range is the range of its table. The code takes a
+uniform random number $\xi$ in $[0, 1)$ and gives the frequency below which the integral of $j$ is $\xi$ times the
+integral over the range. The two methods differ in how they calculate this integral.
+
+- Without [FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL](options.md#freebound_nu_analytic_emissivity_integral), the
+  code divides the range into `NPHIXSPOINTS` equal frequency bins. It selects a bin with numerical integrals of $j$,
+  and it takes a uniform frequency inside the bin. The exponential has the frequency scale $k T_e / h$. Where a bin
+  is wider than this scale, most of the emission is at the lower end of the bin, and a uniform frequency gives a
+  mean photon energy that is too high.
+- With the option, the code uses the form of $j$ in one interval of the table. The cross section is linear between
+  two table points, or constant with [PHIXS_CLASSIC_NO_INTERPOLATION](options.md#phixs_classic_no_interpolation).
+  For an interval with the lower end $\nu_\mathrm{low}$, let $t = h (\nu - \nu_\mathrm{low}) / k T_e$ and
+  $a = h \nu_\mathrm{low} / k T_e$. Then:
+
+  $$
+  j \propto \exp\left( -\frac{h (\nu_\mathrm{low} - \nu_\mathrm{edge})}{k T_e} \right) q(t) \, e^{-t},
+  \qquad q(t) = \left( \sigma_\mathrm{low} + \sigma' t \right) (a + t)^3
+  $$
+
+  $\sigma_\mathrm{low}$ is the cross section at $\nu_\mathrm{low}$, and $\sigma'$ is its slope in $t$. $q$ is a
+  polynomial of degree 4, and each integral $\int_0^t t'^n e^{-t'} \, dt'$ is an elementary function, so the code
+  needs no numerical integral. It adds the integrals of the table intervals in order of frequency to find the
+  interval that holds $\xi$. Inside that interval, it solves
+
+  $$
+  \int_0^t q(t') \, e^{-t'} \, dt' = f \int_0^{t_\mathrm{step}} q(t') \, e^{-t'} \, dt'
+  $$
+
+  for $t$, where $f$ is the fraction of the integral of the interval that is below $\xi$, and $t_\mathrm{step}$ is
+  the table step. The solver is Halley's method, which is Newton's method with a correction from the second
+  derivative. The samples then follow $j$ at each $T_e$.
+
 - Options:
     - [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](options.md#rpkt_boundbound_thermalisation_probability) replaces
       the macro atom for an absorption in a line when it has a value (see
@@ -100,8 +138,7 @@ collisional excitation, and the collisional ionisation.
       r-packet directly from the thermal emission of the cell. The thermal balance has no term for this line
       thermalisation, so a nonzero value needs LTE timesteps only (`num_lte_timesteps` of `input.txt`).
     - [FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL](options.md#freebound_nu_analytic_emissivity_integral) selects
-      how the code samples the frequency of a free-bound emission. With it, the samples follow the emissivity at
-      each $T_e$. Without it, the frequency is uniform inside one of `NPHIXSPOINTS` equal frequency bins.
+      the method for the frequency of a free-bound emission (see above).
 - References: Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 and Lucy (2003), A&A, 403, 261-275,
   doi:10.1051/0004-6361:20030357.
 
