@@ -153,8 +153,8 @@ class InputFileStream : public std::istream {
   const auto working_folder = std::filesystem::current_path(current_path_error);
   fatal_crash("Could not open file '{}'. The search tried {} in the folder '{}'.{}", filename, searched_paths,
               working_folder.string(),
-              filename == "input.txt" ? " Without input.txt, sn3d and exspec read input-newrun.txt, but that file is "
-                                        "also absent."
+              filename == "input.txt" ? " sn3d and exspec read input-newrun.txt only if input.txt is absent. Thus both "
+                                        "files are absent, or the program cannot open input.txt."
                                       : "");
 }
 

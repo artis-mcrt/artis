@@ -946,12 +946,14 @@ void read_fissionproduct_data() {
     double num_neutrons = 0;
     int tablesize = 0;
     double q_fission_mev = 0.;
-    if (!get_noncommentline(ffission_products, line) ||
-        !(std::stringstream(line) >> num_neutrons >> tablesize >> q_fission_mev) || tablesize < 0) {
+    if (!get_noncommentline(ffission_products, line)) {
+      fatal_crash("fissionproducts_GEF_100keV.txt ends after the parent line of Z={} A={}", z_parent, a_parent);
+    }
+    if (!(std::stringstream(line) >> num_neutrons >> tablesize >> q_fission_mev) || tablesize < 0) {
       fatal_crash(
-          "fissionproducts_GEF_100keV.txt: the parent Z={} A={} needs a line with the neutron count, the table size, "
-          "and the Q value",
-          z_parent, a_parent);
+          "fissionproducts_GEF_100keV.txt: the parent Z={} A={} has the line '{}', but this line needs the neutron "
+          "count, a table size of zero or more, and the Q value",
+          z_parent, a_parent, line);
     }
     const int nucindex = get_nucindex_or_neg_one(z_parent, a_parent);
     const bool keep_table = (nucindex >= 0) && (nuclides[nucindex].branchprobs[DECAYTYPE_SPONTFISSION] > 0.);

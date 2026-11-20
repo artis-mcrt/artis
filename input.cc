@@ -212,8 +212,8 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - phixs_groundstate_index_in;
     if (upperlevel < 0) {
-      fatal_crash("{}: Z={} ionstage {} level {} has the target level {}, but the file numbers the levels from {}",
-                  phixs_filename, atomic_number, lower_ionstage, lowerlevel, upperlevel_in, phixs_groundstate_index_in);
+      fatal_crash("{}: Z={} ionstage {} level {} has a target level number below the first level number {}",
+                  phixs_filename, atomic_number, lower_ionstage, lowerlevel, phixs_groundstate_index_in);
     }
     assert_always(levelbuilders.nphixstargets[lowerionlower_uniquelevelindex] == 0 ||
                   levelbuilders.nphixstargets[lowerionlower_uniquelevelindex] == 1);
@@ -320,7 +320,7 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
         tmpallphixstargets[levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex]].levelindex != 0) {
       fatal_crash(
           "phixsdata.txt: Z={} ionstage {} level {} has a target other than the ground state of the upper ion. This "
-          "file format permits only the ground state as target",
+          "file format permits only the ground state as the target",
           atomic_number, lower_ionstage, lowerlevel);
     }
 
@@ -359,9 +359,10 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
       } else {
         if (nu < nugrid_in[0]) {
           fatal_crash(
-              "phixsdata.txt: the table of Z={} ionstage {} level {} starts {:g} Ry above the threshold, above the "
-              "first points of the interpolation. The table must start at the threshold, with the energy 0",
-              atomic_number, lower_ionstage, lowerlevel, (nugrid_in[0] - nu_edge) * H / (13.6 * EV));
+              "phixsdata.txt: the table of Z={} ionstage {} level {} starts {:g} Ry above the ionisation threshold "
+              "{:g} eV of the level. The table must start at the threshold with the energy 0. adata.txt must give "
+              "the level an energy below the ground level of the upper ion",
+              atomic_number, lower_ionstage, lowerlevel, (nugrid_in[0] - nu_edge) * H / (13.6 * EV), nu_edge * H / EV);
         }
         const auto index_above =
             static_cast<std::ptrdiff_t>(std::ranges::upper_bound(nugrid_in, nu) - nugrid_in.begin());
@@ -437,8 +438,12 @@ void read_phixs_file(const int phixs_file_version, const int phixs_groundstate_i
     printlnlog("using NPHIXSPOINTS = {} and NPHIXSNUINCREMENT = {:g} set in input.cc", globals::NPHIXSPOINTS,
                globals::NPHIXSNUINCREMENT);
   } else {
-    if (!(phixsfile >> globals::NPHIXSPOINTS >> globals::NPHIXSNUINCREMENT) || globals::NPHIXSPOINTS <= 0 ||
-        !(globals::NPHIXSNUINCREMENT > 0.)) {
+    if (!(phixsfile >> globals::NPHIXSPOINTS >> globals::NPHIXSNUINCREMENT)) {
+      fatal_crash(
+          "phixsdata_v2.txt must start with the point count NPHIXSPOINTS and the increment NPHIXSNUINCREMENT, with no "
+          "comment line before them, but the program cannot read these two numbers");
+    }
+    if (globals::NPHIXSPOINTS <= 0 || !(globals::NPHIXSNUINCREMENT > 0.)) {
       fatal_crash(
           "phixsdata_v2.txt must start with a positive point count NPHIXSPOINTS and a positive increment "
           "NPHIXSNUINCREMENT, but the values are {} and {:g}",
@@ -473,8 +478,8 @@ void read_phixs_file(const int phixs_file_version, const int phixs_groundstate_i
         upperionstage != lowerionstage + 1) {
       fatal_crash(
           "{} has the table header '{}'. A header needs Z > 0, lowerionstage >= 1, upperionstage = lowerionstage + 1, "
-          "and a positive point count",
-          phixs_filename, phixsline);
+          "and {} in the sixth column",
+          phixs_filename, phixsline, phixs_file_version == 1 ? "a positive point count" : "the threshold energy in eV");
     }
 
     const int element = get_elementindex(Z);
@@ -488,8 +493,8 @@ void read_phixs_file(const int phixs_file_version, const int phixs_groundstate_i
       const int lowerion = lowerionstage - get_ionstage(element, 0);
       const int lowerlevel = lowerlevel_in - phixs_groundstate_index_in;
       if (lowerlevel < 0) {
-        fatal_crash("{} has a table for Z={} ionstage {} level {}, but the file numbers the levels from {}",
-                    phixs_filename, Z, lowerionstage, lowerlevel_in, phixs_groundstate_index_in);
+        fatal_crash("{} has the table header '{}', but the level numbers must start at {}", phixs_filename, phixsline,
+                    phixs_groundstate_index_in);
       }
 
       // record the lowest level the file supplies a table for in each included ion, before any filtering on
@@ -536,7 +541,7 @@ void read_phixs_file(const int phixs_file_version, const int phixs_groundstate_i
       }
       if (!table_read_ok) {
         fatal_crash("{} ends or has an unreadable value in the table of Z={} ionstage {} level {}", phixs_filename, Z,
-                    lowerionstage, lowerlevel_in);
+                    lowerionstage, lowerlevel_in - phixs_groundstate_index_in);
       }
     }
   }
@@ -1150,7 +1155,7 @@ void read_autoion_data() {
             autoion_A) ||
           Z <= 0 || lowerionstage < 1 || upperionstage <= lowerionstage || lowerlevel_in < 0 || upperlevel_in < 0) {
         fatal_crash(
-            "autoion.txt has the line '{}'. A line needs Z > 0, an upper ion stage above the lower ion stage >= 1, "
+            "autoion.txt has the line '{}'. A line needs Z > 0, an upper ionstage above the lower ionstage >= 1, "
             "level numbers that are zero or positive, and the rate",
             autoionline);
       }

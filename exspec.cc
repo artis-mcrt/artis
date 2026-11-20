@@ -71,14 +71,17 @@ auto main(int argc, char* argv[]) -> int {
     fatal_crash("exspec runs with {} ranks but there are only {} packet files", globals::nprocs,
                 globals::nprocs_exspec);
   }
+  // each exspec rank reads a contiguous block of the packet files
+  const auto [firstfile, nfiles] = get_range_chunk(globals::nprocs_exspec, globals::nprocs, globals::my_rank);
+
   // the check comes before the long reads of the atomic data and the model
-  for (int sn3d_rank = 0; sn3d_rank < globals::nprocs_exspec; sn3d_rank++) {
-    const auto packetfilename = std::format("packets/packets{:02d}_{:04d}.out", 0, sn3d_rank);
-    if (!inputfile_exists(packetfilename)) {
+  for (auto sn3d_rank = firstfile; sn3d_rank < firstfile + nfiles; sn3d_rank++) {
+    const auto packet_filename = std::format("packets/packets{:02d}_{:04d}.out", 0, sn3d_rank);
+    if (!inputfile_exists(packet_filename)) {
       fatal_crash(
           "{} is absent. exspec reads one packet file for each of the {} sn3d ranks that nprocs_exspec in input.txt "
           "gives. sn3d writes the packet files at the end of the last requested timestep",
-          packetfilename, globals::nprocs_exspec);
+          packet_filename, globals::nprocs_exspec);
     }
   }
 
@@ -88,8 +91,6 @@ auto main(int argc, char* argv[]) -> int {
 
   setup_timesteps();
 
-  // each exspec rank reads a contiguous block of the packet files
-  const auto [firstfile, nfiles] = get_range_chunk(globals::nprocs_exspec, globals::nprocs, globals::my_rank);
   printlnlog("{} packet files, read by {} exspec ranks", globals::nprocs_exspec, globals::nprocs);
 
   // one vector for each packet file

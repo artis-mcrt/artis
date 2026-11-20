@@ -169,7 +169,7 @@ constexpr bool NLTE_USE_GTH_SOLVER;
 // No value keeps the statistical equilibrium and the steady-state thermal balance for the whole run. With a
 // value, the ion populations of each NLTE element and the electron temperature of each cell with a thermal
 // balance get a backward Euler term from the previous grid update. The excitation inside each ion stays in
-// statistical equilibrium.
+// statistical equilibrium. A value must be zero or positive.
 //
 // The solver stores the ion populations as fractions of the element population and rebuilds the previous nne
 // from these fractions and the current element densities. The expansion and the radioactive decay then add no
@@ -191,7 +191,7 @@ constexpr bool NLTE_USE_GTH_SOLVER;
 //
 // The "cooling:" line of the estimators file does not contain c_heatcapacity, because that file keeps its
 // format. The heating and the cooling of that file therefore do not balance with this option. The rank log
-// gives c_heatcapacity and the k-packet energy factor of each cell. A value must be zero or positive.
+// gives c_heatcapacity and the k-packet energy factor of each cell.
 constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP;
 
 // Reject an NLTE solution with one of these faults:

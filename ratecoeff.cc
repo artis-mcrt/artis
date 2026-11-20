@@ -298,7 +298,7 @@ void read_recombrate_file() {
   while (get_noncommentline(recombrate_file, line)) {
     if (!(std::stringstream(line) >> atomicnumber >> upperionstage >> tablerows) || tablerows < 0) {
       fatal_crash(
-          "recombrates.txt has the table header '{}', but a header needs Z, the upper ion stage, and a row count that "
+          "recombrates.txt has the table header '{}', but a header needs Z, the upper ionstage, and a row count that "
           "is zero or positive",
           line);
     }

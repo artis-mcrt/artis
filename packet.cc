@@ -209,8 +209,8 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
   std::getline(packets_file, line);  // read header line to make sure it matches
   if (line != get_packets_text_header()) {
     fatal_crash(
-        "{} has the header line '{}', but this build expects '{}'. The packet files and exspec must come from builds "
-        "with the same artisoptions.h",
+        "{} has the header line '{}', but this exspec expects '{}'. Build exspec from the same source version and "
+        "with the same artisoptions.h as the sn3d that wrote the packet files",
         filename, line, get_packets_text_header());
   }
 

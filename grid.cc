@@ -356,7 +356,7 @@ void set_modelinitnucmassfrac(const int modelgridindex, const int nucindex, floa
   }
 
   if (abund > 1.) {
-    fatal_crash("the mass fraction {:g} of Z={} A={} in cell {} is above 1", abund, decay::get_nuc_z(nucindex),
+    fatal_crash("the mass fraction {:.9g} of Z={} A={} in cell {} is above 1", abund, decay::get_nuc_z(nucindex),
                 decay::get_nuc_a(nucindex), modelgridindex);
   }
   const ptrdiff_t num_nuclides = decay::get_num_nuclides();
@@ -563,8 +563,9 @@ void allocate_nonemptymodelcells() {
   }
   if (nonempty_npts_model == 0) {
     fatal_crash(
-        "no model cell with matter maps onto the propagation grid. model.txt must have a positive density in "
-        "at least one cell");
+        "no model cell with matter maps onto the propagation grid. A model cell keeps its matter only with a positive "
+        "density in model.txt and with mass in an element of compositiondata.txt. A propagation cell gets the model "
+        "cell that holds the centre of the propagation cell");
   }
   printlnlog("There are {} modelgrid cells with associated propagation cells (nonempty_npts_model)",
              nonempty_npts_model);
