@@ -15,13 +15,14 @@ That dataset holds only iron, cobalt, and nickel. Section 8 shows the effect of 
 
 ## 1. Make the model folder
 
-Each simulation has its own model folder. Clone the source code into the subfolder `artis`, so that the options of
-section 4 belong to this simulation only:
+Each simulation has its own model folder. Run these commands in the clone of the Quickstart. The script makes the
+model folder and clones the branch `release` into its subfolder `artis`, so that the options of section 4 belong to
+this simulation only. The `git` command then checks out the commit of the Quickstart clone in place of `release`:
 
 ```sh
-mkdir ~/nebular_w7
+scripts/new-model-folder.sh ~/nebular_w7
+git -C ~/nebular_w7/artis checkout --detach "$(git rev-parse HEAD)"
 cd ~/nebular_w7
-git clone https://github.com/artis-mcrt/artis.git
 ```
 
 Copy the input files of the test into the model folder. Then download the atomic data of the test and unpack it:
@@ -281,3 +282,5 @@ time of 220 days is in that range, and it is after the timestep at which T_e of 
   timesteps set, and how you measure the cost of a run.
 - **The checks.** Examine each warning of `artistools check`. Make sure that T_e of each cell is between the limits
   and is stable at the times of the spectra that you use.
+
+Next: [Make your own model](ownmodel.md).
