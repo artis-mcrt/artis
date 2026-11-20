@@ -448,7 +448,7 @@ times_days = spec[0, 1:]  # the midpoint of each complete timestep
 nu_hz = spec[1:, 0]  # the middle frequency of each bin
 f_nu = spec[1:, 1:]  # F_nu [erg/s/cm^2/Hz] at 1 Mpc, with one column for each timestep
 
-lightcurve = np.loadtxt(read_output_lines("light_curve.out.zst"))
+lightcurve = np.loadtxt(read_output_lines("light_curve.out.zst"), ndmin=2)  # 2D also for one timestep
 lightcurve_times_days = lightcurve[:, 0]
 luminosity_rest_frame_lsun = lightcurve[:, 1]
 ```

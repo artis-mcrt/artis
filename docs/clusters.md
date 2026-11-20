@@ -14,12 +14,17 @@ The repository has two branches and a tag for each release:
   [stable](https://artis-mcrt.readthedocs.io/en/stable/) of this site describes the newest tag.
 
 Use the branch `release` for a production run, and read the version `stable` of this site. For the results of a
-paper, use one tag, so that a later change of `release` does not change the code of the model folder. After you make
-the model folder, run this command in it, with the tag of your choice:
+paper, use one tag, so that a later change of `release` does not change the code of the model folder. Run these
+commands in the new model folder, with the tag of your choice. Do this before you change `input.txt` and before you
+run `make`.
 
 ```sh
 git -C artis checkout v2026.11.9
+cp artis/scripts/input-template.txt input.txt
 ```
+
+The second command copies the template of the tag, because the lines of `input.txt` can change between versions. The
+tags before `v2026.11.9` have no template.
 
 The log of rank 0 of each job starts with the git version of the build. Record that version with the results:
 
