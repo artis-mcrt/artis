@@ -42,7 +42,8 @@ constexpr std::optional<double> TIMESTEP_SIZE_TRANSITION_TIME_DAYS;
 constexpr std::optional<GridType> GRID_TYPE_OVERRIDE;
 
 // The size of the 3D Cartesian grid for a 1D, a 2D, or a 3D spherical model. A 3D Cartesian model.txt sets the
-// size, and the code ignores these values.
+// size, and the code ignores these values. The three values must be equal and positive, because the code assumes
+// cubic cells.
 constexpr int CUBOID_NCOORDGRID_X;
 constexpr int CUBOID_NCOORDGRID_Y;
 constexpr int CUBOID_NCOORDGRID_Z;
@@ -171,7 +172,7 @@ constexpr bool NLTE_USE_GTH_SOLVER;
 // No value keeps the statistical equilibrium and the steady-state thermal balance for the whole run. With a
 // value, the ion populations of each NLTE element and the electron temperature of each cell with a thermal
 // balance get a backward Euler term from the previous grid update. The excitation inside each ion stays in
-// statistical equilibrium.
+// statistical equilibrium. A value must be zero or positive.
 //
 // The solver stores the ion populations as fractions of the element population and rebuilds the previous nne
 // from these fractions and the current element densities. The expansion and the radioactive decay then add no
@@ -211,13 +212,13 @@ constexpr bool STRICT_POPULATION_CHECKING;
 constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL;
 
 // The same ratio above which the solver logs a warning. This value has an effect only with
-// STRICT_POPULATION_CHECKING.
+// STRICT_POPULATION_CHECKING. It must be 1 or more, and below STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL.
 constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING;
 
 // After a failed NLTE solution of an element, remove the highest ion, or the lowest ion when the highest ion
 // cannot go, and solve again. An ion can go only when its ground population, each NLTE excited population, and its
 // superlevel population are each below this fraction of the element population. With no value, or when no ion can go,
-// the whole element falls back to LTE.
+// the whole element falls back to LTE. A value must be below 1e-4 (NLTE_SIGNIFICANT_ION_FRACTION in nltepop.h).
 constexpr std::optional<double> NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION;
 
 // Include the charge transfer reactions in the NLTE population solver. The published fits come from

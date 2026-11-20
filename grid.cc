@@ -259,7 +259,9 @@ void read_possible_yefile() {
   if (globals::rank_in_node == 0) {
     auto filein = istream_required("Ye.txt");
     int nlines_in = 0;
-    assert_always(static_cast<bool>(filein >> nlines_in));
+    if (!(filein >> nlines_in) || nlines_in < 0) {
+      fatal_crash("Ye.txt must start with the count of its cell lines, but the count is unreadable or negative");
+    }
 
     const int last_mgi = get_npts_model() - 1;
     int cells_set = 0;
@@ -267,7 +269,9 @@ void read_possible_yefile() {
     for (int n = 0; n < nlines_in; n++) {
       int cellnumberin = -1;
       float initelecfrac = 0.;
-      assert_always(static_cast<bool>(filein >> cellnumberin >> initelecfrac));
+      if (!(filein >> cellnumberin >> initelecfrac)) {
+        fatal_crash("Ye.txt ends or has an unreadable value after {} of its {} cell lines", n, nlines_in);
+      }
       // Ye.txt uses the same cell ids as model.txt. read_ejecta_model() detects the id of the first
       // cell (0 or 1) and stores it in first_input_cellid before this function runs.
       const int mgi = cellnumberin - first_input_cellid;
@@ -404,8 +408,10 @@ void set_ffegrp(const int modelgridindex, float x) {
     x = 0.;
   }
 
-  assert_always(x >= 0);
-  assert_always(x <= 1.001);
+  if (x > 1.001) {
+    fatal_crash("model.txt gives the Fe-group mass fraction {:g} in cell {}, but a mass fraction must be 1 or less", x,
+                modelgridindex);
+  }
   modelgrid_input[modelgridindex].ffegrp = x;
 }
 
@@ -430,8 +436,10 @@ void set_modelinitnucmassfrac(const int modelgridindex, const int nucindex, floa
     abund = 0.;
   }
 
-  assert_always(abund >= 0.);
-  assert_always(abund <= 1.);
+  if (abund > 1.) {
+    fatal_crash("the mass fraction {:.9g} of Z={} A={} in cell {} is above 1", abund, decay::get_nuc_z(nucindex),
+                decay::get_nuc_a(nucindex), modelgridindex);
+  }
   const ptrdiff_t num_nuclides = decay::get_num_nuclides();
 
   initnucmassfrac_allcells[(modelgridindex * num_nuclides) + nucindex] = abund;
@@ -635,7 +643,12 @@ void allocate_nonemptymodelcells() {
       nonempty_npts_model++;
     }
   }
-  assert_always(nonempty_npts_model > 0);
+  if (nonempty_npts_model == 0) {
+    fatal_crash(
+        "no model cell with matter maps onto the propagation grid. A model cell keeps its matter only with a positive "
+        "density in model.txt and with mass in an element of compositiondata.txt. A propagation cell gets the model "
+        "cell that holds the centre of the propagation cell");
+  }
   printlnlog("There are {} modelgrid cells with associated propagation cells (nonempty_npts_model)",
              nonempty_npts_model);
 
@@ -907,7 +920,12 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
         // changes the nuclide mass fractions but not the elemental ones, so this cannot be tested afterwards.
         // a small negative remainder is allowed for roundoff error
         const double tracked_isotope_massfrac_sum = tracked_isotope_massfrac_sum_by_atomic_number[atomic_number];
-        assert_always((elemmassfrac - tracked_isotope_massfrac_sum) >= -1e-2);
+        if ((elemmassfrac - tracked_isotope_massfrac_sum) < -1e-2) {
+          fatal_crash(
+              "{} cell {} gives the mass fraction {:g} for Z={}, but the nuclide columns of model.txt give this "
+              "element the larger mass fraction {:g}",
+              massfrac_source, mgi, elemmassfrac, atomic_number, tracked_isotope_massfrac_sum);
+        }
 
         elem_massfracs_of_mgi[(static_cast<size_t>(mgi) * nelements) + element] = elemmassfrac;
         has_mass_in_composition_elements =
@@ -995,7 +1013,10 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
           }
 
           if (abund_in < std::numeric_limits<float>::min()) {
-            assert_always(abund_in > -1e-6);
+            if (!(abund_in > -1e-6)) {
+              fatal_crash("abundances.txt cell {} gives the negative mass fraction {:g} for Z={}", mgi, abund_in,
+                          elem_z_index + 1);
+            }
             abund_in = 0.;
           }
           elem_massfracs_in[elem_z_index] = static_cast<float>(abund_in);
@@ -1179,7 +1200,6 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
     }
 
     if (nucindexlist[i] >= 0) {
-      assert_testmodeonly(valuein <= 1.);
       set_modelinitnucmassfrac(mgi, nucindexlist[i], static_cast<float>(valuein));
     } else if (colnames[i].starts_with("X_") && colnames[i].ends_with(otherstable_suffix)) {
       // the columns have the sequence of model_otherstable_atomic_numbers
@@ -1199,7 +1219,10 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
     } else if (colnames[i] == "q") {
       // The q column holds the trapped radiation energy per mass at t_model. It already includes the adiabatic
       // losses before t_model. The energy of a comoving mass element falls as 1/t, so the value is scaled to tmin.
-      assert_always(valuein >= 0.);
+      if (!(valuein >= 0.)) {
+        fatal_crash("model.txt cell {} has the value {:g} in the column q, but the value must be zero or positive", mgi,
+                    valuein);
+      }
       set_initenergyq(mgi, static_cast<float>(valuein * t_model / globals::tmin));
     } else if (colnames[i] == "tracercount") {
       ;
@@ -1645,18 +1668,21 @@ void setup_grid_cartesian_3d() {
   require_subluminal_corners(sqrt(3 * pow2(globals::vmax)));
 
   // Set grid size for uniform xyz grid
-  if (get_modelgridtype() == GridType::CARTESIAN3D) {
-    // if we used in a 3D ejecta model, the propagation grid will match the input grid exactly
-    assert_always(ncoordgrid[0] > 0);
-    assert_always(ncoordgrid[1] > 0);
-    assert_always(ncoordgrid[2] > 0);
-  } else {
+  // a 3D ejecta model gives the propagation grid its own cell counts
+  if (get_modelgridtype() != GridType::CARTESIAN3D) {
     ncoordgrid = {CUBOID_NCOORDGRID_X, CUBOID_NCOORDGRID_Y, CUBOID_NCOORDGRID_Z};
   }
 
   // artis assumes in some places that the cells are cubes, not cuboids
-  assert_always(ncoordgrid[0] == ncoordgrid[1]);
-  assert_always(ncoordgrid[0] == ncoordgrid[2]);
+  if (ncoordgrid[0] <= 0 || ncoordgrid[0] != ncoordgrid[1] || ncoordgrid[0] != ncoordgrid[2]) {
+    fatal_crash(
+        "the 3D propagation grid has {} x {} x {} cells, but the three counts must be equal and positive. The counts "
+        "come from {}",
+        ncoordgrid[0], ncoordgrid[1], ncoordgrid[2],
+        get_modelgridtype() == GridType::CARTESIAN3D ? "model.txt"
+                                                     : "CUBOID_NCOORDGRID_X, CUBOID_NCOORDGRID_Y, and "
+                                                       "CUBOID_NCOORDGRID_Z in artisoptions.h");
+  }
 
   ngrid = static_cast<ptrdiff_t>(ncoordgrid[0]) * ncoordgrid[1] * ncoordgrid[2];
   reserve_resize(coord_pos_min_tmin[0], ncoordgrid[0]);
@@ -2808,7 +2834,9 @@ void read_ejecta_model() {
     detected_model_type = read_model_keyword_header(fmodel);
   } else {
     if (lineiscommentonly(line)) {
-      assert_always(get_noncommentline(fmodel.file, line));
+      if (!get_noncommentline(fmodel.file, line)) {
+        fatal_crash("model.txt holds only comment lines. Its first line with a value must give the cell count");
+      }
       firstword.clear();
       std::istringstream{line} >> firstword;
     }
@@ -2834,7 +2862,9 @@ void read_ejecta_model() {
 
     // Now read the time (in days) at which the model is specified.
     double t_model_days{NAN};
-    assert_always(get_noncommentline(fmodel.file, line));
+    if (!get_noncommentline(fmodel.file, line)) {
+      fatal_crash("model.txt ends after the cell count, before the line of the snapshot time");
+    }
     std::istringstream{line} >> t_model_days;
     // a failed extraction stores zero, which would zero all densities via the (t_model / tmin)^3 scaling
     if (!std::isfinite(t_model_days) || t_model_days <= 0.) {
@@ -3143,7 +3173,9 @@ void read_ejecta_model() {
   printlnlog("npts_model: {}", get_npts_model());
   globals::rmax = globals::vmax * globals::tmin;
   printlnlog("vmax {:g} [cm/s] ({:.2f}c)", globals::vmax, globals::vmax / CLIGHT);
-  assert_always(globals::vmax < CLIGHT);
+  if (!(globals::vmax < CLIGHT)) {
+    fatal_crash("model.txt gives vmax = {:g} cm/s, but vmax must be below the speed of light", globals::vmax);
+  }
   printlnlog("tmin {:g} [s] = {:.2f} [d]", globals::tmin, globals::tmin / DAY);
   printlnlog("rmax {:g} [cm] (at t=tmin)", globals::rmax);
 
@@ -3309,10 +3341,8 @@ void init_grid() {
 
     map_modeltogrid_direct();
   } else if (get_modelgridtype() == GridType::SPHERICAL1D) {
-    assert_always(prop_gridtype == GridType::CARTESIAN3D);
     map_1dmodelto3dgrid();
   } else if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
-    assert_always(prop_gridtype == GridType::CARTESIAN3D);
     map_2dmodelto3dgrid();
   } else if (has_spherical_angle_axes(get_modelgridtype())) {
     assert_always(prop_gridtype == GridType::CARTESIAN3D);
