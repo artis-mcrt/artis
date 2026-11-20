@@ -40,12 +40,17 @@ help:
 
 ifneq ($(MAKECMDGOALS),help)
 
-# make ignores an unknown variable, so a misspelt option, e.g. TESTMOD=ON, would give a build without the option
+# make ignores an unknown variable. Without this check, the incorrect name TESTMOD=ON gives a build without TESTMODE
 MAKE_OPTION_NAMES := TESTMODE OPTIMIZE FASTMATH REPRODUCIBLE OPENMP STDPAR GPU GPUARCH GCCTOOLCHAIN ZSTD MAX_NODE_SIZE PGO
-COMMAND_LINE_VARIABLES := $(foreach variable,$(.VARIABLES),$(if $(findstring command line,$(origin $(variable))),$(variable)))
-UNKNOWN_COMMAND_LINE_VARIABLES := $(filter-out $(MAKE_OPTION_NAMES) CXX CXXFLAGS CPPFLAGS LDFLAGS,$(COMMAND_LINE_VARIABLES))
-ifneq ($(UNKNOWN_COMMAND_LINE_VARIABLES),)
-  $(error make has no option $(UNKNOWN_COMMAND_LINE_VARIABLES). 'make help' lists the options)
+# a sub-make gets the command-line variables of its parent make, so only the top-level make checks the names.
+# bash-completion sets __BASH_MAKE_COMPLETION__ when it reads the targets.
+ifeq ($(MAKELEVEL),0)
+  COMMAND_LINE_VARIABLES := $(foreach variable,$(.VARIABLES),$(if $(findstring command line,$(origin $(variable))),$(variable)))
+  UNKNOWN_COMMAND_LINE_VARIABLES := $(filter-out $(MAKE_OPTION_NAMES) CXX CXXFLAGS CPPFLAGS LDFLAGS __BASH_MAKE_COMPLETION__,\
+    $(COMMAND_LINE_VARIABLES))
+  ifneq ($(UNKNOWN_COMMAND_LINE_VARIABLES),)
+    $(error make has no option $(UNKNOWN_COMMAND_LINE_VARIABLES). 'make help' lists the options. Use 'export' for a variable of another program, e.g. OMPI_CXX)
+  endif
 endif
 
 # artisoptions.h is gitignored and must be supplied (normally as a symlink to a preset). Check up front
@@ -58,16 +63,15 @@ ifneq ($(BUILD_GOALS),)
   endif
 endif
 
-$(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
-
 # each option is exactly ON, OFF, or empty. The strip removes the spaces around a value, because the ifeq tests
 # below compare the exact text.
 $(foreach option,TESTMODE REPRODUCIBLE GPU OPENMP STDPAR FASTMATH OPTIMIZE ZSTD,\
   $(eval override $(option) := $(strip $($(option))))\
   $(if $(or $(filter-out ON OFF,$($(option))),$(filter-out 0 1,$(words $($(option))))),\
-    $(error bad value '$($(option))' for $(option) option. Should be ON or OFF)))
+    $(error The value '$($(option))' of $(option) is incorrect. Set $(option) to ON or OFF)))
 
 CXX := mpicxx
+$(info $(CXX) version: $(shell $(CXX) --showme:version 2> /dev/null))
 COMPILER_VERSION := $(shell $(CXX) --version 2> /dev/null)
 ifneq ($(BUILD_GOALS),)
   ifeq ($(strip $(COMPILER_VERSION)),)
@@ -99,13 +103,13 @@ else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	ifeq '' '$(findstring Apple,$(COMPILER_VERSION))'
 		# Use lld only when it can link a trivial program. An older lld does not know every target that a
 		# new macOS SDK lists in its TAPI files, and the link then fails with "unknown target".
-		ifeq ($(shell echo 'int main(){}' | mpicxx -fuse-ld=lld -x c++ - -o /dev/null >/dev/null 2>&1 && echo true), true)
+		ifeq ($(shell echo 'int main(){}' | $(CXX) -fuse-ld=lld -x c++ - -o /dev/null >/dev/null 2>&1 && echo true), true)
 			LDFLAGS += -fuse-ld=lld
 		endif
 	endif
 
 define GET_ARCH_CMD
-	mpicxx $(ARCH_FLAGS) -### -c -x c++ /dev/null 2>&1 \
+	$(CXX) $(ARCH_FLAGS) -### -c -x c++ /dev/null 2>&1 \
 	| tr ' ' '\n' \
 	| awk '/-target-cpu/ {getline; gsub(/"/,""); print; exit}'
 endef
@@ -117,7 +121,7 @@ else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPI
 	MIN_GCC_VERSION := 14
 	ifeq ($(shell expr $(firstword $(subst ., ,$(COMPILER_VERSION_NUMBER))) \< $(MIN_GCC_VERSION)),1)
 		ifneq ($(BUILD_GOALS),)
-$(error gcc $(COMPILER_VERSION_NUMBER) is older than the minimum version $(MIN_GCC_VERSION). Load a newer gcc. With Open MPI, you can also set OMPI_CXX to a newer g++)
+$(error gcc $(COMPILER_VERSION_NUMBER) is older than the minimum version $(MIN_GCC_VERSION). Load a newer gcc. With Open MPI, you can also export OMPI_CXX with the name of a newer g++)
 		endif
 	endif
 	CXXFLAGS += -Wno-psabi -Wno-interference-size
@@ -287,7 +291,7 @@ $(shell rm -f $(ZSTD_PROBE_SRC) $(ZSTD_PROBE_SRC).out)
 		BUILD_DIR := $(BUILD_DIR)_zstd
 $(info libzstd found: the programs read .zst input files and write .zst output files)
 	else ifeq ($(ZSTD),ON)
-    $(error ZSTD=ON, but the probe does not find libzstd 1.4.0 or later. Install the development package of zstd, or set PKG_CONFIG_PATH)
+    $(error ZSTD=ON, but the probe does not find libzstd 1.4.0 or later. Install the development package of zstd, or export PKG_CONFIG_PATH)
 	else
 $(info libzstd not found: the programs read and write plain files only. Set ZSTD=OFF to skip the probe)
 	endif
