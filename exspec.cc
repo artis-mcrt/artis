@@ -24,6 +24,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "mpi_logging.h"
 #include "packet.h"
 #include "sn3d.h"
@@ -62,10 +63,30 @@ auto main(int argc, char* argv[]) -> int {
   read_parameterfile({});
 
   // nprocs_exspec is the number of packet files, one for each sn3d rank
-  assert_always(globals::nprocs_exspec > 0);
+  if (globals::nprocs_exspec <= 0) {
+    fatal_crash("input.txt gives nprocs_exspec = {}, but it must be the positive count of the packet files",
+                globals::nprocs_exspec);
+  }
   if (globals::nprocs > globals::nprocs_exspec) {
     fatal_crash("exspec runs with {} ranks but there are only {} packet files", globals::nprocs,
                 globals::nprocs_exspec);
+  }
+  // each exspec rank reads a contiguous block of the packet files
+  const auto [firstfile, nfiles] = get_range_chunk(globals::nprocs_exspec, globals::nprocs, globals::my_rank);
+
+  // the check comes before the long reads of the atomic data and the model
+  for (auto sn3d_rank = firstfile; sn3d_rank < firstfile + nfiles; sn3d_rank++) {
+    const auto packet_filename = std::format("packets/packets{:02d}_{:04d}.out", 0, sn3d_rank);
+    if (!inputfile_exists(packet_filename)) {
+      fatal_crash(
+          "{} is absent. exspec reads one packet file for each of the {} sn3d ranks that nprocs_exspec in input.txt "
+          "gives. sn3d writes the packet files at the end of the last requested timestep",
+          packet_filename, globals::nprocs_exspec);
+    }
+#ifndef USE_ZSTD
+    // a build without libzstd stops here on a .zst packet file
+    [[maybe_unused]] const auto packet_file = istream_required(packet_filename);
+#endif
   }
 
   read_atomicdata();
@@ -74,8 +95,6 @@ auto main(int argc, char* argv[]) -> int {
 
   setup_timesteps();
 
-  // each exspec rank reads a contiguous block of the packet files
-  const auto [firstfile, nfiles] = get_range_chunk(globals::nprocs_exspec, globals::nprocs, globals::my_rank);
   printlnlog("{} packet files, read by {} exspec ranks", globals::nprocs_exspec, globals::nprocs);
 
   // one vector for each packet file
