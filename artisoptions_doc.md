@@ -443,8 +443,9 @@ constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 //   the emissivity from the numerical integrator, and takes a uniform frequency inside the bin. Where a bin is
 //   wider than k T_e / h, the emissivity falls steeply inside the bin, and the mean photon energy is then too high.
 // - true: sn3d selects an interval of the table with the analytic integral of the emissivity over each interval,
-//   and inverts the same integral inside the interval with a Halley iteration. The samples then follow the emissivity
-//   at each T_e.
+//   and inverts the same integral inside the interval. The integral is analytic because the cross section is
+//   linear between two table points, or constant with PHIXS_CLASSIC_NO_INTERPOLATION. The samples then follow the
+//   emissivity at each T_e.
 constexpr bool FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL;
 
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering

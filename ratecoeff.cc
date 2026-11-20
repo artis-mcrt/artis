@@ -580,7 +580,7 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
   const double thermal_width = T_e / HOVERKB;
   const double nu_table_step = nu_threshold * globals::NPHIXSNUINCREMENT;
   const double table_step_over_thermal_width = nu_table_step / thermal_width;
-  const double exp_minus_table_step = std::exp(-table_step_over_thermal_width);
+  const double boltzmann_factor_table_step = std::exp(-table_step_over_thermal_width);
   // nearest integer, because nvc++ has no std::lround for a device
   const int table_interval_count =
       static_cast<int>(std::floor(((last_phixs_nuovernuedge - 1.) / globals::NPHIXSNUINCREMENT) + 0.5));
@@ -602,7 +602,7 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
         power_integrals[power - 1] = ((thermal_offset * power_integrals[power]) + exp_minus_thermal_offset) / power;
       }
     } else {
-      power_integrals[0] = -std::expm1(-thermal_offset) / thermal_offset;
+      power_integrals[0] = (1. - exp_minus_thermal_offset) / thermal_offset;
       for (int power = 1; power <= 4; power++) {
         power_integrals[power] = ((power * power_integrals[power - 1]) - exp_minus_thermal_offset) / thermal_offset;
       }
@@ -611,7 +611,7 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
   };
 
   // Integrals of t^power * exp(-t) over one table step. All table intervals have the same step.
-  auto table_step_moments = get_power_integrals(table_step_over_thermal_width, exp_minus_table_step);
+  auto table_step_moments = get_power_integrals(table_step_over_thermal_width, boltzmann_factor_table_step);
   double table_step_to_power = 1.;
   for (auto& table_step_moment : table_step_moments) {
     table_step_to_power *= table_step_over_thermal_width;
@@ -648,7 +648,7 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
   double boltzmann_factor_low = 1.;
   for (int table_interval = 0; table_interval < table_interval_count; table_interval++) {
     emissivity_total += boltzmann_factor_low * get_table_interval_integral(table_interval);
-    boltzmann_factor_low *= exp_minus_table_step;
+    boltzmann_factor_low *= boltzmann_factor_table_step;
   }
   assert_testmodeonly(std::isfinite(emissivity_total));
   assert_testmodeonly(emissivity_total > 0.);
@@ -660,20 +660,23 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
   const double emissivity_target = cumulative_probability * emissivity_total;
   double emissivity_below = 0.;
   double integral_fraction = 0.;
+  double table_interval_integral = 0.;
   boltzmann_factor_low = 1.;
   int table_interval = 0;
   for (; table_interval < table_interval_count; table_interval++) {
-    const double emissivity_integral = boltzmann_factor_low * get_table_interval_integral(table_interval);
+    table_interval_integral = get_table_interval_integral(table_interval);
+    const double emissivity_integral = boltzmann_factor_low * table_interval_integral;
     if (emissivity_below + emissivity_integral > emissivity_target) {
       integral_fraction = std::min((emissivity_target - emissivity_below) / emissivity_integral, 1.);
       break;
     }
     emissivity_below += emissivity_integral;
-    boltzmann_factor_low *= exp_minus_table_step;
+    boltzmann_factor_low *= boltzmann_factor_table_step;
   }
 
   const double nu_low = nu_threshold + (table_interval * nu_table_step);
-  if (table_interval == table_interval_count || !(integral_fraction > 0.)) {
+  // The fraction is zero also when no table interval holds the target. nu_low is then the upper end of the table.
+  if (!(integral_fraction > 0.)) {
     return nu_low;
   }
 
@@ -694,13 +697,15 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
 
   // Find the thermal offset t that has the integral integral_target of q(t) * exp(-t) below it. Use a Halley
   // iteration inside a bracket.
-  const double integral_target = integral_fraction * get_table_interval_integral(table_interval);
+  const double integral_target = integral_fraction * table_interval_integral;
   double thermal_offset_low = 0.;
   double thermal_offset_high = table_step_over_thermal_width;
-  // The first value is exact for a constant q. The lower limit of the argument keeps it finite.
-  double thermal_offset = std::min(-std::log1p(std::max(integral_fraction * std::expm1(-table_step_over_thermal_width),
-                                                        -1. + std::numeric_limits<double>::epsilon())),
-                                   table_step_over_thermal_width);
+  // The first value is exact for a constant q, because table_step_moments[0] is 1 - exp(-table step). The lower
+  // limit of the argument keeps it finite.
+  double thermal_offset = std::min(
+      -std::log1p(std::max(-integral_fraction * table_step_moments[0], -1. + std::numeric_limits<double>::epsilon())),
+      table_step_over_thermal_width);
+  // The value stays inside the bracket, and 50 bisections reduce the bracket to 1e-15 of the table step.
   for (int iteration = 0; iteration < 50; iteration++) {
     const double exp_minus_thermal_offset = std::exp(-thermal_offset);
     const auto power_integrals = get_power_integrals(thermal_offset, exp_minus_thermal_offset);
@@ -724,15 +729,17 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
       const double newton_step = (integral_below - integral_target) / (polynomial_value * exp_minus_thermal_offset);
       // relative size of the second-order term of the integral at the Newton step
       const double halley_correction = 0.5 * newton_step * ((polynomial_slope / polynomial_value) - 1.);
-      // A Halley step is not valid where this term is large, e.g. near a zero of the emissivity.
+      // A Halley step is not valid where this term is large, e.g. near a zero of the emissivity. The limit of 0.5
+      // only selects the type of step. It does not change the converged value.
       const double step = (std::abs(halley_correction) < 0.5) ? newton_step / (1. - halley_correction) : newton_step;
+      const double thermal_offset_after_step = thermal_offset - step;
       if (std::abs(step) <= 1e-5 * thermal_offset && std::abs(halley_correction) <= 1e-4) {
         // The relative error after this Halley step is of the order of 1e-5 * halley_correction^2.
-        thermal_offset = std::max(thermal_offset_low, std::min(thermal_offset - step, thermal_offset_high));
+        thermal_offset = std::max(thermal_offset_low, std::min(thermal_offset_after_step, thermal_offset_high));
         break;
       }
-      if (thermal_offset - step > thermal_offset_low && thermal_offset - step < thermal_offset_high) {
-        thermal_offset_next = thermal_offset - step;
+      if (thermal_offset_after_step > thermal_offset_low && thermal_offset_after_step < thermal_offset_high) {
+        thermal_offset_next = thermal_offset_after_step;
       }
     }
     thermal_offset = thermal_offset_next;
