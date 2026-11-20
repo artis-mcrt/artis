@@ -9,13 +9,17 @@ and the inner shells hold Ni56. It is a test of the method and not a model of a 
 
 ## 1. Make the model folder
 
-Run this command in a clone of the repository, and go to the new folder. The script clones the branch `release`
-into the subfolder `artis`, so that the options of section 4 belong to this model only. Then download the atomic
+Run these commands in a clone of the repository. The script makes the model folder and clones the branch `release`
+into its subfolder `artis`, so that the options of section 4 belong to this model only. The `git` command then
+checks out the commit of your clone in place of `release`. The `cp` command copies the template of `input.txt` of
+that commit, because the lines of `input.txt` can change between versions. The last two commands download the atomic
 data of the tests and unpack it:
 
 ```sh
 scripts/new-model-folder.sh ~/ownmodel
+git -C ~/ownmodel/artis checkout --detach "$(git rev-parse HEAD)"
 cd ~/ownmodel
+cp artis/scripts/input-template.txt input.txt
 curl -fLO "https://github.com/artis-mcrt/artis/releases/download/$(cat artis/tests/atomic_data_release.txt)/atomicdata_feconi.tar.xz"
 tar -xf atomicdata_feconi.tar.xz
 ```
