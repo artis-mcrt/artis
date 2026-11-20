@@ -49,7 +49,7 @@ reproducible results, and the portability to GPUs.
   it finds more than a local build. A pull request from a fork gets no automatic run.
 - Say in the commit message and in the pull request when you expect the numerical results to change, and name the
   tests that change. The checksums must stay the same for every other change.
-- After an intended change of the results, start the `updatechecksums.yml` workflow. It runs from `main` and takes
+- After an intended change of the results, or after you add a test, start the `updatechecksums.yml` workflow. It runs from `main` and takes
   your branch as an input, so give no `--ref`:
 
   ```sh
@@ -57,7 +57,8 @@ reproducible results, and the portability to GPUs.
   ```
 
   The workflow needs write access to the repository, and the branch must be in `artis-mcrt/artis`. Ask a maintainer
-  when you have neither.
+  when you have neither. [Testing](https://artis-mcrt.readthedocs.io/en/latest/testing.html#new-reference-checksums)
+  gives the checks before and after the workflow.
 - If your pull request changes `docs/` or `artisoptions_doc.md`, start its text with this line and put the number of
   the pull request in both places. Read the Docs builds this preview for each pull request.
 

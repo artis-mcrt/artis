@@ -9,12 +9,12 @@ triangular solve of the Spencer-Fano matrix. Build and run them:
 make unittests && ./unittests
 ```
 
-CI runs them for the classic and the {term}`NLTE` nebular {term}`presets <preset>`. The harness is hand-written, so there is no gtest and no
-catch.
+Continuous integration (CI) runs them for the classic and the {term}`NLTE` nebular {term}`presets <preset>`. The
+harness is hand-written, so there is no gtest and no catch.
 
 ## The end-to-end tests
 
-The `tests` folder holds eleven small end-to-end test models. `tests/runtest.sh` runs one of them:
+The `tests` folder holds small end-to-end test models. `tests/runtest.sh` runs one of them:
 
 ```sh
 tests/runtest.sh kilonova_1d
@@ -85,3 +85,72 @@ Once each week, a separate workflow builds the site with the `linkcheck` builder
 A change that must not alter the numerical results has to give identical checksums. For such a change, a mismatch is an
 error in the change. A change that alters the results for a good reason needs new reference checksums, which the
 "Update checksums" workflow writes.
+
+## New reference checksums
+
+Start the "Update checksums" workflow (`.github/workflows/updatechecksums.yml`) after a change that alters the results
+for a good reason. Also start it after you add a test. The checksum steps of a new test compare nothing and give only a
+warning, so CI passes. In all other cases, if each test of CI passes, the reference checksums are correct, and the
+workflow is not necessary. The workflow needs write access to the repository, and the branch must be in
+`artis-mcrt/artis`.
+
+1. Wait until the CI run of the head commit of the branch is complete.
+2. Make sure that each failed test job failed only at a checksum step, with no crash and no failed assertion.
+3. Make sure that only the tests that the change must affect have different checksums.
+4. Start the workflow with the branch as the input. With gh 2.87.0 or later, the first command prints the URL of the new
+   run, and the URL ends with the run ID. With an older gh, `gh run list --workflow updatechecksums.yml` shows the run
+   ID. The second command waits for the run, and it fails if the run fails.
+
+   ```sh
+   gh workflow run updatechecksums.yml -f branch=<branch>
+   gh run watch <run ID> --exit-status
+   ```
+
+5. If the run fails, read its log and correct the cause.
+6. Read the log of the run. Make sure that it selected the artifact of the head commit.
+7. Make sure that the CI run of the new commit passes.
+8. Pull the new commit before your next push to the branch.
+
+The workflow gets a token with write access, so it runs only from `main`, and the first command needs no `--ref`. The
+workflow takes the checksums from the CI artifact of the nearest commit in the history of the branch. If these
+checksums are different from the reference checksums, it pushes a commit with them. A failed step of a test job, e.g. a
+crash, makes the artifact incomplete. The workflow then takes an older commit and gives only a warning. An older
+commit is correct only if the later commits do not change the results.
+
+## A new end-to-end test
+
+A new test needs these parts:
+
+- a setup script `tests/setup_<name>.sh`;
+- a folder `tests/<name>_inputfiles/` with the input files of the model, e.g. `input-newrun.txt` and
+  `input-resume.txt`, or with only the files that are different from the folder of another test;
+- the entry `<name>` in the `testname` matrix of `.github/workflows/ci.yml`;
+- the atomic data archive in the release that `tests/atomic_data_release.txt` names;
+- a row in the table of the tests on this page, if no row names the test.
+
+The setup script does these steps:
+
+1. It gets the atomic data archive with `getatomicdata`.
+2. It makes the model folder `tests/<name>_testrun`.
+3. In the model folder, it extracts the archive and copies the input files.
+4. It makes the symlink `artis` to the repository folder. `sn3d` finds the files of `data/` through this symlink.
+5. It copies a preset from `artis/` to `artisoptions.h`.
+6. It changes some options with `setoption`.
+
+`tests/setupfuncs.sh` holds `getatomicdata` and `setoption`. The setup script of a variant first copies the input
+folder of the other test. Then it copies its own input folder with `rsync --ignore-times`. The input folder must hold
+at least one file. Git keeps no empty folder.
+
+`ci.yml` keeps each archive in a cache. Each cache step selects the tests with an `if` condition on their names. The
+step of `atomicdata_feconi.tar.xz` takes each name that the other steps do not select. Make sure that these conditions
+give the new test the cache of its archive. A new archive also needs its own cache step.
+
+The plot steps of `ci.yml` also select a time from the start of the test name, e.g. `-t 200` for `nebular`. artistools
+stops with an error if this time is outside the valid time range of the test. Make sure that the time of each plot
+step is in the valid time range of the new test.
+
+`tests/runtest.sh` finds the test from its setup script. Commit the test with no reference checksums. A checksum step
+without a reference file compares nothing and gives a warning. After the first complete CI run, the "Update checksums"
+workflow writes the reference checksums.
+
+A new test must run in CI in about ten minutes or less. Every push runs the full matrix.
