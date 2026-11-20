@@ -779,6 +779,34 @@ void test_continuum_quantiles_zero_at_table_point() {
   }
 }
 
+void test_continuum_quantiles_range_below_last_table_point() {
+  std::println("free-bound quantiles of a table with points above the upper limit of the range...");
+  // the table of phixsdata.txt without phixsdata_v2.txt: the range ends at table point 90 of 100
+  globals::NPHIXSPOINTS = 100;
+  globals::NPHIXSNUINCREMENT = 0.1;
+  last_phixs_nuovernuedge = 10.;
+  // A sampler that uses the points above the range gives almost all samples there.
+  std::vector<float> photoion_xs(globals::NPHIXSPOINTS, 1e-18F);
+  std::fill(photoion_xs.begin() + 91, photoion_xs.end(), 1e-6F);
+  constexpr double nu_threshold = 13.6 * EV / H;
+  constexpr float T_e = 100000.F;
+  const double delta_nu = nu_threshold * globals::NPHIXSNUINCREMENT / 1000.;
+  const double emissivity_total = get_emissivity_integral_below(photoion_xs, nu_threshold, T_e, delta_nu,
+                                                                nu_threshold * (last_phixs_nuovernuedge - 1.));
+  for (const double cumulative_probability : {0.001, 0.5, 0.999, 1. - 1e-9, 1.}) {
+    const double sampled_nu =
+        get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, cumulative_probability);
+    check(sampled_nu >= nu_threshold && sampled_nu <= nu_threshold * last_phixs_nuovernuedge * (1. + 1e-15),
+          "the free-bound quantile is inside the range");
+    const double integral_probability =
+        get_emissivity_integral_below(photoion_xs, nu_threshold, T_e, delta_nu, sampled_nu - nu_threshold) /
+        emissivity_total;
+    // the largest difference here is 1.2e-10
+    check(std::abs(integral_probability - cumulative_probability) < 1e-8,
+          "the free-bound quantile agrees with the integral of the emissivity up to the end of the range");
+  }
+}
+
 void test_phixs_table_lookup() {
   std::println("photoionisation cross-section table lookup...");
   globals::NPHIXSPOINTS = 10;
@@ -1729,6 +1757,7 @@ auto main() -> int {
   test_phixs_table_lookup();
   test_continuum_quantiles_structured_table();
   test_continuum_quantiles_zero_at_table_point();
+  test_continuum_quantiles_range_below_last_table_point();
   test_closest_transition_randomised();
   test_recombination_rate_rows();
   test_input_helpers();
