@@ -1697,17 +1697,21 @@ void setup_grid_cartesian_3d() {
   coord_pos_max_of_grid_tmin = {globals::rmax, globals::rmax, globals::rmax};
 }
 
-// The readers of model.txt check the radial edges as velocities. Two edges that differ in the last bit can give the
-// same radius at tmin, and the shell between them then has no volume. Thus a grid of radial shells gets this check
-// after the multiplication by tmin.
+// The readers of model.txt check the radial edges as velocities. Two edges that differ in the last bits can give
+// radii at tmin that are equal or nearly equal. A packet at a boundary is in the position tolerance of that boundary
+// (see cellbound_tolerance). In a shell that is not wider than this tolerance, the packet is at once at the next
+// boundary, thus the shell gets no path length and no estimators. A grid of radial shells gets this check after the
+// multiplication by tmin.
 void require_increasing_shell_radii_at_tmin() {
   for (int n_r = 0; n_r < ncoordgrid[0]; n_r++) {
     const double radius_outer_tmin = (n_r < ncoordgrid[0] - 1) ? coord_pos_min_tmin[0][n_r + 1] : globals::rmax;
-    if (!(radius_outer_tmin > coord_pos_min_tmin[0][n_r])) {
+    const double tolerance = cellbound_tolerance(radius_outer_tmin);
+    if (!(radius_outer_tmin - coord_pos_min_tmin[0][n_r] > tolerance)) {
       fatal_crash(
           "model.txt: the radial shell {} of the grid has the inner radius {:.17g} [cm] and the outer radius {:.17g} "
-          "[cm] at tmin. The radial velocities of model.txt must give radii that increase",
-          n_r, coord_pos_min_tmin[0][n_r], radius_outer_tmin);
+          "[cm] at tmin. Each shell must be wider than the position tolerance of a cell boundary, which is {:g} [cm] "
+          "at this radius",
+          n_r, coord_pos_min_tmin[0][n_r], radius_outer_tmin, tolerance);
     }
   }
 }
