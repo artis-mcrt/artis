@@ -11,9 +11,10 @@ The script makes three checks:
 - each log message that docs/troubleshooting.md quotes is in the source;
 - the table of docs/inputfiles.md has the lines of inputlinecomments in input.cc that are not unused.
 
-The script gives the status 0 when each check passes, and 1 otherwise.
+The script gives the status 0 when each check passes, 2 for an incorrect argument, and 1 otherwise.
 """
 
+import argparse
 import re
 import subprocess  # ruff: ignore[suspicious-subprocess-import]
 import sys
@@ -108,6 +109,7 @@ def find_input_line_differences(source: str) -> list[str]:
 
 def main() -> int:
     """Run the checks, and give the status 1 for a difference."""
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     source = read_source_with_joined_literals()
     errors = [
         *find_make_option_differences(),

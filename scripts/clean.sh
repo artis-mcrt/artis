@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# Remove the files that a simulation writes into the current model folder. Then copy input-newrun.txt to input.txt.
+
+if [ $# -gt 1 ] || { [ $# -eq 1 ] && [ "$1" != -y ]; }; then
+  echo "Usage: artis/scripts/clean.sh [-y], in the model folder. With -y, the script asks no question." >&2
+  exit 1
+fi
 
 # for the +([0-9]) patterns that only match generated filenames (e.g. output_0-0.txt but not output_0-0_backup.txt)
 shopt -s extglob

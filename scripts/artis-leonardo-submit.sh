@@ -1,6 +1,12 @@
 #!/bin/bash -x
 # Submit the ARTIS job on Leonardo. Use this script in place of a direct sbatch.
 
+# A job script sources this file, and a sourced file sees the arguments of the job script.
+if [ "${BASH_SOURCE:-$0}" = "$0" ] && [ $# -gt 0 ]; then
+    echo "Usage: artis/scripts/artis-leonardo-submit.sh with no argument, in the model folder. The script submits the ARTIS job on Leonardo with sbatch." >&2
+    exit 1
+fi
+
 # sbatch expands no variable in a #SBATCH line, and Slurm supplies no
 # SBATCH_MAIL_USER variable. The address must therefore come from the command
 # line. The job script artis-leonardo-slurmjob.sh keeps all of the resource options,

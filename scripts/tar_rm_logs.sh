@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+if [ $# -gt 0 ]; then
+    echo "Usage: artis/scripts/tar_rm_logs.sh with no argument, in the model folder. The script archives the log files of the ranks into logfiles.tar.zst and then removes them." >&2
+    exit 1
+fi
+
 # a failure of find or tar must stop the script before it removes the log files
 set -o pipefail
 
