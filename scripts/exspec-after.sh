@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# A job script sources this file, and a sourced file sees the arguments of the job script.
+if [ "${BASH_SOURCE:-$0}" = "$0" ] && [ $# -gt 0 ]; then
+  echo "Usage: artis/scripts/exspec-after.sh with no argument, in the model folder. After the last timestep, the script removes the restart files and compresses the output files." >&2
+  exit 1
+fi
+
 # only change the model folder if sn3d finished cleanly after the last timestep of the model. A run that
 # stopped at an earlier timestep_finish needs its restart files to continue.
 if grep -qs "No need for restart" output_0-0.txt && grep -qs "sn3d finished" output_0-0.txt; then
