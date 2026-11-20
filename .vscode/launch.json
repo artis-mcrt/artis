@@ -1,17 +1,17 @@
 {
     "configurations": [
         {
-            "name": "C/C++: clang++ build and debug active file",
+            "name": "Debug the unit tests",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "program": "${workspaceFolder}/unittests",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "lldb",
-            "preLaunchTask": "C/C++: clang++ build active file"
+            "preLaunchTask": "make unittests"
         }
     ],
     "version": "2.0.0"

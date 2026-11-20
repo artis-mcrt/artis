@@ -48,8 +48,35 @@ make TESTMODE=ON compile_commands.json
 run-clang-tidy grid.cc
 ```
 
-Name the files that you changed in the last command. The section "Linting and formatting" of
-[AGENTS.md](https://github.com/artis-mcrt/artis/blob/main/AGENTS.md) describes each tool and its settings.
+Name the files that you changed in the last command. CI runs the same tools, and each tool stops the job on an error:
+
+- The pre-commit hooks apply clang-format and the checks of the whitespace and of the files. They also run the two
+  documentation scripts and the checks of the Python scripts. CI skips the `make` hook, which compiles the code.
+- clang-tidy reads `compile_commands.json` and makes almost every diagnostic an error (see `.clang-tidy`). CI makes the
+  database with the `nltenebular` preset, and it runs clang-tidy 23 with the libc++ headers of LLVM 23. `make check`
+  runs clang-tidy over all sources with the clang-tidy, the standard library, and the preset of your computer. Its
+  diagnostics can therefore differ from those of CI.
+- cppcheck checks all sources except `third_party/`. `.github/workflows/ci-checks.yml` holds its command and the
+  message types that it ignores. To ignore one message, put the comment `// cppcheck-suppress <id>` on the line above
+  the code. This works because the command has the option `--inline-suppr`.
+
+Make the compilation database with a build or with `make TESTMODE=ON compile_commands.json`. Do not use `compiledb`.
+That tool removes `mpicxx` from each command, so each diagnostic of clang-tidy is then false.
+
+## Compiler warnings
+
+The build adds `-Werror` for every compiler except nvc++, so a warning stops the build. clang also adds
+`-Wunsafe-buffer-usage`, which gcc does not have. A change that compiles cleanly with gcc can therefore fail with clang.
+CI compiles the code with both. Some system headers and the construction of a `std::span` from a raw pointer give this
+warning. Put such an `#include` or such a construction between `#pragma clang unsafe_buffer_usage begin` and
+`#pragma clang unsafe_buffer_usage end`.
+
+## The Python scripts
+
+The scripts of `scripts/` use only the standard library of Python. The hooks check them with ruff, pyrefly, and ty, and
+`scripts/ruff.toml`, `scripts/pyrefly.toml`, and `scripts/ty.toml` hold the settings. If a script needs a package, add
+the package to `additional_dependencies` of the `pyrefly` hook and of the `ty` hook in `.pre-commit-config.yaml`. The
+type checkers otherwise cannot resolve the imports of the script.
 
 ## Documentation
 
@@ -76,6 +103,21 @@ generated page.
 A new option must go into every `artisoptions_*.h` preset and into `artisoptions_doc.md`, under the same heading and at
 the same position in each file. CI finds the presets with a glob, so a missing preset stops the build.
 `scripts/make_options_docs.py` stops when a preset holds an option that `artisoptions_doc.md` does not describe.
+
+When you rename or remove an option, or change its type or its form, search these files for its name:
+
+- `tests/setup_*.sh`, which change some options with `setoption` from `tests/setupfuncs.sh`;
+- `.github/workflows/ci.yml`;
+- the pages of `docs/`, because most of them name the options by hand.
+
+`scripts/make_options_docs.py` rewrites only `docs/options.md` and the comparison table of `docs/presets.md`.
+
+## A new make option
+
+A make option that changes `CXXFLAGS` must also add a suffix to `BUILD_DIR` in the Makefile. Without the suffix, two
+values of the option share one build folder, and make can then link objects that it compiled with the other value. Add
+the option to the help text of the Makefile and to the table of [Make options](makeoptions.md).
+`scripts/check_docs.py` compares the two lists.
 
 ## More for contributors
 

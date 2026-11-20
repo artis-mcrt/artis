@@ -82,3 +82,51 @@ Once each week, a separate workflow builds the site with the `linkcheck` builder
 A change that must not alter the numerical results has to give identical checksums. For such a change, a mismatch is an
 error in the change. A change that alters the results for a good reason needs new reference checksums, which the
 "Update checksums" workflow writes.
+
+## New reference checksums
+
+Start the "Update checksums" workflow (`.github/workflows/updatechecksums.yml`) only after a change that alters the
+results for a good reason. If each test of CI passes, the stored checksums are correct, and the workflow is not
+necessary. The workflow needs write access to the repository, and the branch must be in `artis-mcrt/artis`.
+
+1. Wait until the CI run of the head commit of the branch is complete.
+2. Make sure that each failed test job failed only at a checksum step, with no crash and no failed assertion.
+3. Make sure that only the tests that the change must affect have different checksums.
+4. Start the workflow with the branch as the input. The first command prints the URL of the new run, and the URL ends
+   with the run ID. The second command waits for the run, and it fails if the run fails.
+
+   ```sh
+   gh workflow run updatechecksums.yml -f branch=<branch>
+   gh run watch <run ID> --exit-status
+   ```
+
+5. If the run fails, read its log and correct the cause.
+6. Read the log of the run. Make sure that it selected the artifact of the head commit.
+7. Make sure that the CI run of the new commit passes.
+
+The workflow gets a token with write access, so it runs only from `main`, and the first command needs no `--ref`. The
+workflow takes the checksums from the nearest commit in the history of the branch that has a complete artifact, and it
+pushes a commit with them. A crash or a failed assertion in a test job makes the artifact incomplete. The workflow then
+takes an older commit and gives only a warning. An older commit is correct only if the later commits do not change the
+results.
+
+## A new end-to-end test
+
+A new test needs these parts:
+
+- a setup script `tests/setup_<name>.sh`;
+- a folder `tests/<name>_inputfiles/` with the input files of the model, including `input-newrun.txt` and
+  `input-resume.txt`;
+- the entry `<name>` in the `testname` matrix of `.github/workflows/ci.yml`;
+- the atomic data archive in the release that `tests/atomic_data_release.txt` names.
+
+The setup script gets the atomic data with `getatomicdata`, makes the model folder `tests/<name>_testrun`, and copies
+the input files into it. Then it copies a preset to `artisoptions.h` and changes some options with `setoption`.
+`tests/setupfuncs.sh` holds both functions, and an existing setup script shows the order. `ci.yml` keeps each archive
+in a cache, so an archive that no other test uses also needs its own cache step there.
+
+`tests/runtest.sh` finds the test from its setup script. Commit the test with no reference checksums. A checksum step
+without a reference file compares nothing and gives a warning. After the first complete CI run, the "Update checksums"
+workflow writes the reference files.
+
+A new test must run in CI in about ten minutes or less, because every push runs the full matrix.
