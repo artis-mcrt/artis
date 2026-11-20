@@ -126,12 +126,14 @@ A new make option needs these changes:
 
 - a suffix of `BUILD_DIR` in the Makefile, if the option changes `CXXFLAGS`;
 - an entry in the `foreach` list of the Makefile, if the values of the option are `ON` and `OFF`;
+- the name of the option in `MAKE_OPTION_NAMES` of the Makefile;
 - a fixed value in the `make` command of `tests/runtest.sh`;
 - a line in the help text of the Makefile, and a row in the table of [Make options](makeoptions.md).
 
 Without the suffix, two values of the option share one build folder, and make can then link objects that it compiled
-with the other value. The `foreach` list stops make for a bad value, e.g. `on`. The fixed value keeps a value of your
-environment out of the test build. `scripts/check_docs.py` compares the help text with the table.
+with the other value. The `foreach` list stops make for a bad value, e.g. `on`. Without the name in `MAKE_OPTION_NAMES`,
+make stops when the command line sets the option. The fixed value keeps a value of your environment out of the test
+build. `scripts/check_docs.py` compares the help text with the table and with `MAKE_OPTION_NAMES`.
 
 ## More for contributors
 
