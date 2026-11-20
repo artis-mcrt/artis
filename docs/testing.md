@@ -20,7 +20,8 @@ The `tests` folder holds small end-to-end test models. `tests/runtest.sh` runs o
 tests/runtest.sh kilonova_1d
 ```
 
-Run the script without arguments to see the names of the tests and of the steps. The test job of
+`tests/runtest.sh --help` shows the names of the tests and of the steps, and `tests/runtest.sh --list` shows only the
+names of the tests. The test job of
 [ci.yml](https://github.com/artis-mcrt/artis/blob/main/.github/workflows/ci.yml) calls the same script. The script does
 these steps:
 
@@ -41,9 +42,11 @@ these steps:
    then removes the restart files and runs `exspec`.
 5. It compares the checksums of the output files with `results_md5_final.txt`.
 
-The script stops at the first step that fails. To run only one step, give the name of the step after the name of the
-test, e.g. `tests/runtest.sh kilonova_1d resume`. With `TESTMODE=ON` in the environment, the build has the sanitizers
-and the extra assertions. The script then sets the two variables that a run of such a build needs:
+The script stops at the first step that fails, except a checksum step that finds different checksums. The other steps
+then run, and at the end the script lists the files that differ and exits with an error status. To run only one step,
+give the name of the step after the name of the test, e.g. `tests/runtest.sh kilonova_1d resume`. With `TESTMODE=ON`
+in the environment, the build has the sanitizers and the extra assertions. The script then sets the two variables that
+a run of such a build needs:
 
 ```sh
 export ASAN_OPTIONS=detect_stack_use_after_return=1:detect_leaks=0
