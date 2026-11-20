@@ -14,17 +14,8 @@ The repository has two branches and a tag for each release:
   [stable](https://artis-mcrt.readthedocs.io/en/stable/) of this site describes the newest tag.
 
 Use the branch `release` for a production run, and read the version `stable` of this site. For the results of a
-paper, use one tag, so that a later change of `release` does not change the code of the model folder. Run these
-commands in the new model folder, with the tag of your choice. Do this before you change `input.txt` and before you
-run `make`.
-
-```sh
-git -C artis checkout v2026.11.9
-cp artis/scripts/input-template.txt input.txt
-```
-
-The second command copies the template of the tag, because the lines of `input.txt` can change between versions. The
-tags before `v2026.11.9` have no template.
+paper, use one tag, so that a later change of `release` does not change the code of the model folder.
+[Make the model folder](#make-the-model-folder) gives the commands that select a tag.
 
 The log of rank 0 of each job starts with the git version of the build. Record that version with the results:
 
@@ -43,7 +34,25 @@ the commits of git.
 ```sh
 git clone https://github.com/artis-mcrt/artis.git ~/artis
 ~/artis/scripts/new-model-folder.sh mymodel
-cd mymodel/artis
+cd mymodel
+```
+
+To use a tag, run these commands in the model folder before you change `input.txt`. Give the tag of your choice:
+
+```sh
+git -C artis checkout v2026.11.9
+cp artis/scripts/input-template.txt input.txt
+```
+
+The second command copies the template of the tag, because the lines of `input.txt` can change between versions. The
+tags from `v2023.10` to `v2026.5.15` have no template. For such a tag, copy
+`artis/tests/classicmode_1d_3dgrid_inputfiles/input-newrun.txt` to `input.txt` instead. That file is the `input.txt`
+of a test of the tag, so its lines agree with the code of the tag. The tags before `v2023.10` have neither file.
+
+Next, go into the source folder:
+
+```sh
+cd artis
 ```
 
 An HPC cluster gives the compiler and the MPI library through a module or a spack command. For the systems that we use,
