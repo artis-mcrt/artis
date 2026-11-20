@@ -65,7 +65,8 @@ output files.
 ADS holds a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg) and a
 list of [papers that use ARTIS with non-LTE enabled](https://ui.adsabs.harvard.edu/user/libraries/CX8fnPInSu2q1rAE4wWQrg).
 
-If you use ARTIS, please cite it using the [DOI from Zenodo](https://zenodo.org/records/18670358).
+If you use ARTIS, please cite it with the Zenodo DOI
+[10.5281/zenodo.7728326](https://doi.org/10.5281/zenodo.7728326). This DOI always resolves to the newest version.
 
 These papers describe an early version of the code: [Sim (2007), MNRAS, 375, 154-162,
 doi:10.1111/j.1365-2966.2006.11271.x](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract) and
