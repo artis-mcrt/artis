@@ -4,19 +4,19 @@
 # Do not add the labels of Dependabot here (dependencies, github_actions, pre_commit, python),
 # because the workflow then removes them from the Dependabot pull requests.
 
-checksums:
+checksums changed:
     - changed-files:
           - any-glob-to-any-file: tests/*_inputfiles/results_md5_*.txt
 
-no C++:
+no C++ changes:
     - changed-files:
           - all-globs-to-all-files: ['!**/*.{cc,h,inc}', '!third_party/**']
 
-options:
+compile-time options:
     - changed-files:
           - any-glob-to-any-file: [artisoptions_*.h, artisoptions_doc.md]
 
-data:
+data files:
     - changed-files:
           - any-glob-to-any-file: data/**
 
@@ -24,11 +24,11 @@ tests:
     - changed-files:
           - any-glob-to-any-file: [unittests.cc, 'tests/*.*', 'tests/*_inputfiles/!(results_md5_*)']
 
-build:
+build system:
     - changed-files:
           - any-glob-to-any-file: [Makefile, pixi.toml]
 
-CI:
+CI and linting:
     - changed-files:
           - any-glob-to-any-file: [.github/workflows/**, .pre-commit-config.yaml, .clang-format, .clang-tidy]
 

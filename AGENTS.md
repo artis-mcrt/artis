@@ -345,8 +345,9 @@ The workflows in `.github/workflows/`:
 - `depapprove.yml` enables auto-merge for the pull requests of Dependabot and
   of pre-commit-ci.
 - `labeler.yml` labels each pull request from the paths of its changed files.
-  The rules are in `.github/labeler.yml`. For example, `checksums` shows a
-  change of the stored checksums, and `no C++` shows that no C++ file changes.
+  The rules are in `.github/labeler.yml`. For example, `checksums changed`
+  shows a change of the stored checksums, and `no C++ changes` shows that no
+  C++ file changes.
   The workflow removes a label when its rule no longer matches.
 - `copilot-setup-steps.yml` runs when you change that file, or when you start
   it by hand.
