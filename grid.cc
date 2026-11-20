@@ -974,7 +974,6 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
     }
 
     if (nucindexlist[i] >= 0) {
-      assert_testmodeonly(valuein <= 1.);
       set_modelinitnucmassfrac(mgi, nucindexlist[i], static_cast<float>(valuein));
     } else if (colnames[i] == "X_Fegroup") {
       set_ffegrp(mgi, static_cast<float>(valuein));

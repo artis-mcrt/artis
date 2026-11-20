@@ -83,6 +83,10 @@ auto main(int argc, char* argv[]) -> int {
           "gives. sn3d writes the packet files at the end of the last requested timestep",
           packet_filename, globals::nprocs_exspec);
     }
+#ifndef USE_ZSTD
+    // a build without libzstd stops here on a .zst packet file
+    [[maybe_unused]] const auto packet_file = istream_required(packet_filename);
+#endif
   }
 
   read_atomicdata();
