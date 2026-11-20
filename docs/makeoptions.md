@@ -2,8 +2,12 @@
 
 The Makefile is the authority for these options and for the way that they interact.
 
-An unknown name on the command line, e.g. `TESTMOD=ON`, stops `make`. The command line can also set the variables
-`CXX`, `CXXFLAGS`, `CPPFLAGS`, and `LDFLAGS`.
+An unknown name on the command line, e.g. `TESTMOD=ON`, stops `make`. The command line can also set the compiler
+command `CXX`, which is `mpicxx` by default.
+
+To add compiler flags or linker flags, export `CXXFLAGS` or `LDFLAGS` in the environment. The Makefile then adds its
+flags to these values. Do not set `CXXFLAGS` or `LDFLAGS` on the command line. A value on the command line replaces all
+the flags of the Makefile, e.g. `-O3` and `-lzstd`.
 
 | Option | Effect |
 | --- | --- |
