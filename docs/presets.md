@@ -57,13 +57,13 @@ This table holds each option whose value differs between the presets, and `scrip
 | [STRICT_POPULATION_CHECKING](options.md#strict_population_checking) | `false` | `true` | `true` | `true` |
 | [STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL](options.md#strict_population_checking_inversion_factor_solver_fail) | `1000.` | `50.` | `50.` | `50.` |
 | [STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING](options.md#strict_population_checking_inversion_factor_printout_warning) | `10.` | `2.` | `2.` | `2.` |
-| [NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION](options.md#nlte_limit_ion_stages_max_levelpop_over_elementpop_remove_ion) | `no value` | `1e-9` | `1e-9` | `1e-9` |
+| [NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION](options.md#nlte_limit_ion_stages_max_levelpop_over_elementpop_remove_ion) | no value | `1e-9` | `1e-9` | `1e-9` |
 | [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops) | `false` | `true` | `true` | `true` |
 | [BFCOOLING_USELEVELPOPNOTIONPOP](options.md#bfcooling_uselevelpopnotionpop) | `false` | `false` | `true` | `true` |
 | [USE_ION_BFHEATING_ESTIMATORS](options.md#use_ion_bfheating_estimators) | `true` | `false` | `false` | `false` |
 | [USE_LUT_PHOTOION](options.md#use_lut_photoion) | `true` | `false` | `false` | `false` |
-| [MULTIBIN_RADFIELD_FIRST_TIMESTEP](options.md#multibin_radfield_first_timestep) | `no value` | `no value` | `12` | `12` |
-| [DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP](options.md#detailed_bf_estimators_first_timestep) | `no value` | `no value` | `13` | `13` |
+| [MULTIBIN_RADFIELD_FIRST_TIMESTEP](options.md#multibin_radfield_first_timestep) | no value | no value | `12` | `12` |
+| [DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP](options.md#detailed_bf_estimators_first_timestep) | no value | no value | `13` | `13` |
 | [DETAILED_BF_ESTIMATORS_LEVEL_SELECTED](options.md#detailed_bf_estimators_level_selected) | `{ return false; }` | `{ return false; }` | `{ return true; }` | see the option |
 | [NT_SCHEME](options.md#nt_scheme) | `NonThermalScheme::NT_OFF` | `NonThermalScheme::NT_OFF` | `NonThermalScheme::NT_SPENCERFANO` | `NonThermalScheme::NT_SPENCERFANO` |
 | [PARTICLE_THERMALISATION_SCHEME](options.md#particle_thermalisation_scheme) | see the option | see the option | see the option | see the option |

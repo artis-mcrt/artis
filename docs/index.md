@@ -7,7 +7,8 @@ describes the packets, and [How a simulation works](simulation.md) describes the
 
 Go to the page for your task:
 
-- **A first run.** The [Quickstart](quickstart.md) gives a first simulation and a plot on a laptop.
+- **A first run.** The [Quickstart](quickstart.md) gives a first simulation and a plot on a laptop. Then
+  [Example: a nebular spectrum](example.md) takes a small model through a complete {term}`NLTE` run.
 - **A production run.** Start with [Make your own model](ownmodel.md), [Plan a simulation](planning.md), and
   [Runs on a cluster](clusters.md). Then use [Analyse the results](analysis.md).
 - **A change of the code.** Start with [Development setup](development.md) and the [Code map](codemap.md).
@@ -65,7 +66,8 @@ output files.
 ADS holds a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg) and a
 list of [papers that use ARTIS with non-LTE enabled](https://ui.adsabs.harvard.edu/user/libraries/CX8fnPInSu2q1rAE4wWQrg).
 
-If you use ARTIS, please cite it using the [DOI from Zenodo](https://zenodo.org/records/18670358).
+If you use ARTIS, please cite it with the Zenodo DOI
+[10.5281/zenodo.7728326](https://doi.org/10.5281/zenodo.7728326). This DOI always resolves to the newest version.
 
 These papers describe an early version of the code: [Sim (2007), MNRAS, 375, 154-162,
 doi:10.1111/j.1365-2966.2006.11271.x](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract) and
@@ -98,32 +100,37 @@ Thus ARTIS comes as it is, and the developers do not promise to correct a defect
 a [pull request](https://github.com/artis-mcrt/artis/pulls) sometimes.
 
 :::{toctree}
-:caption: Getting started
+:caption: Tutorials
 :maxdepth: 1
 :hidden:
 
 quickstart
-installation
-presets
-data
 example
 ownmodel
 :::
 
 :::{toctree}
-:caption: Running a simulation
+:caption: Guides
+:maxdepth: 1
+:hidden:
+
+installation
+data
+planning
+running
+clusters
+exspec
+analysis
+troubleshooting
+:::
+
+:::{toctree}
+:caption: Concepts
 :maxdepth: 1
 :hidden:
 
 simulation
 methods
-planning
-running
-clusters
-outputfiles
-exspec
-analysis
-troubleshooting
 :::
 
 :::{toctree}
@@ -131,8 +138,10 @@ troubleshooting
 :maxdepth: 1
 :hidden:
 
+presets
 options
 inputfiles
+outputfiles
 makeoptions
 scripts
 glossary
