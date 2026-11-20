@@ -16,10 +16,12 @@ It also checks that the presets and artisoptions_doc.md name the same options, i
 doc does not describe, and an option that a preset does not declare, both stop the script. Both checks cover every
 tracked preset, also a preset that PRESETS_NOT_ON_PAGE keeps off the page.
 
-The script gives the status 0 when it wrote the page or when the page was already current, and 1 for an error. The
-pre-commit hook fails when the script changes the page, so that the commit holds the new content.
+The script gives the status 0 when it wrote the page or when the page was already current, 2 for an incorrect
+argument, and 1 for all other errors. The pre-commit hook fails when the script changes the page, so that the commit
+holds the new content.
 """
 
+import argparse
 import re
 import subprocess  # ruff: ignore[suspicious-subprocess-import]
 import sys
@@ -409,6 +411,7 @@ def build_pages() -> tuple[str, str, int, int]:
 
 def main() -> int:
     """Write docs/options.md and docs/presets.md, and give the status 1 for an error."""
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     try:
         page, presets_page, noptions, npresets = build_pages()
     except ValueError as exc:

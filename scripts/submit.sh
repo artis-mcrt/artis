@@ -2,6 +2,11 @@
 # Submit the ARTIS job script of the current cluster. Run this script in the model folder.
 # The script finds the cluster from the fully qualified host name.
 
+if [ $# -gt 0 ]; then
+    echo "Usage: artis/scripts/submit.sh with no argument, in the model folder. The script submits the ARTIS job script of this cluster with sbatch." >&2
+    exit 1
+fi
+
 host_fqdn=$(hostname -f 2>/dev/null || hostname)
 
 case "$host_fqdn" in

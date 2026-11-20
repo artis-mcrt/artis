@@ -7,6 +7,7 @@
 #include "sn3d.h"
 
 #include <getopt.h>  // NOLINT(misc-include-cleaner): glibc declares getopt/optarg in bits/, no IWYU mapping to <getopt.h>
+#include <sys/resource.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -957,10 +958,21 @@ void enter_inputcheck_folder() {
 }
 
 void print_options_help(std::FILE* stream, const char* progname) {
-  std::println(stream, "Usage: {} [-c] [-w WALLTIMELIMITHOURS] [-h]", progname);
+  std::println(stream, "Usage: {} [-c] [-w WALLTIMELIMITHOURS] [-h] [--version]", progname);
   std::println(stream, "  -c                     check the input files in the folder inputcheck, and run no timestep");
   std::println(stream, "  -w WALLTIMELIMITHOURS  finish cleanly (writing restart files) before this much wall time");
-  std::println(stream, "  -h                     print this help and exit");
+  std::println(stream, "  -h, --help             print this help and exit");
+  std::println(stream, "  --version              print the git version, the preset, and the compiler, and exit");
+}
+
+// Every rank reads the same command line, so every rank stops here. Only rank 0 writes the message.
+[[noreturn]] void stop_for_command_line_error(const char* progname, const std::string_view message) {
+  if (globals::my_rank == 0) {
+    std::println(stderr, "[error] {}", message);
+    print_options_help(stderr, progname);
+  }
+  MPI_Finalize();
+  std::exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
 }
 
 struct CommandLineOptions {
@@ -971,11 +983,31 @@ struct CommandLineOptions {
 
 auto parse_command_line(const int argc, char* const* argv) -> CommandLineOptions {
   CommandLineOptions options;
+#pragma clang unsafe_buffer_usage begin
+  const auto arguments = std::span(argv, static_cast<size_t>(argc));
+#pragma clang unsafe_buffer_usage end
+  const char* const progname = arguments[0];
+  // a value outside the range of the characters of the short options
+  constexpr int version_option = 256;
+  const std::array long_options{
+      // NOLINTNEXTLINE(misc-include-cleaner)
+      option{.name = "help", .has_arg = no_argument, .flag = nullptr, .val = 'h'},
+      option{.name = "version", .has_arg = no_argument, .flag = nullptr, .val = version_option},
+      option{.name = nullptr, .has_arg = 0, .flag = nullptr, .val = 0},
+  };
+  // getopt writes no message, because each rank would write it
+  opterr = 0;  // NOLINT(misc-include-cleaner)
   int opt = 0;
-  while ((opt = getopt(argc, argv, "chw:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
-    if (opt == 'h') {
+  // the colon at the start makes getopt_long give ':' for an option without its value
+  // NOLINTNEXTLINE(concurrency-mt-unsafe,misc-include-cleaner)
+  while ((opt = getopt_long(argc, argv, ":chw:", long_options.data(), nullptr)) != -1) {
+    if (opt == 'h' || opt == version_option) {
       if (globals::my_rank == 0) {
-        print_options_help(stdout, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+        if (opt == 'h') {
+          print_options_help(stdout, progname);
+        } else {
+          print_build_version();
+        }
       }
       MPI_Finalize();
       std::exit(EXIT_SUCCESS);  // NOLINT(concurrency-mt-unsafe)
@@ -988,20 +1020,34 @@ auto parse_command_line(const int argc, char* const* argv) -> CommandLineOptions
       if (parse_end == optarg || *parse_end != '\0' || !std::isfinite(walltime_limit_hours) ||
           walltime_limit_hours <= 0.) {
         // silently accepting a bad value would disable the wall time limit instead of applying it
-        fatal_crash("invalid wall time hours '{}' given with -w option", optarg);
+        stop_for_command_line_error(progname, std::format("invalid wall time hours '{}' given with -w option", optarg));
       }
       const double walltime_limit_seconds_exact = walltime_limit_hours * HOUR;
       if (!std::isfinite(walltime_limit_seconds_exact) || walltime_limit_seconds_exact < 1. ||
           walltime_limit_seconds_exact > std::numeric_limits<int>::max()) {
-        fatal_crash("wall time limit of {} hours is outside the range of 1 second to {} seconds", optarg,
-                    std::numeric_limits<int>::max());
+        stop_for_command_line_error(
+            progname, std::format("wall time limit of {} hours is outside the range of 1 second to {} seconds", optarg,
+                                  std::numeric_limits<int>::max()));
       }
       options.walltime_limit_seconds = static_cast<int>(walltime_limit_seconds_exact);
       options.walltime_limit_hours_str = optarg;
+    } else if (opt == ':') {
+      // NOLINTNEXTLINE(misc-include-cleaner)
+      stop_for_command_line_error(progname, std::format("the option -{} needs a value", static_cast<char>(optopt)));
     } else {
-      print_options_help(stderr, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-      fatal_crash("unknown command line option");
+      // arguments[optind - 1] holds an unknown long option, or a long option with a value that it does not take
+      // NOLINTBEGIN(misc-include-cleaner)
+      const std::string_view option_argument = arguments[static_cast<size_t>(optind - 1)];
+      const std::string unknown_option = option_argument.starts_with("--")
+                                             ? std::string{option_argument}
+                                             : std::format("-{}", static_cast<char>(optopt));
+      // NOLINTEND(misc-include-cleaner)
+      stop_for_command_line_error(progname, std::format("unknown command line option '{}'", unknown_option));
     }
+  }
+  if (optind < argc) {
+    stop_for_command_line_error(
+        progname, std::format("unknown command line argument '{}'", arguments[static_cast<size_t>(optind)]));
   }
   return options;
 }
@@ -1188,6 +1234,9 @@ void log_job_end(const bool terminate_early) {
     printlnlog("No need for restart");
   }
 
+  const auto warning_message_count = get_warning_message_count_of_all_ranks();
+  printlnlog("The logs of all ranks have {} warnings from this job.", warning_message_count);
+
   MPI_Barrier_allranks();
   const auto real_time_end = std::chrono::steady_clock::now();
   const auto wallclock_hours = std::chrono::duration<double>(real_time_end - real_time_start).count() / HOUR;
@@ -1255,7 +1304,33 @@ auto main(int argc, char* argv[]) -> int {
     }
     MPI_Barrier_allranks();
     printlnlog("The input check is complete. sn3d stops before timestep {}.", globals::timestep);
+    rusage resource_usage{};  // NOLINT(misc-include-cleaner)
+    getrusage(RUSAGE_SELF, &resource_usage);
+    // macOS gives ru_maxrss in bytes, and Linux gives it in kilobytes
+#ifdef __APPLE__
+    auto peak_resident_memory_MB = resource_usage.ru_maxrss / 1024. / 1024.;
+#else
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access): glibc declares ru_maxrss in an anonymous union
+    auto peak_resident_memory_MB = resource_usage.ru_maxrss / 1024.;
+#endif
+    MPI_Allreduce_safe(peak_resident_memory_MB, MPI_MAX, MPI_COMM_WORLD);
     if (globals::my_rank == 0) {
+      std::println(
+          "input check: {} of the {} model cells have matter and a propagation cell. compositiondata.txt has {} "
+          "elements, and their atomic data has {} ions, {} levels ({} excited NLTE levels and superlevels), and {} "
+          "lines.",
+          grid::get_nonempty_npts_model(), grid::get_npts_model(), get_nelements(), get_includedions(),
+          get_includedlevels(), globals::total_nlte_levels, globals::nlines);
+      if (globals::simulation_continued_from_saved) {
+        std::println(
+            "input check: the largest peak memory of one rank is {:.0f} MB, with the packets of the restart files.",
+            peak_resident_memory_MB);
+      } else {
+        std::println(
+            "input check: the largest peak memory of one rank is {:.0f} MB. A rank needs {} bytes more for each of "
+            "its packets.",
+            peak_resident_memory_MB, sizeof(Packet));
+      }
       std::println("input check: complete");
     }
     MPI_Finalize();
@@ -1274,11 +1349,13 @@ auto main(int argc, char* argv[]) -> int {
       const int requested_timesteps_remaining = globals::timestep_finish - globals::timestep - 1;
       const double timestep_hours =
           std::chrono::duration<double>(std::chrono::steady_clock::now() - timestep_start_time).count() / HOUR;
+      const auto warning_message_count = get_warning_message_count_of_all_ranks();
       printlnlog(
           "timestep {} is complete ({} of {} timesteps of the model) after {:.2f} hours. If each timestep takes this "
-          "time, the remaining {} requested timesteps take {:.2f} hours.",
+          "time, the remaining {} requested timesteps take {:.2f} hours. The logs of all ranks have {} warnings from "
+          "this job.",
           globals::timestep, globals::timestep + 1, globals::ntimesteps, timestep_hours, requested_timesteps_remaining,
-          timestep_hours * requested_timesteps_remaining);
+          timestep_hours * requested_timesteps_remaining, warning_message_count);
     }
 
     globals::timestep++;

@@ -124,6 +124,7 @@ description.
 | [DIPOLE](#dipole) | Sample the electron scattering direction of a real packet from the dipole phase function of Thomson scattering, 1 + cos^2(theta) for unpolarised light. | classic `true`, kilonova_lte `false`, nltenebular `false`, nltephotospheric `false` |
 | [POL_ON](#pol_on) | Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out. | classic `true`, kilonova_lte `false`, nltenebular `false`, nltephotospheric `false` |
 | [USE_RELATIVISTIC_DOPPLER_SHIFT](#use_relativistic_doppler_shift) | Use the full relativistic Doppler factor instead of the first-order 1 - n.v/c. | classic `false`, kilonova_lte `true`, nltenebular `false`, nltephotospheric `false` |
+| [FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL](#freebound_nu_analytic_emissivity_integral) | Select how sn3d samples the frequency of a free-bound photon. | every preset: `false` |
 | [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](#rpkt_boundbound_thermalisation_probability) | Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering with probability 1 - P. | every preset: no value |
 | [RPKT_GREY_TYPE](#rpkt_grey_type) | The grey opacity of a thick cell. | classic `RpktGreyType::FEGROUP_APPROX`, kilonova_lte `RpktGreyType::TANAKA2020_ELECTRONFRAC`, nltenebular `RpktGreyType::FEGROUP_APPROX`, nltephotospheric `RpktGreyType::FEGROUP_APPROX` |
 | [SAMPLE_RPKT_EMISSION](#sample_rpkt_emission) | Keep one r-packet emission of each packet. | every preset: `false` |
@@ -930,6 +931,18 @@ Track the Stokes parameters and write specpol.out, emissionpol.out, and absorpti
 Use the full relativistic Doppler factor instead of the first-order 1 - n.v/c. The line resonance distance and the walk over the binned opacities then use a linear interpolation of the frequency along the path.
 
 **Preset values:** classic `false`, kilonova_lte `true`, nltenebular `false`, nltephotospheric `false`
+
+### FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL
+
+`bool FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL`
+
+Select how sn3d samples the frequency of a free-bound photon. The distribution is the energy-weighted emissivity sigma_bf(nu) nu^3 exp(-h (nu - nu_edge) / (k T_e)) on the range of the photoionisation cross-section table.
+
+- false: sn3d divides the table range into NPHIXSPOINTS equal frequency bins. It selects a bin with integrals of the emissivity from the numerical integrator, and takes a uniform frequency inside the bin. Where a bin is wider than k T_e / h, the emissivity falls steeply inside the bin, and the mean photon energy is then too high.
+
+- true: sn3d selects an interval of the table with the analytic integral of the emissivity over each interval, and inverts the same integral inside the interval. The integral is analytic because the cross section is linear between two table points, or constant with [PHIXS_CLASSIC_NO_INTERPOLATION](#phixs_classic_no_interpolation). The samples then follow the emissivity at each T_e.
+
+**Every preset:** `false`
 
 ### RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY
 

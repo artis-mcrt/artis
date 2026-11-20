@@ -175,7 +175,7 @@ The log gives these values:
   timestep:
 
     ```text
-    timestep 23 is complete (24 of 50 timesteps of the model) after 0.00 hours. If each timestep takes this time, the remaining 26 requested timesteps take 0.01 hours.
+    timestep 23 is complete (24 of 50 timesteps of the model) after 0.00 hours. If each timestep takes this time, the remaining 26 requested timesteps take 0.01 hours. The logs of all ranks have 0 warnings from this job.
     ```
 
 - The core hours of the job, in the last line of the log:

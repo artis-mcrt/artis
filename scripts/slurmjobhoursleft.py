@@ -2,9 +2,11 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
-"""Print the hours that remain before the time limit of a Slurm job. Usage: slurmjobhoursleft.py JOBID."""
+"""Print the hours that remain before the time limit of a Slurm job."""
 
+import argparse
 import datetime as dt
+import re
 import subprocess
 import sys
 
@@ -21,10 +23,14 @@ def get_hours_left(strendtime: str, now: dt.datetime) -> float:
 
 def main() -> None:
     """Print the hours between now and the end time that squeue gives for the job."""
-    assert len(sys.argv) == 2
-    jobid = int(sys.argv[1])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("jobid", help="the ID of the Slurm job, e.g. $SLURM_JOB_ID")
+    jobid = parser.parse_args().jobid
+    # squeue gives an array task the job ID <jobid>_<taskid>
+    if not re.fullmatch(r"[0-9]+(_[0-9]+)?", jobid):
+        parser.error(f"the job ID {jobid!r} is not of the form <jobid> or <jobid>_<taskid>")
     # the time format of the user, e.g. SLURM_TIME_FORMAT=relative, gives an end time that fromisoformat() cannot read
-    cmd = ["env", "SLURM_TIME_FORMAT=standard", "squeue", "-j", str(jobid), "--noheader", "--Format", "EndTime"]
+    cmd = ["env", "SLURM_TIME_FORMAT=standard", "squeue", "-j", jobid, "--noheader", "--Format", "EndTime"]
     try:
         cmdendtime = subprocess.run(cmd, capture_output=True, check=True, text=True)
         print(get_hours_left(cmdendtime.stdout.strip(), dt.datetime.now().astimezone()))
