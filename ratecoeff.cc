@@ -753,7 +753,7 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 
   const auto photoion_xs = get_phixs_table(lower_uniquelevelindex);
 
-  if (FREEBOUND_NU_EMISSIVITY_INVERSION) {
+  if (FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL) {
     return get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, rng_uniform(rngstate));
   }
 

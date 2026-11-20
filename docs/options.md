@@ -790,15 +790,15 @@ Use the full relativistic Doppler factor instead of the first-order 1 - n.v/c. T
 
 **Preset values:** classic `false`, kilonova_lte `true`, nltenebular `false`, nltephotospheric `false`
 
-### FREEBOUND_NU_EMISSIVITY_INVERSION
+### FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL
 
-`bool FREEBOUND_NU_EMISSIVITY_INVERSION`
+`bool FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL`
 
 Select how sn3d samples the frequency of a free-bound photon. The distribution is the energy-weighted emissivity sigma_bf(nu) nu^3 exp(-h (nu - nu_edge) / (k T_e)) on the range of the photoionisation cross-section table.
 
 - false: sn3d divides the table range into NPHIXSPOINTS equal frequency bins. It selects a bin with integrals of the emissivity from the numerical integrator, and takes a uniform frequency inside the bin. Where a bin is wider than k T_e / h, the emissivity falls steeply inside the bin, and the mean photon energy is then too high.
 
-- true: sn3d selects an interval of the table with the exact integral of the emissivity over each interval, and inverts the same integral inside the interval with a Halley iteration. The samples then follow the emissivity at each T_e.
+- true: sn3d selects an interval of the table with the analytic integral of the emissivity over each interval, and inverts the same integral inside the interval with a Halley iteration. The samples then follow the emissivity at each T_e.
 
 **Every preset:** `false`
 

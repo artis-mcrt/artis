@@ -99,9 +99,9 @@ collisional excitation, and the collisional ionisation.
       then still activates a macro atom. A k-packet does not: with a value of this option, each k-packet emits an
       r-packet directly from the thermal emission of the cell. The thermal balance has no term for this line
       thermalisation, so a nonzero value needs LTE timesteps only (`num_lte_timesteps` of `input.txt`).
-    - [FREEBOUND_NU_EMISSIVITY_INVERSION](options.md#freebound_nu_emissivity_inversion) selects how the code
-      samples the frequency of a free-bound emission. With it, the samples follow the emissivity at each $T_e$.
-      Without it, the frequency is uniform inside one of `NPHIXSPOINTS` equal frequency bins.
+    - [FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL](options.md#freebound_nu_analytic_emissivity_integral) selects
+      how the code samples the frequency of a free-bound emission. With it, the samples follow the emissivity at
+      each $T_e$. Without it, the frequency is uniform inside one of `NPHIXSPOINTS` equal frequency bins.
 - References: Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 and Lucy (2003), A&A, 403, 261-275,
   doi:10.1051/0004-6361:20030357.
 
