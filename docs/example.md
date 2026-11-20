@@ -15,13 +15,14 @@ That dataset holds only iron, cobalt, and nickel. Section 8 shows the effect of 
 
 ## 1. Make the model folder
 
-Each simulation has its own model folder. Clone the source code into the subfolder `artis`, so that the options of
-section 4 belong to this simulation only:
+Each simulation has its own model folder. Run these commands in the clone of the Quickstart. The script makes the
+model folder and clones the branch `release` into its subfolder `artis`, so that the options of section 4 belong to
+this simulation only. The `git` command then checks out the commit of the Quickstart clone in place of `release`:
 
 ```sh
-mkdir ~/nebular_w7
+scripts/new-model-folder.sh ~/nebular_w7
+git -C ~/nebular_w7/artis checkout --detach "$(git rev-parse HEAD)"
 cd ~/nebular_w7
-git clone https://github.com/artis-mcrt/artis.git
 ```
 
 Copy the input files of the test into the model folder. Then download the atomic data of the test and unpack it:
@@ -171,7 +172,7 @@ grep "is complete" output_0-0.txt | tail -n 1
 ```
 
 ```text
-timestep 23 is complete (24 of 50 timesteps of the model) after 0.00 hours. If each timestep takes this time, the remaining 26 requested timesteps take 0.01 hours.
+timestep 23 is complete (24 of 50 timesteps of the model) after 0.00 hours. If each timestep takes this time, the remaining 26 requested timesteps take 0.01 hours. The logs of all ranks have 0 warnings from this job.
 ```
 
 The `mem_usage` lines give the memory of the packets and of each large array:
@@ -191,6 +192,7 @@ The last lines of the log give the end state and the cost of the job:
 
 ```text
 No need for restart
+The logs of all ranks have 0 warnings from this job.
 sn3d finished (job: pktprop ts 0 to ts 49 grid-preprop, 0.021 wallclock hours * 4 processes * 1 threads = 0.083 core hours)
 ```
 
@@ -280,3 +282,5 @@ time of 220 days is in that range, and it is after the timestep at which T_e of 
   timesteps set, and how you measure the cost of a run.
 - **The checks.** Examine each warning of `artistools check`. Make sure that T_e of each cell is between the limits
   and is stable at the times of the spectra that you use.
+
+Next: [Make your own model](ownmodel.md).

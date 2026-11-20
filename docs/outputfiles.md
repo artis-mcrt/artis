@@ -87,6 +87,8 @@ A run writes these files into the model folder:
     - `gammalinelist.out`: each gamma line of each nuclide, with its energy in MeV and its number of photons for
       each decay;
     - `bflist.out`: each bound-free continuum, with its ion, its lower level, and its upper level.
+- `syn_dir.txt`: the three components of the unit vector from which the direction bins measure the polar angle. The
+  value is always `0 0 1`. Rank 0 writes the file at the start of each job, and the file stays plain in every build.
 - `artis.pid`: the process id of rank 0 and the path of the model folder. `sn3d` and `exspec` stop when this file
   names a process that still runs in the same folder, and each program removes the file at the end.
 - `gridsave_ts*.tmp` and `packets_*_ts*.tmp`: restart files that hold the state at the start of a timestep, after its
@@ -425,6 +427,37 @@ whose virtual packet escaped in one direction or more:
 | `nuclides.out` | A header row, and then the nuclide index, the atomic number, and the mass number of each nuclide. |
 | `gammalinelist.out` | A header row, and then one row for each gamma-ray line in the sequence of the energy. The columns are the line index, the nuclide index, the atomic number, and the mass number. Then come the index of the line in its nuclide, the energy [MeV], and the number of photons for each decay. |
 | `bflist.out` | The number of bound-free continua, and then one row for each continuum. The first three columns are its index, the element index, and the ion index. Then come the lower level index and the level index of the upper ion. All of them start at 0. |
+
+## Read a file without artistools
+
+`zstdcat` writes the text of a `.zst` file to the standard output, e.g. `zstdcat spec.out.zst | head`. It writes a
+plain file without a change, so the same command reads both forms. This Python script reads the spectra and the light
+curve of the model folder with numpy (see [The spectra](#the-spectra) and [The light curves](#the-light-curves)). Put
+it into the model folder as `read_spectra.py`:
+
+```python
+import subprocess
+
+import numpy as np
+
+
+def read_output_lines(filename: str) -> list[str]:
+    return subprocess.run(["zstdcat", filename], capture_output=True, check=True, text=True).stdout.splitlines()
+
+
+spec = np.loadtxt(read_output_lines("spec.out.zst"))
+times_days = spec[0, 1:]  # the midpoint of each complete timestep
+nu_hz = spec[1:, 0]  # the middle frequency of each bin
+f_nu = spec[1:, 1:]  # F_nu [erg/s/cm^2/Hz] at 1 Mpc, with one column for each timestep
+
+lightcurve = np.loadtxt(read_output_lines("light_curve.out.zst"), ndmin=2)  # 2D also for one timestep
+lightcurve_times_days = lightcurve[:, 0]
+luminosity_rest_frame_lsun = lightcurve[:, 1]
+```
+
+Run the script in the model folder with `python3 read_spectra.py`. For a build without libzstd, give the plain file
+names, e.g. `spec.out`. The script needs the command `zstdcat` of the package `zstd`, also for a plain file. If your
+Python has no numpy, run the script with uv, e.g. `uv run --with numpy read_spectra.py`.
 
 ## A new simulation removes the files of the previous one
 

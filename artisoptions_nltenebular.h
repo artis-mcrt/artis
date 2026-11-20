@@ -172,6 +172,8 @@ constexpr bool POL_ON = false;
 
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
 
+constexpr bool FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL = false;
+
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
 constexpr RpktGreyType RPKT_GREY_TYPE = RpktGreyType::FEGROUP_APPROX;

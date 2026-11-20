@@ -9,14 +9,24 @@ and the inner shells hold Ni56. It is a test of the method and not a model of a 
 
 ## 1. Make the model folder
 
-Run this command in a clone of the repository, and go to the new folder:
+Run these commands in a clone of `https://github.com/artis-mcrt/artis.git`, e.g. the clone of the Quickstart. The
+commit of that clone must be on GitHub, because the script clones from the URL of `origin`.
+
+The script makes the model folder and clones the branch `release` into its subfolder `artis`, so that the options of
+section 4 belong to this model only. The `git` command then checks out the commit of your clone in place of `release`. The `cp` command copies the template of `input.txt` of
+that commit, because the lines of `input.txt` can change between versions. The last two commands download the atomic
+data of the tests and unpack it:
 
 ```sh
-scripts/new-model-folder.sh --symlink ~/ownmodel
+scripts/new-model-folder.sh ~/ownmodel
+git -C ~/ownmodel/artis checkout --detach "$(git rev-parse HEAD)"
 cd ~/ownmodel
-curl -fLO https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_feconi.tar.xz
+cp artis/scripts/input-template.txt input.txt
+curl -fLO "https://github.com/artis-mcrt/artis/releases/download/$(cat artis/tests/atomic_data_release.txt)/atomicdata_feconi.tar.xz"
 tar -xf atomicdata_feconi.tar.xz
 ```
+
+`artis/tests/atomic_data_release.txt` names the release that holds the archive.
 
 The archive holds Fe, Co, and Ni, so the model can hold only these elements. A cell with mass only in other elements becomes an empty cell.
 
@@ -121,7 +131,7 @@ Select the {term}`preset` that is nearest to the model (see [Option presets](pre
 
 ```sh
 cd artis
-ln -sf artisoptions_classic.h artisoptions.h
+ln -s artisoptions_classic.h artisoptions.h
 ```
 
 Change `NUM_PACKETS` in `artisoptions.h` to `1e5`, and then build:
@@ -131,7 +141,7 @@ make
 cd ..
 ```
 
-`artisoptions.h` is a symlink, so `git restore artisoptions_classic.h` in the clone removes the change.
+`artisoptions.h` is a symlink, so `git -C artis restore artisoptions_classic.h` in the model folder removes the change.
 
 Change these lines of `input.txt`, and keep the comment of each line:
 
@@ -181,3 +191,5 @@ Look for the lines `timestep 3 is complete` in `output_0-0.txt`. To run the rema
 - **The packets and the shells.** Increase `NUM_PACKETS`, and use enough shells to resolve the density and the
   composition.
 - **The geometry.** A 2D or a 3D model has a different layout of `model.txt` (see [Input files](inputfiles.md)).
+
+Next: [Plan a simulation](planning.md).

@@ -55,6 +55,9 @@ mpicxx --version
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
+if [ -z "$hoursleft" ]; then
+    echo "[warning] The remaining wall time is unknown, so sn3d runs without -w. Slurm can then stop the job at its time limit, and no next job starts."
+fi
 source ./artis/scripts/corehours-before.sh
 echo "$(date): before srun sn3d. hours left: $hoursleft"
 time srun --hint=nomultithread -- ./artis/sn3d ${hoursleft:+-w "$hoursleft"}

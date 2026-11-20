@@ -175,7 +175,7 @@ The log gives these values:
   timestep:
 
     ```text
-    timestep 23 is complete (24 of 50 timesteps of the model) after 0.00 hours. If each timestep takes this time, the remaining 26 requested timesteps take 0.01 hours.
+    timestep 23 is complete (24 of 50 timesteps of the model) after 0.00 hours. If each timestep takes this time, the remaining 26 requested timesteps take 0.01 hours. The logs of all ranks have 0 warnings from this job.
     ```
 
 - The core hours of the job, in the last line of the log:
@@ -194,3 +194,5 @@ For a run in several jobs, `sn3d -w WALLTIMELIMITHOURS` tests the remaining wall
 [Running sn3d](running.md)).
 A job then needs wall time for at least two timesteps, because `sn3d` writes the restart files from the second
 timestep of a job.
+
+Next: [Runs on a cluster](clusters.md).

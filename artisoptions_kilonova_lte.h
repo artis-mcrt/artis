@@ -168,6 +168,8 @@ constexpr bool POL_ON = false;
 
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = true;
 
+constexpr bool FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL = false;
+
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
 constexpr RpktGreyType RPKT_GREY_TYPE = RpktGreyType::TANAKA2020_ELECTRONFRAC;
