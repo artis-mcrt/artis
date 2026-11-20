@@ -669,6 +669,52 @@ void test_compton() {
               1e-8, "meanf_sigma is continuous across the Taylor-series/closed-form crossover");
 }
 
+void test_compton_distribution_independent() {
+  std::println("Compton distribution and energy transfer against angular quadrature...");
+  constexpr int angle_count = 16384;
+  constexpr int sample_count = 2048;
+  // The largest errors here are 2e-7 (estimator), 8e-5 (quantile), and 2e-6 (mean energy transfer).
+  for (const double photon_energy_over_rest_mass : {0.05, 0.2, 1., 5., 20.}) {
+    // The differential cross section uses the scattering angle, independently of the inverse sampler.
+    const auto differential_cross_section = [&](const double cos_scatter_angle) {
+      const double energy_ratio = 1. / (1. + (photon_energy_over_rest_mass * (1. - cos_scatter_angle)));
+      return (3. / 8.) * SIGMA_T * pow2(energy_ratio) *
+             (energy_ratio + (1. / energy_ratio) - 1. + pow2(cos_scatter_angle));
+    };
+    double total_cross_section = 0.;
+    double energy_transfer_cross_section = 0.;
+    for (int angle_index = 0; angle_index < angle_count; angle_index++) {
+      const double cos_scatter_angle = -1. + ((angle_index + 0.5) * 2. / angle_count);
+      const double cross_section = differential_cross_section(cos_scatter_angle) * 2. / angle_count;
+      const double energy_ratio = 1. / (1. + (photon_energy_over_rest_mass * (1. - cos_scatter_angle)));
+      total_cross_section += cross_section;
+      energy_transfer_cross_section += cross_section * (1. - energy_ratio);
+    }
+    check_close(gammapkt::meanf_sigma(photon_energy_over_rest_mass), energy_transfer_cross_section, 2e-6,
+                "the Compton estimator agrees with independent angular quadrature");
+    for (const double cumulative_probability : {0.01, 0.1, 0.5, 0.9, 0.99}) {
+      const double loss_factor = gammapkt::choose_f(photon_energy_over_rest_mass, cumulative_probability);
+      const double cos_scatter_angle_min = 1. - ((loss_factor - 1.) / photon_energy_over_rest_mass);
+      double partial_cross_section = 0.;
+      const double angle_width = (1. - cos_scatter_angle_min) / angle_count;
+      for (int angle_index = 0; angle_index < angle_count; angle_index++) {
+        const double cos_scatter_angle = cos_scatter_angle_min + ((angle_index + 0.5) * angle_width);
+        partial_cross_section += differential_cross_section(cos_scatter_angle) * angle_width;
+      }
+      check(std::abs((partial_cross_section / total_cross_section) - cumulative_probability) < 2e-4,
+            "the Compton quantile agrees with the independent angular distribution");
+    }
+    double sampled_energy_loss = 0.;
+    for (int sample_index = 0; sample_index < sample_count; sample_index++) {
+      const double cumulative_probability = (sample_index + 0.5) / sample_count;
+      const double loss_factor = gammapkt::choose_f(photon_energy_over_rest_mass, cumulative_probability);
+      sampled_energy_loss += 1. - (1. / loss_factor);
+    }
+    check_close(sampled_energy_loss / sample_count, energy_transfer_cross_section / total_cross_section, 2e-5,
+                "the mean sampled Compton energy transfer agrees with the deposition estimator");
+  }
+}
+
 void test_rad_deexcitation() {
   std::println("radiative deexcitation rate coefficient...");
   const double epsilon_trans = 2. * EV;
@@ -804,6 +850,43 @@ void test_continuum_quantiles_range_below_last_table_point() {
     // the largest difference here is 1.2e-10
     check(std::abs(integral_probability - cumulative_probability) < 1e-8,
           "the free-bound quantile agrees with the integral of the emissivity up to the end of the range");
+  }
+}
+
+void test_continuum_distribution_independent() {
+  std::println("free-bound distribution against an analytic integral...");
+  constexpr double nu_threshold = 13.6 * EV / H;
+  for (const int table_point_count : {20, 100}) {
+    globals::NPHIXSPOINTS = table_point_count;
+    globals::NPHIXSNUINCREMENT = 0.03;
+    last_phixs_nuovernuedge = 1. + (0.03 * (table_point_count - 1));
+    const std::vector<float> photoion_xs(table_point_count, 1e-18F);
+    for (const float T_e : {500.F, 1000.F, 3000.F, 10000.F, 50000.F}) {
+      const double thermal_width = T_e / HOVERKB;
+      const double threshold_over_thermal_width = nu_threshold / thermal_width;
+      // This is the analytic tail integral of (h nu / kT)^3 exp(-h (nu - nu_threshold) / kT).
+      const auto emissivity_tail = [&](const double thermal_offset) {
+        const double frequency_over_thermal_width = threshold_over_thermal_width + thermal_offset;
+        return std::exp(-thermal_offset) *
+               (pow3(frequency_over_thermal_width) + (3. * pow2(frequency_over_thermal_width)) +
+                (6. * frequency_over_thermal_width) + 6.);
+      };
+      const double thermal_offset_max = threshold_over_thermal_width * (last_phixs_nuovernuedge - 1.);
+      const double emissivity_total = emissivity_tail(0.) - emissivity_tail(thermal_offset_max);
+      for (const double cumulative_probability : {0.001, 0.01, 0.1, 0.5, 0.9, 0.99, 0.999, 1.}) {
+        const double sampled_nu =
+            get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, cumulative_probability);
+        const double thermal_offset = (sampled_nu - nu_threshold) / thermal_width;
+        const double analytic_probability = (emissivity_tail(0.) - emissivity_tail(thermal_offset)) / emissivity_total;
+        // the largest error here is 2e-14, and it comes from the rounding
+        check(std::abs(analytic_probability - cumulative_probability) < 1e-12,
+              "the free-bound quantile agrees with the analytic energy-weighted distribution");
+        check(sampled_nu >= nu_threshold && sampled_nu <= nu_threshold * last_phixs_nuovernuedge * (1. + 1e-15),
+              "the free-bound quantile is inside the table");
+      }
+      check(get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, 0.) == nu_threshold,
+            "the zero quantile is the continuum threshold");
+    }
   }
 }
 
@@ -1753,11 +1836,13 @@ auto main() -> int {
   test_nuclide_names();
   test_bateman();
   test_compton();
+  test_compton_distribution_independent();
   test_rad_deexcitation();
   test_phixs_table_lookup();
   test_continuum_quantiles_structured_table();
   test_continuum_quantiles_zero_at_table_point();
   test_continuum_quantiles_range_below_last_table_point();
+  test_continuum_distribution_independent();
   test_closest_transition_randomised();
   test_recombination_rate_rows();
   test_input_helpers();
