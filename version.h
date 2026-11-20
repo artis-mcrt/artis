@@ -11,6 +11,11 @@
 extern const char* const GIT_VERSION;
 extern const char* const GIT_BRANCH;
 extern const char* const GIT_STATUS;
+// the file that the symlink artisoptions.h points to, or "not a symlink"
+extern const char* const ARTISOPTIONS_SYMLINK_TARGET;
+// the first line of the text of "mpicxx --version"
+extern const char* const COMPILER_VERSION_LINE;
+extern const char* const COMPILE_FLAGS;
 // the lines of artisoptions.h, separated by newlines
 extern const std::string_view ARTISOPTIONS_LINES;
 

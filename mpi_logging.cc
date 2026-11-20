@@ -2,8 +2,11 @@
 
 #include "mpi_logging.h"
 
+#include <array>
 #include <chrono>
 #include <cstdarg>
+#include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -38,6 +41,8 @@ bool outputstartofline = true;
 
 OutputFileStream output_file;
 std::thread::id mpi_main_thread;
+// the log messages of this rank with the tag [warning], in all threads
+std::int64_t warning_message_count = 0;
 
 // Only the main thread can call MPI with MPI_THREAD_FUNNELED. Test its identity before any MPI call.
 [[noreturn]] void abort_run() noexcept {
@@ -78,10 +83,27 @@ void initialise_mpi(int& argc, char**& argv) {
 // the logs stay plain, so tail -f and the job scripts read them. exspec-after.sh compresses them later.
 void set_log_file(const std::string_view filename) noexcept { output_file = open_uncompressed_output_file(filename); }
 
+void print_build_version() {
+  std::println("git version: {}", GIT_VERSION);
+  std::println("git branch: {}", GIT_BRANCH);
+  std::println("artisoptions.h is a symlink to: {}", ARTISOPTIONS_SYMLINK_TARGET);
+  std::println("compiler: {}", COMPILER_VERSION_LINE);
+}
+
 void log_git_metadata_and_artisoptions() {
   printlnlog("git branch: {}", GIT_BRANCH);
   printlnlog("git version: {}", GIT_VERSION);
   printlnlog("git status: {}", GIT_STATUS);
+  printlnlog("artisoptions.h is a symlink to: {}", ARTISOPTIONS_SYMLINK_TARGET);
+  printlnlog("compiler: {}", COMPILER_VERSION_LINE);
+  printlnlog("compile flags: {}", COMPILE_FLAGS);
+  std::array<char, MPI_MAX_LIBRARY_VERSION_STRING> mpi_library_version{};
+  int mpi_library_version_length = 0;
+  MPI_Get_library_version(mpi_library_version.data(), &mpi_library_version_length);
+  const auto mpi_library_version_text =
+      std::string_view{mpi_library_version.data(), static_cast<size_t>(mpi_library_version_length)};
+  // some MPI libraries give several lines
+  printlnlog("MPI library: {}", mpi_library_version_text.substr(0, mpi_library_version_text.find('\n')));
   std::istringstream option_lines{std::string{ARTISOPTIONS_LINES}};
   for (std::string option_line; std::getline(option_lines, option_line);) {
     if (!option_line.empty()) {
@@ -91,6 +113,9 @@ void log_git_metadata_and_artisoptions() {
 }
 
 void log_write(const std::string_view message, const bool add_newline) noexcept {
+  if (message.contains("[warning]")) {
+    atomicadd(warning_message_count, 1);
+  }
   print_line_start();
   if (add_newline) {
     std::println(output_file, "{}", message);
@@ -102,6 +127,12 @@ void log_write(const std::string_view message, const bool add_newline) noexcept 
     }
   }
   output_file.flush();
+}
+
+auto get_warning_message_count_of_all_ranks() -> std::int64_t {
+  auto warning_message_count_of_all_ranks = atomicload(warning_message_count);
+  MPI_Allreduce_safe(warning_message_count_of_all_ranks, MPI_SUM, MPI_COMM_WORLD);
+  return warning_message_count_of_all_ranks;
 }
 
 DEVICE_FUNC void report_assert_failure(const char* file, const int line, const char* expr, const char* func) noexcept {

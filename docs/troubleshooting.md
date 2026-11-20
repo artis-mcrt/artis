@@ -102,7 +102,8 @@ and to the standard error, which a Slurm job puts into its output file. The mess
 ```
 
 `artistools logsummary <model folder>` counts each kind of warning in the logs of rank 0, with the first and the last
-timestep of each kind.
+timestep of each kind. The line of each timestep in the log of rank 0 gives the number of warnings in the logs of all
+ranks since the start of the job, and the end of the log gives the total.
 
 ### Warnings that most runs give
 
@@ -118,6 +119,7 @@ The run continues after each of these warnings:
 | `frac_sum is ..., but should be 1.0` | The three fractions of the Spencer-Fano solution do not sum to 1. The code sets the heating fraction to 1 minus the two other fractions, with the limits 0 and 1. If the two other fractions sum to more than 1, the heating fraction is 0 and the sum stays above 1. |
 | `cell ... timestep ...: B_planck(T_e=...) peak at ... is outside the radiation field frequency range` | The Planck function of the electron temperature has its peak outside the range from [NU_MIN_R](options.md#nu_min_r) to [NU_MAX_R](options.md#nu_max_r). |
 | `calculate_ionfractions: ... non-finite ionfract set to zero` | An ion fraction of the ionisation balance was not finite, and the code uses zero for that ion. |
+| `NLTE (Spencer-Fano/Te/pops) solver mgi ... failed to converge` | The iteration of T_e and the NLTE populations of a cell stopped at the limit [NLTE_TE_NNE_MAXITER](options.md#nlte_te_nne_maxiter) before T_e and the electron density converged. When [NT_SCHEME](options.md#nt_scheme) is NT_SPENCERFANO, the iteration also includes the non-thermal solution. The code keeps the solution of the last iteration. |
 ### Warnings of the temperature limits
 
 The run also continues after the warnings below, but each of these warnings says that a
