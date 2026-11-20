@@ -660,28 +660,31 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
     table_step_moment *= table_step_to_power;
   }
 
-  // Give the integral of q(t) * exp(-t) over one table interval. With (a + t)^3 = a^3 + 3 a^2 t + 3 a t^2 + t^3,
-  // the integral is
-  //   sigma_bf_low * (a^3 M_0 + 3 a^2 M_1 + 3 a M_2 + M_3) + sigma_bf_slope * (a^3 M_1 + 3 a^2 M_2 + 3 a M_3 + M_4).
-  // The code writes each bracket as a nested product in a = nu_low_over_thermal_width.
+  // Give the integral of q(t) * exp(-t) over one table interval. q(t) is sigma_bf_low * (a + t)^3 plus
+  // sigma_bf_slope * t * (a + t)^3, and a + t is h * nu / kT_e. With (a + t)^3 = a^3 + 3 a^2 t + 3 a t^2 + t^3:
+  //   integral of (a + t)^3 * exp(-t)     = a^3 M_0 + 3 a^2 M_1 + 3 a M_2 + M_3
+  //   integral of t * (a + t)^3 * exp(-t) = a^3 M_1 + 3 a^2 M_2 + 3 a M_3 + M_4
+  // The code calculates each sum as a nested product: it multiplies by a = nu_low_over_thermal_width and adds the
+  // next term, three times.
   const auto get_table_interval_integral = [&](const int table_interval) {
     const double sigma_bf_low = photoion_xs[table_interval];
     const double nu_low_over_thermal_width =
         (nu_threshold / thermal_width) + (table_interval * table_step_over_thermal_width);
-    double integral =
-        sigma_bf_low * ((((((table_step_moments[0] * nu_low_over_thermal_width) + (3. * table_step_moments[1])) *
-                           nu_low_over_thermal_width) +
-                          (3. * table_step_moments[2])) *
-                         nu_low_over_thermal_width) +
-                        table_step_moments[3]);
+    double integral_nu_cubed = table_step_moments[0];
+    integral_nu_cubed = (integral_nu_cubed * nu_low_over_thermal_width) + (3. * table_step_moments[1]);
+    integral_nu_cubed = (integral_nu_cubed * nu_low_over_thermal_width) + (3. * table_step_moments[2]);
+    integral_nu_cubed = (integral_nu_cubed * nu_low_over_thermal_width) + table_step_moments[3];
+    double integral = sigma_bf_low * integral_nu_cubed;
     if constexpr (!PHIXS_CLASSIC_NO_INTERPOLATION) {
       const double sigma_bf_slope = (photoion_xs[table_interval + 1] - sigma_bf_low) / table_step_over_thermal_width;
-      integral +=
-          sigma_bf_slope * ((((((table_step_moments[1] * nu_low_over_thermal_width) + (3. * table_step_moments[2])) *
-                               nu_low_over_thermal_width) +
-                              (3. * table_step_moments[3])) *
-                             nu_low_over_thermal_width) +
-                            table_step_moments[4]);
+      double integral_nu_cubed_times_thermal_offset = table_step_moments[1];
+      integral_nu_cubed_times_thermal_offset =
+          (integral_nu_cubed_times_thermal_offset * nu_low_over_thermal_width) + (3. * table_step_moments[2]);
+      integral_nu_cubed_times_thermal_offset =
+          (integral_nu_cubed_times_thermal_offset * nu_low_over_thermal_width) + (3. * table_step_moments[3]);
+      integral_nu_cubed_times_thermal_offset =
+          (integral_nu_cubed_times_thermal_offset * nu_low_over_thermal_width) + table_step_moments[4];
+      integral += sigma_bf_slope * integral_nu_cubed_times_thermal_offset;
     }
     return integral;
   };
