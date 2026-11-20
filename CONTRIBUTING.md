@@ -49,7 +49,7 @@ reproducible results, and the portability to GPUs.
   it finds more than a local build. A pull request from a fork gets no automatic run.
 - Say in the commit message and in the pull request when you expect the numerical results to change, and name the
   tests that change. The checksums must stay the same for every other change.
-- After an intended change of the results, start the `updatechecksums.yml` workflow. It runs from `main` and takes
+- After an intended change of the results, or after you add a test, start the `updatechecksums.yml` workflow. It runs from `main` and takes
   your branch as an input, so give no `--ref`:
 
   ```sh

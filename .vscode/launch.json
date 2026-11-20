@@ -2,20 +2,14 @@
     "configurations": [
         {
             "name": "Debug the unit tests",
-            "type": "cppdbg",
+            "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/unittests",
             "args": [],
-            "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [
-                {
-                    "name": "ASAN_OPTIONS",
-                    "value": "detect_stack_use_after_return=1:detect_leaks=0"
-                }
-            ],
-            "externalConsole": false,
-            "MIMode": "lldb",
+            "env": {
+                "ASAN_OPTIONS": "detect_stack_use_after_return=1:detect_leaks=0:abort_on_error=1"
+            },
             "preLaunchTask": "make unittests"
         }
     ],
