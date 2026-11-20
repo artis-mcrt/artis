@@ -7,7 +7,9 @@
 artisoptions_doc.md holds one fenced C++ block. The block has a group marker of the form "// --- Name ---", and then
 for each option a comment block and a declaration. This script turns each group into a section of the page, and each
 option into a subsection with its type, its description, and the value of each preset. A comment block with no
-declaration after it becomes a note at the top of its section.
+declaration after it becomes a note at the top of its section. A summary at the top of the page has one table for each
+group, with the first sentence and the preset values of each option. In each description, the name of another option
+is a link to its subsection.
 
 The script reads the presets that the repository tracks, so an untracked preset of your own stays out of the page.
 It also checks that the presets and artisoptions_doc.md name the same options, in both directions. An option that the
@@ -41,6 +43,8 @@ COMMENT_PATTERN = re.compile(r"^\s*//(.*)$")
 DECLARATION_PATTERN = re.compile(r"^constexpr\s+(.+?)\s*\b([A-Z][A-Z0-9_]*)\b\s*(\([^)]*\))?\s*;$")
 # the name of an option of a preset, before its value, its body, or its semicolon
 PRESET_OPTION_PATTERN = re.compile(r"^constexpr\s+.*?\b([A-Z][A-Z0-9_]*)\b\s*[(;={]", re.MULTILINE)
+# the full stop that ends the first sentence of a description, but not the full stop of "e.g." or "et al."
+END_OF_SENTENCE_PATTERN = re.compile(r"(?<!\be\.g)(?<!\bi\.e)(?<!\bet al)\.(?=\s+[A-Z(])")
 
 PAGE_HEADER = """# Compile-time options
 
@@ -51,7 +55,8 @@ A change of an option needs a new build. The log file of rank 0 holds the option
 simulation shows the values that gave its results.
 
 This page lists every option, with the value of each preset of [Option presets](presets.md). `std::optional` options
-with no value are empty, e.g. `GRID_TYPE_OVERRIDE` keeps the grid type of `model.txt`.
+with no value are empty, e.g. `GRID_TYPE_OVERRIDE` keeps the grid type of `model.txt`. The summary gives the first
+sentence of each description. Click the name of an option to read its full description.
 """
 
 
@@ -219,8 +224,8 @@ def find_preset_value(preset_text: str, name: str) -> str | None:
     raise ValueError(message)
 
 
-def preset_values(presets: dict[str, str], option: Option) -> list[str]:
-    """Give the markdown blocks that hold the value of the option in each preset of the page.
+def shown_preset_values(presets: dict[str, str], option: Option) -> dict[str, str]:
+    """Give the value of the option in each preset of the page, with "" for an option that has no value.
 
     Every tracked preset must declare the option, also a preset that PRESETS_NOT_ON_PAGE keeps off the page.
     """
@@ -229,26 +234,96 @@ def preset_values(presets: dict[str, str], option: Option) -> list[str]:
     if missing:
         message = f"the presets {', '.join(missing)} declare no option {option.name}"
         raise ValueError(message)
-    shown = {preset: value or "no value" for preset, value in values.items() if preset not in PRESETS_NOT_ON_PAGE}
+    # an optional option that a preset sets to std::nullopt has no value, the same as a declaration with no value
+    return {
+        preset: "" if value is None or value == "std::nullopt" else value
+        for preset, value in values.items()
+        if preset not in PRESETS_NOT_ON_PAGE
+    }
+
+
+def format_preset_value(value: str) -> str:
+    """Give the markdown of one preset value. An option with no value gets the text "no value"."""
+    return f"`{value}`" if value else "no value"
+
+
+def preset_values(presets: dict[str, str], option: Option) -> list[str]:
+    """Give the markdown blocks that hold the value of the option in each preset of the page."""
+    shown = shown_preset_values(presets, option)
     one_line = all("\n" not in value for value in shown.values())
     if len(set(shown.values())) == 1 and one_line:
-        return [f"**Every preset:** `{next(iter(shown.values()))}`"]
-    if one_line and all(len(value) <= 40 for value in shown.values()):
-        return ["**Preset values:** " + ", ".join(f"{preset} `{value}`" for preset, value in shown.items())]
+        return [f"**Every preset:** {format_preset_value(next(iter(shown.values())))}"]
+    if one_line and all(len(value) <= MAX_PRESET_TABLE_VALUE_LENGTH for value in shown.values()):
+        return ["**Preset values:** " + ", ".join(f"{preset} {format_preset_value(v)}" for preset, v in shown.items())]
     blocks: list[str] = ["**Preset values:**"]
-    blocks.extend(f"{preset}\n\n```c++\n{value}\n```" for preset, value in shown.items())
+    blocks.extend(
+        f"{preset}\n\n```c++\n{value}\n```" if value else f"{preset}: no value" for preset, value in shown.items()
+    )
+    return blocks
+
+
+def heading_anchor(heading: str) -> str:
+    """Give the anchor that MyST makes for a heading, e.g. "packets-and-timesteps" for "Packets and timesteps"."""
+    return re.sub(r"[^\w\- ]", "", heading.strip().lower().replace(" ", "-"))
+
+
+def link_option_names(text: str, option_names: list[str], own_name: str) -> str:
+    """Give the text with each name of another option as a link to the subsection of that option."""
+    # the longest names come first, so that a name that is the start of a longer name does not match inside it
+    names_pattern = "|".join(re.escape(name) for name in sorted(option_names, key=len, reverse=True))
+
+    def link(match: re.Match[str]) -> str:
+        name = match.group(1)
+        return name if name == own_name else f"[{name}](#{heading_anchor(name)})"
+
+    return re.sub(rf"\b({names_pattern})\b", link, text)
+
+
+def first_sentence(option: Option) -> str:
+    """Give the first sentence of the description of the option, with a full stop in place of a final colon."""
+    first_block = option.description[0] if option.description else ""
+    end_match = END_OF_SENTENCE_PATTERN.search(first_block)
+    sentence = first_block[: end_match.end()] if end_match else first_block
+    return sentence.removesuffix(":") + "." if sentence.endswith(":") else sentence
+
+
+def summary_preset_values(presets: dict[str, str], option: Option) -> str:
+    """Give the preset values of the option for one cell of the summary table."""
+    shown = shown_preset_values(presets, option)
+    if any("\n" in value or len(value) > MAX_PRESET_TABLE_VALUE_LENGTH for value in shown.values()):
+        return "see the option"
+    if len(set(shown.values())) == 1:
+        return f"every preset: {format_preset_value(next(iter(shown.values())))}"
+    return ", ".join(f"{preset} {format_preset_value(value)}" for preset, value in shown.items())
+
+
+def make_summary(groups: list[Group], presets: dict[str, str], option_names: list[str]) -> list[str]:
+    """Give the markdown blocks of the summary: one table for each group, with one row for each option."""
+    blocks: list[str] = ["## Summary"]
+    for group in groups:
+        rows = ["| Option | Description | Preset values |", "| --- | --- | --- |"]
+        for option in group.options:
+            description = link_option_names(first_sentence(option), option_names, option.name)
+            cells = [
+                f"[{option.name}](#{heading_anchor(option.name)})",
+                description,
+                summary_preset_values(presets, option),
+            ]
+            rows.append("| " + " | ".join(cell.replace("|", "\\|") for cell in cells) + " |")
+        blocks.extend((f"**[{group.name}](#{heading_anchor(group.name)})**", "\n".join(rows)))
     return blocks
 
 
 def make_page(groups: list[Group], presets: dict[str, str]) -> str:
     """Give the content of docs/options.md."""
-    blocks: list[str] = [PAGE_HEADER.strip()]
+    option_names = [option.name for group in groups for option in group.options]
+    blocks: list[str] = [PAGE_HEADER.strip(), *make_summary(groups, presets, option_names)]
     for group in groups:
         blocks.append(f"## {group.name}")
-        blocks.extend(group.notes)
+        blocks.extend(link_option_names(note, option_names, "") for note in group.notes)
         for option in group.options:
             blocks.extend((f"### {option.name}", f"`{option.type_name} {option.name}{option.parameters}`"))
-            blocks.extend(option.description)
+            blocks.extend(link_option_names(block, option_names, option.name) for block in option.description)
             blocks.extend(preset_values(presets, option))
     return "\n\n".join(blocks) + "\n"
 
@@ -258,15 +333,15 @@ def make_preset_table(groups: list[Group], presets: dict[str, str]) -> str:
     shown_presets = [preset for preset in presets if preset not in PRESETS_NOT_ON_PAGE]
     rows = [f"| Option | {' | '.join(shown_presets)} |", f"| --- |{' --- |' * len(shown_presets)}"]
     for option in (option for group in groups for option in group.options):
-        values = [find_preset_value(presets[preset], option.name) or "no value" for preset in shown_presets]
+        values = list(shown_preset_values(presets, option).values())
         if len(set(values)) > 1:
             cells = [
-                f"`{value}`".replace("|", "\\|")
+                format_preset_value(value).replace("|", "\\|")
                 if "\n" not in value and len(value) <= MAX_PRESET_TABLE_VALUE_LENGTH
                 else "see the option"
                 for value in values
             ]
-            rows.append(f"| [{option.name}](options.md#{option.name.lower()}) | {' | '.join(cells)} |")
+            rows.append(f"| [{option.name}](options.md#{heading_anchor(option.name)}) | {' | '.join(cells)} |")
     return "\n".join(rows)
 
 
