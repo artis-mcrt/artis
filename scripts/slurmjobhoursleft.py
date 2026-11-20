@@ -2,8 +2,9 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
-"""Print the hours that remain before the time limit of a Slurm job. Usage: slurmjobhoursleft.py JOBID."""
+"""Print the hours that remain before the time limit of a Slurm job."""
 
+import argparse
 import datetime as dt
 import subprocess
 import sys
@@ -21,8 +22,9 @@ def get_hours_left(strendtime: str, now: dt.datetime) -> float:
 
 def main() -> None:
     """Print the hours between now and the end time that squeue gives for the job."""
-    assert len(sys.argv) == 2
-    jobid = int(sys.argv[1])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("jobid", type=int, help="the ID of the Slurm job, e.g. $SLURM_JOB_ID")
+    jobid = parser.parse_args().jobid
     # the time format of the user, e.g. SLURM_TIME_FORMAT=relative, gives an end time that fromisoformat() cannot read
     cmd = ["env", "SLURM_TIME_FORMAT=standard", "squeue", "-j", str(jobid), "--noheader", "--Format", "EndTime"]
     try:

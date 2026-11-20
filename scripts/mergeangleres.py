@@ -4,6 +4,7 @@
 # ///
 """Merge the files of the direction bins into light_curve_res.out, spec_res.out, and specpol_res.out."""
 
+import argparse
 import re
 from pathlib import Path
 
@@ -31,6 +32,7 @@ def get_mabins() -> int:
 
 def main() -> None:
     """Merge the files of the direction bins in the current folder and in speclc_angle_res."""
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     mabins = get_mabins()
     for basefolder in [Path(), Path("speclc_angle_res")]:
         if not basefolder.is_dir():

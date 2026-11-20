@@ -1,4 +1,9 @@
 #!/bin/bash -x
+
+if [ $# -gt 0 ]; then
+    echo "Usage: artis/scripts/artis-virgo-submit.sh with no argument, in the model folder. The script submits the ARTIS job on Virgo with sbatch." >&2
+    exit 1
+fi
 sbatch -J "${PWD##*/}" --ntasks=2112 --ntasks-per-node=176 --mem-per-cpu=2000MB --partition=long --time=48:00:00 --constraint=amd,epyc,9654 --mail-type=ALL --mail-user="${EMAIL:-${USER}@gsi.de}" --no-requeue -- artis/scripts/artis-virgo-slurmjob.sh
 # An AMD EPYC 9654 (Zen 4) node has 192 real cores. The command above requests
 # only 176 cores per node, because a full node is usually busy.
