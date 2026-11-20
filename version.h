@@ -11,9 +11,9 @@
 extern const char* const GIT_VERSION;
 extern const char* const GIT_BRANCH;
 extern const char* const GIT_STATUS;
-// the file that the symlink artisoptions.h points to, or "not a symlink"
+// the preset that the symlink artisoptions.h points to, or a text that says that artisoptions.h is not a symlink
 extern const char* const ARTISOPTIONS_SYMLINK_TARGET;
-// the first line of the text of "mpicxx --version"
+// the first line that is not empty of the text of "$(CXX) --version"
 extern const char* const COMPILER_VERSION_LINE;
 extern const char* const COMPILE_FLAGS;
 // the lines of artisoptions.h, separated by newlines

@@ -16,11 +16,19 @@ occurs. Each MPI rank n writes a log file `output_n-t.txt` into the job folder, 
 [Output files](outputfiles.md)). A run without threads writes only the files of thread 0. `sn3d` keeps a symlink
 `output_0-0.txt` in the model folder that points to the log of rank 0 and thread 0.
 
-The log of rank 0 starts with the git version, the file that the symlink `artisoptions.h` points to, the compiler, the
-compile flags, the MPI library, and the options of `artisoptions.h`. After each {term}`timestep`, it gives the progress of the model and an estimate of the
+The log of rank 0 starts with these lines:
+
+- the git version;
+- the {term}`preset` that the symlink `artisoptions.h` points to;
+- the compiler and the compile flags;
+- the MPI library;
+- the options of `artisoptions.h`.
+
+After each {term}`timestep`, the log gives the progress of the model and an estimate of the
 time for the remaining requested timesteps. The estimate uses the duration of the last timestep. The same line gives
 the number of warnings in the logs of all ranks since the start of the job, and the end of the log gives the total.
-Most warnings are in the logs of the ranks that update the cells, and not in the log of rank 0.
+Each rank writes the warnings of its own cells, so most warnings are in the logs of the other ranks and not in the log
+of rank 0.
 
 ## Check the input before a job
 
@@ -34,8 +42,11 @@ mpirun -np 4 artis/sn3d -c
 An error in an input file then stops the check, and not a job that waited in the queue. When the check finds no
 error, `sn3d` writes these lines to the standard output:
 
-- the number of model cells with matter, the number of elements in `compositiondata.txt`, and the numbers of ions,
-  levels, NLTE levels, and lines of their atomic data;
+- the counts of the model and of its atomic data:
+  - the model cells with matter and a propagation cell;
+  - the elements of `compositiondata.txt`;
+  - the ions, the levels, and the lines of their atomic data;
+  - the excited NLTE levels and the superlevels;
 - the largest peak memory of one rank in the check. For a new simulation, the line also gives the memory of one
   packet. Each rank of a run needs that memory for each of its packets;
 - `input check: complete`.

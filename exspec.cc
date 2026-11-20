@@ -20,6 +20,7 @@
 #include <print>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -73,16 +74,18 @@ void stop_for_command_line_option(const int argc, char* const* argv) {
     } else if (opt == version_option) {
       print_build_version();
     } else {
-      std::string unknown_argument;
       if (opt == -1) {
-        unknown_argument = arguments[static_cast<size_t>(optind)];
-      } else if (optopt != 0) {  // NOLINT(misc-include-cleaner)
-        unknown_argument = std::format("-{}", static_cast<char>(optopt));
+        std::println(stderr, "[error] unknown command line argument '{}'", arguments[static_cast<size_t>(optind)]);
       } else {
-        // optopt is 0 for an unknown long option, and arguments[optind - 1] then holds it
-        unknown_argument = arguments[static_cast<size_t>(optind - 1)];
+        // arguments[optind - 1] holds an unknown long option, or a long option with a value that it does not take
+        const std::string_view option_argument = arguments[static_cast<size_t>(optind - 1)];
+        // NOLINTBEGIN(misc-include-cleaner)
+        const std::string unknown_option = option_argument.starts_with("--")
+                                               ? std::string{option_argument}
+                                               : std::format("-{}", static_cast<char>(optopt));
+        // NOLINTEND(misc-include-cleaner)
+        std::println(stderr, "[error] unknown command line option '{}'", unknown_option);
       }
-      std::println(stderr, "[error] unknown command line argument '{}'", unknown_argument);
       print_options_help(stderr, progname);
     }
   }

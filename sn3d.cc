@@ -1020,13 +1020,14 @@ auto parse_command_line(const int argc, char* const* argv) -> CommandLineOptions
       if (parse_end == optarg || *parse_end != '\0' || !std::isfinite(walltime_limit_hours) ||
           walltime_limit_hours <= 0.) {
         // silently accepting a bad value would disable the wall time limit instead of applying it
-        fatal_crash("invalid wall time hours '{}' given with -w option", optarg);
+        stop_for_command_line_error(progname, std::format("invalid wall time hours '{}' given with -w option", optarg));
       }
       const double walltime_limit_seconds_exact = walltime_limit_hours * HOUR;
       if (!std::isfinite(walltime_limit_seconds_exact) || walltime_limit_seconds_exact < 1. ||
           walltime_limit_seconds_exact > std::numeric_limits<int>::max()) {
-        fatal_crash("wall time limit of {} hours is outside the range of 1 second to {} seconds", optarg,
-                    std::numeric_limits<int>::max());
+        stop_for_command_line_error(
+            progname, std::format("wall time limit of {} hours is outside the range of 1 second to {} seconds", optarg,
+                                  std::numeric_limits<int>::max()));
       }
       options.walltime_limit_seconds = static_cast<int>(walltime_limit_seconds_exact);
       options.walltime_limit_hours_str = optarg;
@@ -1034,10 +1035,12 @@ auto parse_command_line(const int argc, char* const* argv) -> CommandLineOptions
       // NOLINTNEXTLINE(misc-include-cleaner)
       stop_for_command_line_error(progname, std::format("the option -{} needs a value", static_cast<char>(optopt)));
     } else {
-      // optopt is 0 for an unknown long option, and arguments[optind - 1] then holds it
+      // arguments[optind - 1] holds an unknown long option, or a long option with a value that it does not take
       // NOLINTBEGIN(misc-include-cleaner)
-      const std::string unknown_option = (optopt != 0) ? std::format("-{}", static_cast<char>(optopt))
-                                                       : std::string{arguments[static_cast<size_t>(optind - 1)]};
+      const std::string_view option_argument = arguments[static_cast<size_t>(optind - 1)];
+      const std::string unknown_option = option_argument.starts_with("--")
+                                             ? std::string{option_argument}
+                                             : std::format("-{}", static_cast<char>(optopt));
       // NOLINTEND(misc-include-cleaner)
       stop_for_command_line_error(progname, std::format("unknown command line option '{}'", unknown_option));
     }
@@ -1313,8 +1316,9 @@ auto main(int argc, char* argv[]) -> int {
     MPI_Allreduce_safe(peak_resident_memory_MB, MPI_MAX, MPI_COMM_WORLD);
     if (globals::my_rank == 0) {
       std::println(
-          "input check: {} of the {} model cells have matter. compositiondata.txt has {} elements, and their atomic "
-          "data has {} ions, {} levels ({} NLTE levels), and {} lines.",
+          "input check: {} of the {} model cells have matter and a propagation cell. compositiondata.txt has {} "
+          "elements, and their atomic data has {} ions, {} levels ({} excited NLTE levels and superlevels), and {} "
+          "lines.",
           grid::get_nonempty_npts_model(), grid::get_npts_model(), get_nelements(), get_includedions(),
           get_includedlevels(), globals::total_nlte_levels, globals::nlines);
       if (globals::simulation_continued_from_saved) {

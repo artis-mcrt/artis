@@ -382,10 +382,10 @@ endif
 # the shell command and the C++ string literal must not see a quote, a backslash, a dollar, or a backtick
 text_without_quotes_and_escapes = $(subst ",,$(subst \,,$(subst `,,$(subst $$,,$(1)))))
 define version_cc
-extern const char* const GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";
-extern const char* const GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";
+extern const char* const GIT_VERSION = \"$(call text_without_quotes_and_escapes,$(shell git describe --dirty --always --tags))\";
+extern const char* const GIT_BRANCH = \"$(call text_without_quotes_and_escapes,$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD ))\";
 extern const char* const GIT_STATUS = \"$(call text_without_quotes_and_escapes,$(shell git status --short))\";
-extern const char* const ARTISOPTIONS_SYMLINK_TARGET = \"$(call text_without_quotes_and_escapes,$(or $(shell readlink artisoptions.h 2> /dev/null),not a symlink))\";
+extern const char* const ARTISOPTIONS_SYMLINK_TARGET = \"$(call text_without_quotes_and_escapes,$(or $(shell readlink artisoptions.h 2> /dev/null),unknown because artisoptions.h is not a symlink))\";
 extern const char* const COMPILER_VERSION_LINE = \"$(call text_without_quotes_and_escapes,$(shell $(CXX) --version 2> /dev/null | awk 'NF { print; exit }'))\";
 extern const char* const COMPILE_FLAGS = \"$(call text_without_quotes_and_escapes,$(CXXFLAGS))\";
 endef

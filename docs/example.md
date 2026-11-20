@@ -171,7 +171,7 @@ grep "is complete" output_0-0.txt | tail -n 1
 ```
 
 ```text
-timestep 23 is complete (24 of 50 timesteps of the model) after 0.00 hours. If each timestep takes this time, the remaining 26 requested timesteps take 0.01 hours.
+timestep 23 is complete (24 of 50 timesteps of the model) after 0.00 hours. If each timestep takes this time, the remaining 26 requested timesteps take 0.01 hours. The logs of all ranks have 0 warnings from this job.
 ```
 
 The `mem_usage` lines give the memory of the packets and of each large array:
@@ -191,6 +191,7 @@ The last lines of the log give the end state and the cost of the job:
 
 ```text
 No need for restart
+The logs of all ranks have 0 warnings from this job.
 sn3d finished (job: pktprop ts 0 to ts 49 grid-preprop, 0.021 wallclock hours * 4 processes * 1 threads = 0.083 core hours)
 ```
 

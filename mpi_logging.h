@@ -113,8 +113,7 @@ void set_log_file(std::string_view filename) noexcept;
 // Write the git version and branch, the preset, and the compiler of the build to the standard output.
 void print_build_version();
 
-// Write the git metadata, the preset, the compiler, the compile flags, the MPI library, and the lines of
-// artisoptions.h to the log file.
+// Write the build information, the MPI library, and the lines of artisoptions.h to the log file.
 void log_git_metadata_and_artisoptions();
 
 // Give the number of log messages with the tag [warning] in all ranks. Every rank must call it.

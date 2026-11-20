@@ -42,7 +42,7 @@ bool outputstartofline = true;
 OutputFileStream output_file;
 std::thread::id mpi_main_thread;
 // the log messages of this rank with the tag [warning], in all threads
-std::int64_t warning_message_count = 0;
+ALIGNAS_AVOID_FALSE_SHARING std::int64_t warning_message_count = 0;
 
 // Only the main thread can call MPI with MPI_THREAD_FUNNELED. Test its identity before any MPI call.
 [[noreturn]] void abort_run() noexcept {
@@ -86,7 +86,7 @@ void set_log_file(const std::string_view filename) noexcept { output_file = open
 void print_build_version() {
   std::println("git version: {}", GIT_VERSION);
   std::println("git branch: {}", GIT_BRANCH);
-  std::println("artisoptions.h is a symlink to: {}", ARTISOPTIONS_SYMLINK_TARGET);
+  std::println("preset: {}", ARTISOPTIONS_SYMLINK_TARGET);
   std::println("compiler: {}", COMPILER_VERSION_LINE);
 }
 
@@ -94,14 +94,14 @@ void log_git_metadata_and_artisoptions() {
   printlnlog("git branch: {}", GIT_BRANCH);
   printlnlog("git version: {}", GIT_VERSION);
   printlnlog("git status: {}", GIT_STATUS);
-  printlnlog("artisoptions.h is a symlink to: {}", ARTISOPTIONS_SYMLINK_TARGET);
+  printlnlog("preset: {}", ARTISOPTIONS_SYMLINK_TARGET);
   printlnlog("compiler: {}", COMPILER_VERSION_LINE);
   printlnlog("compile flags: {}", COMPILE_FLAGS);
   std::array<char, MPI_MAX_LIBRARY_VERSION_STRING> mpi_library_version{};
   int mpi_library_version_length = 0;
   MPI_Get_library_version(mpi_library_version.data(), &mpi_library_version_length);
-  const auto mpi_library_version_text =
-      std::string_view{mpi_library_version.data(), static_cast<size_t>(mpi_library_version_length)};
+  // Open MPI includes the null character in the length, so the text ends at the null character
+  const std::string_view mpi_library_version_text{mpi_library_version.data()};
   // some MPI libraries give several lines
   printlnlog("MPI library: {}", mpi_library_version_text.substr(0, mpi_library_version_text.find('\n')));
   std::istringstream option_lines{std::string{ARTISOPTIONS_LINES}};

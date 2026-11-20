@@ -167,7 +167,7 @@ Points that surprise a new agent:
   change of the preset or of an option value compiles all objects in a new
   build folder, and a change back to an earlier content compiles nothing. The
   timestamp of `artisoptions.h` has no effect, so a symlink and a copy give the
-  same build. Each edit of an option keeps the build folder of the old value,
+  same build folder. Each edit of an option keeps the build folder of the old value,
   and `make clean` removes all build folders.
 - The Makefile decides how the options interact, e.g. `REPRODUCIBLE=ON` with
   `FASTMATH`, and `OPENMP=ON` with `STDPAR=ON`. Read the Makefile for the rule.
@@ -186,8 +186,9 @@ Points that surprise a new agent:
 - `GCCTOOLCHAIN` selects the gcc toolchain of nvc++. The Makefile has fallbacks
   for some known hosts, so this option is not always necessary. CI sets it in
   the environment.
-- The Makefile writes `version.cc` into the build folder from the git metadata
-  and from `artisoptions.h`, but only when the content changes. `sn3d` and
+- The Makefile writes `version.cc` into the build folder from the git metadata,
+  from `artisoptions.h` and its symlink target, and from the compiler, but only
+  when the content changes. `sn3d` and
   `exspec` log these strings. `version.h` is a tracked file that declares the
   strings. Keep the definitions in `version.cc`.
   The git metadata changes at almost every git operation, so a definition in
