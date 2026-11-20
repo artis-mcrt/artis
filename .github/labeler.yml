@@ -1,0 +1,41 @@
+---
+# The rules of .github/workflows/labeler.yml. Each label comes from the paths of the changed files.
+# The workflow removes a label of this file when the label no longer matches.
+# Do not add the labels of Dependabot here (dependencies, github_actions, pre_commit, python),
+# because the workflow then removes them from the Dependabot pull requests.
+
+checksums:
+    - changed-files:
+          - any-glob-to-any-file: tests/*_inputfiles/results_md5_*.txt
+
+no C++:
+    - changed-files:
+          - all-globs-to-all-files: ['!**/*.{cc,h,inc}', '!third_party/**']
+
+options:
+    - changed-files:
+          - any-glob-to-any-file: [artisoptions_*.h, artisoptions_doc.md]
+
+data:
+    - changed-files:
+          - any-glob-to-any-file: data/**
+
+tests:
+    - changed-files:
+          - any-glob-to-any-file: [unittests.cc, 'tests/*.*', 'tests/*_inputfiles/!(results_md5_*)']
+
+build:
+    - changed-files:
+          - any-glob-to-any-file: [Makefile, pixi.toml]
+
+CI:
+    - changed-files:
+          - any-glob-to-any-file: [.github/workflows/**, .pre-commit-config.yaml, .clang-format, .clang-tidy]
+
+scripts:
+    - changed-files:
+          - any-glob-to-any-file: scripts/**
+
+documentation:
+    - changed-files:
+          - any-glob-to-any-file: [docs/**, '**/*.md', CITATION.cff, .readthedocs.yaml]
