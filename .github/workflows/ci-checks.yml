@@ -19,7 +19,7 @@ jobs:
             - uses: actions/checkout@v7
 
             - name: Run pre-commit hooks
-              uses: j178/prek-action@v2
+              uses: j178/prek-action@v3.1.1
               if: always()
               with:
                 extra-args: '--all-files --skip make'

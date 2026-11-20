@@ -507,11 +507,11 @@ void add_packet_to_light_curve(const Packet& pkt, const int dirbin, std::span<do
                      pkt.e_rf / globals::timesteps[nts].width * solidanglefactor / globals::nprocs_exspec);
   }
 
-  const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
-
   // Now do the cmf light curve. Unlike t_arrive above, this has no light-travel-time term:
-  // it is the escape time transformed (time-dilated) into the comoving frame.
-  const double t_escape_cmf = pkt.escape_time * inverse_gamma;
+  // it is the escape time transformed (time-dilated) into the comoving frame of the matter at the escape position,
+  // which has the velocity pos / escape_time. The float escape_time can round to below |pos| / c.
+  const double t_escape_cmf =
+      std::sqrt(std::max(0., pow2(static_cast<double>(pkt.escape_time)) - (dot(pkt.pos, pkt.pos) / CLIGHTSQUARED)));
 
   if (t_escape_cmf > globals::tmin && t_escape_cmf < globals::tmax) {
     const int nts = get_timestep(t_escape_cmf);
