@@ -19,7 +19,7 @@ Makefile, e.g. `-O3` and `-lzstd`.
 | `FASTMATH=OFF` | Do not enable compiler transformations that affect round-off-level results, e.g. a\*(b\*c) = (a\*b)\*c. |
 | `MAX_NODE_SIZE=N` | Artificially limit the MPI node size to N ranks. This is useful for testing and prevents MPI shared memory windows from crossing CPU sockets. |
 | `REPRODUCIBLE=ON` | Use stable sorts and disable `FASTMATH`. |
-| `GPU=ON` | Compile for a GPU, together with `STDPAR=ON` or `OPENMP=ON`. This option works around incompatible function calls and uses a Simpson-rule integrator in place of the Gauss-Kronrod integrator. |
+| `GPU=ON` | Compile for a GPU, together with `STDPAR=ON` or `OPENMP=ON`. hipcc needs `STDPAR=ON`. This option works around incompatible function calls and uses a Simpson-rule integrator in place of the Gauss-Kronrod integrator. |
 | `GCCTOOLCHAIN=path` | With nvc++, select the gcc toolchain at that path. The Makefile has fallbacks for some known hosts, so this option is not always necessary. |
 | `GPUARCH=N` | With nvc++ and `GPU=ON`, compile for compute capability N, e.g. `GPUARCH=80`, in place of the GPU of the host. A host that has no GPU needs this option to get a defined target. |
 | `OPENMP=ON` | Parallelise with OpenMP threads within each MPI rank. This cannot be combined with `STDPAR`. The Makefile gives the OpenMP flags to gcc, clang, and nvc++ only, so a build with hipcc gets no threads. |

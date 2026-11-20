@@ -22,7 +22,7 @@ Options:
   REPRODUCIBLE=ON        use stable sorts and FASTMATH=OFF
   OPENMP=ON              add OpenMP threads in each MPI rank
   STDPAR=ON              use the parallel algorithms of the standard library
-  GPU=ON                 compile for a GPU, together with STDPAR=ON or OPENMP=ON
+  GPU=ON                 compile for a GPU, together with STDPAR=ON or OPENMP=ON. hipcc needs STDPAR=ON
   GPUARCH=N              with nvc++ and GPU=ON, compile for the compute capability N
   GCCTOOLCHAIN=path      with nvc++, use the gcc toolchain at that path
   ZSTD=ON, ZSTD=OFF      stop without libzstd, or build without it. The default uses libzstd if make finds it
@@ -186,6 +186,11 @@ endif
 ifeq ($(GPU),ON)
 	ifeq ($(filter ON,$(STDPAR) $(OPENMP)),)
     $(error GPU=ON needs STDPAR=ON or OPENMP=ON, because a build without them runs on the CPU)
+	endif
+	ifeq ($(COMPILER_NAME),hipcc)
+		ifneq ($(STDPAR),ON)
+      $(error GPU=ON with hipcc needs STDPAR=ON, because the Makefile gives hipcc no OpenMP flags)
+		endif
 	endif
 	CXXFLAGS += -DGPU_ON -DUSE_SIMPSON_INTEGRATOR -U_GLIBCXX_ASSERTIONS
 	BUILD_DIR := $(BUILD_DIR)_gpu
