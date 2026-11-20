@@ -194,3 +194,5 @@ For a run in several jobs, `sn3d -w WALLTIMELIMITHOURS` tests the remaining wall
 [Running sn3d](running.md)).
 A job then needs wall time for at least two timesteps, because `sn3d` writes the restart files from the second
 timestep of a job.
+
+Next: [Runs on a cluster](clusters.md).

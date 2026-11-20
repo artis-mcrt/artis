@@ -62,6 +62,55 @@ and the same source version, and also the same rank count, the same timestep cou
 message names the value of the file and the value of the run. The code has no fallback for a file of a different
 build. Start a new simulation, or build the source version of that run again.
 
+### A job stopped with a crash or a memory kill
+
+A crash or a kill stops the job before the last line of the log, `sn3d finished (job: ...)`. The job scripts then
+submit no next job (see [Runs on a cluster](clusters.md#what-the-job-scripts-do)). Find the cause in these places:
+
+- the output file of the Slurm job, `slurm-<job ID>.out`. It holds the standard error of `sn3d` and the messages of
+  Slurm, e.g. about a kill at the memory limit.
+- the logs of the ranks in the {term}`job folder`. The message that stops the run is in the log of the rank that found
+  the fault (see [The tags of the log lines](#the-tags-of-the-log-lines)). This command lists the logs that have an
+  error line or a failed assertion:
+
+  ```sh
+  grep -l -e '\[error\]' -e 'failed assertion' job_from_ts*/output_*.txt
+  ```
+
+- `sacct -j <job ID> --format=JobID,State,MaxRSS`. It gives the end state of each step of the job and its largest
+  memory. The state `OUT_OF_MEMORY` is a kill at the memory limit.
+
+`sn3d` writes the {term}`restart files <restart file>` and updates `input.txt` after the grid update of each
+{term}`timestep`, except the first timestep of a job. It removes the restart files of the timestep before only after
+each rank has written its new files. After a crash, `input.txt` thus names the timestep of the newest complete set of
+restart files. After a crash in the first timestep of a job, `input.txt` and the restart files are the same as at the
+start of that job.
+
+Correct the cause, and then submit the job again, e.g. with `artis/scripts/submit.sh`. The next job continues from
+the timestep that `input.txt` names. If that timestep is the start timestep of the crashed job, the next job uses the
+same job folder and removes the logs of the crashed job. Copy these logs first if you need them.
+
+For a memory kill, read the `mem_usage` lines of the log (see
+[Plan a simulation](planning.md#measure-the-cost-of-your-run)). A resumed run needs the same rank count and the same
+`NUM_PACKETS` as the run that wrote the restart files (see [Plan a simulation](planning.md#the-ranks)). Each rank
+holds its share of `NUM_PACKETS`, and the ranks of a node share one copy of the large arrays. To resume, give the job
+more nodes and fewer ranks on each node, e.g. with the option `--ntasks-per-node` of `sbatch`. A new simulation can
+also use a smaller `NUM_PACKETS` or a lower level limit in `compositiondata.txt` (see
+[Plan a simulation](planning.md#the-atomic-data-and-the-nlte-levels)).
+
+### The code or the options changed between two jobs
+
+A resumed run needs the same `artisoptions.h` and the same source version as the run that wrote the restart files.
+Each job script runs `make` in `artis` before it starts `sn3d`, so a change of the clone between two jobs goes into the
+next job. The checks of the restart files compare only some values, e.g. the counts of the timesteps, the ranks, the
+cells that contain matter, and the ions, and the time range (see
+[A resumed run stops at a restart file](#a-resumed-run-stops-at-a-restart-file)). A change of the code that keeps
+these values can thus resume with no message.
+
+Thus change the code or the options only between two simulations. Give each {term}`model folder` its own clone (see
+[Runs on a cluster](clusters.md#make-the-model-folder)), so that a change for one simulation does not reach another.
+The `git version` and `git status` lines at the start of the log of each job give the code of that job.
+
 ### The run starts again from the first timestep
 
 `input.txt` holds the timesteps of the next job. A new simulation writes the file again and keeps a copy in
@@ -154,3 +203,25 @@ data.
   [TIMESTEP_SIZE_METHOD](options.md#timestep_size_method). For such a timestep, decrease
   [TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS](options.md#timestep_size_constant_max_width_days). The constant segment
   then takes more of the timestep count, so increase the timestep count also.
+
+### Messages that stop a run
+
+Each of these messages stops the run. The page in the last column describes the rule of the input.
+
+| Start of the message | Cause | Page |
+| --- | --- | --- |
+| `Could not open file '...'` | An input file is absent from the model folder and from the data folders `data/` and `artis/data/`. | [Input files](inputfiles.md) |
+| `Found '...', but this build has no libzstd.` | The input file is zstd compressed, and the build has no libzstd. | [Make options](makeoptions.md) |
+| `... ends before line ...` | `input.txt` has fewer lines than the code reads. | [Input files](inputfiles.md#inputtxt) |
+| `... has the unreadable text '...' at line ...` | A line of `input.txt` has a value of the wrong type. | [Input files](inputfiles.md#inputtxt) |
+| `input.txt gives tmin_days ... and tmax_days ..., but they must obey 0 < tmin_days < tmax_days` | The time range of `input.txt` is not valid. | [Plan a simulation](planning.md#the-time-grid) |
+| `The model snapshot time ... d is after tmin ... d` | `tmin_days` is before the snapshot time of `model.txt`. | [Make your own model](ownmodel.md#4-select-the-options-and-the-times) |
+| `model.txt: found only ... cells instead of ... expected.` | `model.txt` has fewer cells than its first line gives. | [Input files](inputfiles.md#modeltxt) |
+| `model.txt cell ... has vel_r_max_kmps ..., but it must be larger than ... of the cell before` | The outer velocities of a 1D model do not increase. | [Input files](inputfiles.md#modeltxt) |
+| `abundances.txt ends before cell ... of the ... cells of model.txt` | `abundances.txt` has fewer cells than `model.txt`. | [Input files](inputfiles.md#abundancestxt) |
+| `abundances.txt cell ... has element mass fractions that sum to ..., which is more than 1` | The element mass fractions of a cell sum to more than 1. | [Input files](inputfiles.md#abundancestxt) |
+| `compositiondata.txt has ... elements, but the row of element ... is absent or unreadable` | `compositiondata.txt` has fewer element rows than its first line gives, or a row has a value of the wrong type. | [Input files](inputfiles.md#compositiondatatxt) |
+| `... has ... timesteps and ... ranks, but this simulation has ... timesteps and ... ranks` | A resumed run has a different timestep count or rank count than the run that wrote the restart files. | [A resumed run stops at a restart file](#a-resumed-run-stops-at-a-restart-file) |
+| `the restart files have ... ranks (nprocs_exspec in input.txt), but this simulation has ... ranks` | A resumed run has a different rank count than the run that wrote the restart files. The line `nprocs_exspec` of `input.txt` gives the rank count of that run. | [A resumed run stops at a restart file](#a-resumed-run-stops-at-a-restart-file) |
+| `NUM_PACKETS = ... is less than the ... ranks, but every rank needs a packet` | The run has more ranks than packets. | [Plan a simulation](planning.md#the-ranks) |
+| `invalid wall time hours '...' given with -w option` | The value of `-w` is not a positive number. | [Running sn3d](running.md#a-simulation-in-several-jobs) |

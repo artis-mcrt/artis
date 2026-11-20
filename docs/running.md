@@ -57,6 +57,25 @@ continuation job, and they pass the remaining Slurm allocation time automaticall
 
 Run `artis/sn3d -h` to list all command-line options.
 
+## Is the run healthy?
+
+Examine these points during and after a run:
+
+- the progress line after each timestep, with its estimate of the remaining time (see
+  [Example: a nebular spectrum](example.md#7-follow-the-run));
+- the `mem_usage` lines, against the memory of a node (see
+  [Plan a simulation](planning.md#measure-the-cost-of-your-run));
+- the warnings of the logs. Most runs give some of them, and some need a change of the input (see
+  [Troubleshooting](troubleshooting.md#warnings-that-most-runs-give));
+- the electron temperature T_e of the cells after the first timesteps. It must be between `MINTEMP` and `MAXTEMP`, and
+  stable at the times of the results that you use (see [Plan a simulation](planning.md#the-first-timesteps) and
+  [Example: a nebular spectrum](example.md#8-check-the-results));
+- the rows of `artistools check` (see [Analyse the results](analysis.md#start-with-the-checks));
+- the packet noise of the spectra (see [Analyse the results](analysis.md#is-the-packet-count-sufficient)).
+
+The log of a complete job ends with the line `sn3d finished (job: ...)`. A job without that line had a crash or a kill
+(see [Troubleshooting](troubleshooting.md#a-job-stopped-with-a-crash-or-a-memory-kill)).
+
 ## The ranks and the threads
 
 Each MPI rank holds an equal share of `NUM_PACKETS` in memory, and it updates its own range of the cells (see

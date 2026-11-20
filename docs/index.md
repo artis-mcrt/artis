@@ -7,7 +7,8 @@ describes the packets, and [How a simulation works](simulation.md) describes the
 
 Go to the page for your task:
 
-- **A first run.** The [Quickstart](quickstart.md) gives a first simulation and a plot on a laptop.
+- **A first run.** The [Quickstart](quickstart.md) gives a first simulation and a plot on a laptop. Then
+  [Example: a nebular spectrum](example.md) takes a small model through a complete non-LTE run.
 - **A production run.** Start with [Make your own model](ownmodel.md), [Plan a simulation](planning.md), and
   [Runs on a cluster](clusters.md). Then use [Analyse the results](analysis.md).
 - **A change of the code.** Start with [Development setup](development.md) and the [Code map](codemap.md).
@@ -98,32 +99,37 @@ Thus ARTIS comes as it is, and the developers do not promise to correct a defect
 a [pull request](https://github.com/artis-mcrt/artis/pulls) sometimes.
 
 :::{toctree}
-:caption: Getting started
+:caption: Tutorials
 :maxdepth: 1
 :hidden:
 
 quickstart
-installation
-presets
-data
 example
 ownmodel
 :::
 
 :::{toctree}
-:caption: Running a simulation
+:caption: Guides
+:maxdepth: 1
+:hidden:
+
+installation
+data
+planning
+running
+clusters
+exspec
+analysis
+troubleshooting
+:::
+
+:::{toctree}
+:caption: Concepts
 :maxdepth: 1
 :hidden:
 
 simulation
 methods
-planning
-running
-clusters
-outputfiles
-exspec
-analysis
-troubleshooting
 :::
 
 :::{toctree}
@@ -131,8 +137,10 @@ troubleshooting
 :maxdepth: 1
 :hidden:
 
+presets
 options
 inputfiles
+outputfiles
 makeoptions
 scripts
 glossary
