@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <iosfwd>
 #include <optional>
+#include <span>
 #include <utility>
 
 #include "constants.h"
@@ -21,6 +22,12 @@
 void ratecoefficients_init();
 
 void setup_photoion_luts();
+
+// Give the frequency of a free-bound photon at a cumulative probability of the energy-weighted emissivity, on the
+// range of the photoionisation table. The comment above the definition describes the method.
+[[nodiscard]] DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(double nu_threshold, float T_e,
+                                                                            std::span<const float> photoion_xs,
+                                                                            double cumulative_probability) -> double;
 
 [[nodiscard]] DEVICE_FUNC auto select_continuum_nu(int element, int lowerion, int lower, int phixstargetindex,
                                                    float T_e, rngstate_type& rngstate) -> double;
