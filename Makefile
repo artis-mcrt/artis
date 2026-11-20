@@ -22,7 +22,7 @@ Options:
   REPRODUCIBLE=ON        use stable sorts and FASTMATH=OFF
   OPENMP=ON              add OpenMP threads in each MPI rank
   STDPAR=ON              use the parallel algorithms of the standard library
-  GPU=ON                 compile for a GPU, together with STDPAR=ON
+  GPU=ON                 compile for a GPU, together with STDPAR=ON or OPENMP=ON
   GPUARCH=N              with nvc++ and GPU=ON, compile for the compute capability N
   GCCTOOLCHAIN=path      with nvc++, use the gcc toolchain at that path
   ZSTD=ON, ZSTD=OFF      stop without libzstd, or build without it. The default uses libzstd if make finds it
@@ -39,6 +39,14 @@ help:
 	@:
 
 ifneq ($(MAKECMDGOALS),help)
+
+# make ignores an unknown variable, so a misspelt option, e.g. TESTMOD=ON, would give a build without the option
+MAKE_OPTION_NAMES := TESTMODE OPTIMIZE FASTMATH REPRODUCIBLE OPENMP STDPAR GPU GPUARCH GCCTOOLCHAIN ZSTD MAX_NODE_SIZE PGO
+COMMAND_LINE_VARIABLES := $(foreach variable,$(.VARIABLES),$(if $(findstring command line,$(origin $(variable))),$(variable)))
+UNKNOWN_COMMAND_LINE_VARIABLES := $(filter-out $(MAKE_OPTION_NAMES) CXX CXXFLAGS CPPFLAGS LDFLAGS,$(COMMAND_LINE_VARIABLES))
+ifneq ($(UNKNOWN_COMMAND_LINE_VARIABLES),)
+  $(error make has no option $(UNKNOWN_COMMAND_LINE_VARIABLES). 'make help' lists the options)
+endif
 
 # artisoptions.h is gitignored and must be supplied (normally as a symlink to a preset). Check up front
 # to give one actionable message rather than a compiler error per translation unit. 'make clean' and 'make help'
@@ -57,7 +65,7 @@ $(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
 $(foreach option,TESTMODE REPRODUCIBLE GPU OPENMP STDPAR FASTMATH OPTIMIZE ZSTD,\
   $(eval override $(option) := $(strip $($(option))))\
   $(if $(or $(filter-out ON OFF,$($(option))),$(filter-out 0 1,$(words $($(option))))),\
-    $(error bad value for $(option) option. Should be ON or OFF)))
+    $(error bad value '$($(option))' for $(option) option. Should be ON or OFF)))
 
 CXX := mpicxx
 COMPILER_VERSION := $(shell $(CXX) --version 2> /dev/null)
@@ -172,13 +180,16 @@ endif
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR
 
 ifeq ($(GPU),ON)
+	ifeq ($(filter ON,$(STDPAR) $(OPENMP)),)
+    $(error GPU=ON needs STDPAR=ON or OPENMP=ON, because a build without them runs on the CPU)
+	endif
 	CXXFLAGS += -DGPU_ON -DUSE_SIMPSON_INTEGRATOR -U_GLIBCXX_ASSERTIONS
 	BUILD_DIR := $(BUILD_DIR)_gpu
 endif
 
 ifeq ($(OPENMP),ON)
 	ifeq ($(STDPAR),ON)
-		$(error cannot combine OPENMP and STDPAR)
+    $(error cannot combine OPENMP and STDPAR)
 	endif
 	BUILD_DIR := $(BUILD_DIR)_openmp
 
@@ -276,7 +287,7 @@ $(shell rm -f $(ZSTD_PROBE_SRC) $(ZSTD_PROBE_SRC).out)
 		BUILD_DIR := $(BUILD_DIR)_zstd
 $(info libzstd found: the programs read .zst input files and write .zst output files)
 	else ifeq ($(ZSTD),ON)
-		$(error ZSTD=ON, but the probe does not find libzstd 1.4.0 or later. Install the development package of zstd, or set PKG_CONFIG_PATH)
+    $(error ZSTD=ON, but the probe does not find libzstd 1.4.0 or later. Install the development package of zstd, or set PKG_CONFIG_PATH)
 	else
 $(info libzstd not found: the programs read and write plain files only. Set ZSTD=OFF to skip the probe)
 	endif

@@ -2,13 +2,16 @@
 
 The Makefile is the authority for these options and for the way that they interact.
 
+An unknown name on the command line, e.g. `TESTMOD=ON`, stops `make`. The command line can also set the variables
+`CXX`, `CXXFLAGS`, `CPPFLAGS`, and `LDFLAGS`.
+
 | Option | Effect |
 | --- | --- |
 | `TESTMODE=ON` | Enable additional assertions and the address and undefined behaviour sanitizers. |
 | `FASTMATH=OFF` | Do not enable compiler transformations that affect round-off-level results, e.g. a\*(b\*c) = (a\*b)\*c. |
 | `MAX_NODE_SIZE=N` | Artificially limit the MPI node size to N ranks. This is useful for testing and prevents MPI shared memory windows from crossing CPU sockets. |
 | `REPRODUCIBLE=ON` | Use stable sorts and disable `FASTMATH`. |
-| `GPU=ON` | Required to compile for GPUs. It works around incompatible function calls and uses a Simpson-rule integrator in place of Gauss-Kronrod. |
+| `GPU=ON` | Required to compile for GPUs, together with `STDPAR=ON` or `OPENMP=ON`. It works around incompatible function calls and uses a Simpson-rule integrator in place of Gauss-Kronrod. |
 | `GCCTOOLCHAIN=path` | With nvc++, select the gcc toolchain at that path. The Makefile has fallbacks for some known hosts, so this option is not always necessary. |
 | `GPUARCH=N` | With nvc++ and `GPU=ON`, compile for compute capability N, e.g. `GPUARCH=80`, in place of the GPU of the host. A host that has no GPU needs this option to get a defined target. |
 | `OPENMP=ON` | Parallelise with OpenMP threads within each MPI rank. This cannot be combined with `STDPAR`. The Makefile gives the OpenMP flags to gcc, clang, and nvc++ only, so a build with hipcc gets no threads. |
