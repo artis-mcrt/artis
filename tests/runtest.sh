@@ -112,12 +112,15 @@ case $step in
         checksum_steps_with_differences=()
         failed_step=
         for step_name in "${steps[@]}"; do
-            if "$testsdir/runtest.sh" "$testname" "$step_name"; then
+            step_status=0
+            "$testsdir/runtest.sh" "$testname" "$step_name" || step_status=$?
+            if [ "$step_status" -eq 0 ]; then
                 continue
             fi
-            # A different compiler or CPU type can give different checksums, so the other steps still run. After a
-            # failure, the checksum file exists only if the step stopped at the comparison.
-            if [[ $step_name == checksums_* ]] && [ -f "$modelpath/results_md5_${step_name#checksums_}.txt" ]; then
+            # A different compiler or CPU type can give different checksums, so the other steps still run. A checksum
+            # step gives the status 1 with its checksum file only for a difference of the checksums.
+            if [[ $step_name == checksums_* ]] && [ "$step_status" -eq 1 ] &&
+                [ -f "$modelpath/results_md5_${step_name#checksums_}.txt" ]; then
                 echo "[error] The step $step_name of the test $testname failed." >&2
                 checksum_steps_with_differences+=("$step_name")
             else
@@ -225,8 +228,12 @@ case $step in
         elif diff "$reffile" "$checksumfile"; then
             echo "The checksums agree with ${reffile#"$repopath"/}."
         else
-            echo "[error] The checksums differ from ${reffile#"$repopath"/}. In the diff, '<' marks the reference and '>' marks this run." >&2
-            exit 1
+            # diff gives the status 1 for a difference and 2 for an error
+            diff_status=$?
+            if [ "$diff_status" -eq 1 ]; then
+                echo "[error] The checksums differ from ${reffile#"$repopath"/}. In the diff, '<' marks the reference and '>' marks this run." >&2
+            fi
+            exit "$diff_status"
         fi
         ;;
 esac
