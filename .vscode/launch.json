@@ -8,7 +8,12 @@
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [],
+            "environment": [
+                {
+                    "name": "ASAN_OPTIONS",
+                    "value": "detect_stack_use_after_return=1:detect_leaks=0"
+                }
+            ],
             "externalConsole": false,
             "MIMode": "lldb",
             "preLaunchTask": "make unittests"

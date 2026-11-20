@@ -22,7 +22,7 @@
             "label": "make unittests",
             "type": "process",
             "command": "make",
-            "args": ["OPTIMIZE=OFF", "unittests"],
+            "args": ["TESTMODE=ON", "OPTIMIZE=OFF", "unittests"],
             "problemMatcher": []
         }
     ]

@@ -74,9 +74,9 @@ warning. Put such an `#include` or such a construction between `#pragma clang un
 ## The Python scripts
 
 The scripts of `scripts/` use only the standard library of Python. The hooks check them with ruff, pyrefly, and ty, and
-`scripts/ruff.toml`, `scripts/pyrefly.toml`, and `scripts/ty.toml` hold the settings. If a script needs a package, add
-the package to `additional_dependencies` of the `pyrefly` hook and of the `ty` hook in `.pre-commit-config.yaml`. The
-type checkers otherwise cannot resolve the imports of the script.
+`scripts/ruff.toml`, `scripts/pyrefly.toml`, and `scripts/ty.toml` hold the settings. `.pre-commit-config.yaml` holds
+the hooks. Add each new package of a script to `additional_dependencies` of the `pyrefly` hook and of the `ty` hook.
+The type checkers otherwise cannot resolve the imports of the script.
 
 ## Documentation
 
