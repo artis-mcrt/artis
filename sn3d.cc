@@ -990,6 +990,7 @@ auto parse_command_line(const int argc, char* const* argv) -> CommandLineOptions
   // a value outside the range of the characters of the short options
   constexpr int version_option = 256;
   const std::array long_options{
+      // NOLINTNEXTLINE(misc-include-cleaner)
       option{.name = "help", .has_arg = no_argument, .flag = nullptr, .val = 'h'},
       option{.name = "version", .has_arg = no_argument, .flag = nullptr, .val = version_option},
       option{.name = nullptr, .has_arg = 0, .flag = nullptr, .val = 0},
@@ -1030,11 +1031,14 @@ auto parse_command_line(const int argc, char* const* argv) -> CommandLineOptions
       options.walltime_limit_seconds = static_cast<int>(walltime_limit_seconds_exact);
       options.walltime_limit_hours_str = optarg;
     } else if (opt == ':') {
+      // NOLINTNEXTLINE(misc-include-cleaner)
       stop_for_command_line_error(progname, std::format("the option -{} needs a value", static_cast<char>(optopt)));
     } else {
       // optopt is 0 for an unknown long option, and arguments[optind - 1] then holds it
+      // NOLINTBEGIN(misc-include-cleaner)
       const std::string unknown_option = (optopt != 0) ? std::format("-{}", static_cast<char>(optopt))
                                                        : std::string{arguments[static_cast<size_t>(optind - 1)]};
+      // NOLINTEND(misc-include-cleaner)
       stop_for_command_line_error(progname, std::format("unknown command line option '{}'", unknown_option));
     }
   }
@@ -1297,12 +1301,13 @@ auto main(int argc, char* argv[]) -> int {
     }
     MPI_Barrier_allranks();
     printlnlog("The input check is complete. sn3d stops before timestep {}.", globals::timestep);
-    rusage resource_usage{};
+    rusage resource_usage{};  // NOLINT(misc-include-cleaner)
     getrusage(RUSAGE_SELF, &resource_usage);
     // macOS gives ru_maxrss in bytes, and Linux gives it in kilobytes
 #ifdef __APPLE__
     auto peak_resident_memory_MB = resource_usage.ru_maxrss / 1024. / 1024.;
 #else
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access): glibc declares ru_maxrss in an anonymous union
     auto peak_resident_memory_MB = resource_usage.ru_maxrss / 1024.;
 #endif
     MPI_Allreduce_safe(peak_resident_memory_MB, MPI_MAX, MPI_COMM_WORLD);

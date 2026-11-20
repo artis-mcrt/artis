@@ -54,6 +54,7 @@ void stop_for_command_line_option(const int argc, char* const* argv) {
   // a value outside the range of the characters of the short options
   constexpr int version_option = 256;
   const std::array long_options{
+      // NOLINTNEXTLINE(misc-include-cleaner)
       option{.name = "help", .has_arg = no_argument, .flag = nullptr, .val = 'h'},
       option{.name = "version", .has_arg = no_argument, .flag = nullptr, .val = version_option},
       option{.name = nullptr, .has_arg = 0, .flag = nullptr, .val = 0},
@@ -62,7 +63,7 @@ void stop_for_command_line_option(const int argc, char* const* argv) {
   opterr = 0;  // NOLINT(misc-include-cleaner)
   // NOLINTNEXTLINE(concurrency-mt-unsafe,misc-include-cleaner)
   const int opt = getopt_long(argc, argv, "h", long_options.data(), nullptr);
-  if (opt == -1 && optind == argc) {
+  if (opt == -1 && optind == argc) {  // NOLINT(misc-include-cleaner)
     return;
   }
   const bool is_help_or_version = (opt == 'h' || opt == version_option);
@@ -75,7 +76,7 @@ void stop_for_command_line_option(const int argc, char* const* argv) {
       std::string unknown_argument;
       if (opt == -1) {
         unknown_argument = arguments[static_cast<size_t>(optind)];
-      } else if (optopt != 0) {
+      } else if (optopt != 0) {  // NOLINT(misc-include-cleaner)
         unknown_argument = std::format("-{}", static_cast<char>(optopt));
       } else {
         // optopt is 0 for an unknown long option, and arguments[optind - 1] then holds it
