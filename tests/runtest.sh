@@ -13,6 +13,7 @@ step=${2:-all}
 modelpath="$testsdir/${testname}_testrun"
 testmode=${TESTMODE:-OFF}
 mpirun_command=(mpirun --oversubscribe --mca osc '^ucx' --mca mpi_yield_when_idle 1)
+steps=(setup build inputcheck job0 checksums_job0 resume exspec checksums_final)
 
 # the sanitizers of TESTMODE=ON need these settings
 if [ "$testmode" = ON ]; then
@@ -20,11 +21,21 @@ if [ "$testmode" = ON ]; then
     export OMPI_MCA_memory='^patcher'
 fi
 
-usage() {
-    cat >&2 <<EOF
-Usage: tests/runtest.sh <testname> [step]
+test_names() {
+    for setupscript in "$testsdir"/setup_*.sh; do
+        setupscript=${setupscript##*/setup_}
+        echo "${setupscript%.sh}"
+    done
+}
 
-Without a step, the script runs these steps in order. It stops at the first step that fails.
+usage() {
+    cat <<EOF
+Usage: tests/runtest.sh <testname> [step]
+       tests/runtest.sh --list
+
+Without a step, the script runs these steps in order. It stops at the first step that fails, except a checksum
+step. After a checksum step fails, the other steps run. At the end, the script lists the files with different
+checksums and exits with an error status.
   setup            remove tests/<testname>_testrun and make it again with tests/setup_<testname>.sh
   build            build sn3d and exspec from the artisoptions.h of the model folder, and copy them into it
   inputcheck       check the input of the new simulation with sn3d -c
@@ -38,15 +49,38 @@ TESTMODE=ON in the environment adds the sanitizers and the extra assertions to t
 
 Tests:
 EOF
-    for setupscript in "$testsdir"/setup_*.sh; do
-        setupscript=${setupscript##*/setup_}
-        echo "  ${setupscript%.sh}" >&2
-    done
-    exit 1
+    test_names | sed 's/^/  /'
 }
 
-if [ -z "$testname" ] || [ ! -f "$testsdir/setup_${testname}.sh" ]; then
-    usage
+case $testname in
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    --list)
+        test_names
+        exit 0
+        ;;
+    "")
+        usage >&2
+        exit 1
+        ;;
+esac
+
+if [ ! -f "$testsdir/setup_${testname}.sh" ]; then
+    echo "[error] The script has no test '$testname'. Run tests/runtest.sh --list to see the tests." >&2
+    exit 1
+fi
+
+step_is_known=false
+for step_name in all "${steps[@]}"; do
+    if [ "$step" = "$step_name" ]; then
+        step_is_known=true
+    fi
+done
+if [ "$step_is_known" = false ]; then
+    echo "[error] The script has no step '$step'. Run tests/runtest.sh --help to see the steps." >&2
+    exit 1
 fi
 
 if [ "$step" != all ] && [ "$step" != setup ] && [ ! -d "$modelpath" ]; then
@@ -74,12 +108,33 @@ run_inputcheck() {
 
 case $step in
     all)
-        for step_name in setup build inputcheck job0 checksums_job0 resume exspec checksums_final; do
-            if ! "$testsdir/runtest.sh" "$testname" "$step_name"; then
-                echo "[error] The step $step_name of the test $testname failed." >&2
+        failed_checksum_steps=()
+        for step_name in "${steps[@]}"; do
+            if "$testsdir/runtest.sh" "$testname" "$step_name"; then
+                continue
+            fi
+            echo "[error] The step $step_name of the test $testname failed." >&2
+            # a different compiler or CPU type can give different checksums, so the other steps still run
+            if [[ $step_name != checksums_* ]]; then
                 exit 1
             fi
+            failed_checksum_steps+=("$step_name")
         done
+        if [ ${#failed_checksum_steps[@]} -gt 0 ]; then
+            for step_name in "${failed_checksum_steps[@]}"; do
+                checksumfile=results_md5_${step_name#checksums_}.txt
+                if [ ! -f "$modelpath/$checksumfile" ]; then
+                    echo "[error] The step $step_name wrote no $checksumfile. Its output above gives the cause." >&2
+                    continue
+                fi
+                echo "[error] These files have checksums that differ from tests/${testname}_inputfiles/$checksumfile:" >&2
+                # a line that is in only one of the two files names a changed, a missing, or an extra output file
+                comm -3 <(sort "$testsdir/${testname}_inputfiles/$checksumfile") <(sort "$modelpath/$checksumfile") |
+                    sed 's/^[[:space:]]*[0-9a-f]*  /  /' | sort -u >&2
+            done
+            echo "[error] The other steps of the test $testname succeeded. The model folder is $modelpath." >&2
+            exit 1
+        fi
         echo "All steps of the test $testname succeeded. The model folder is $modelpath."
         ;;
 
@@ -168,9 +223,5 @@ case $step in
             echo "[error] The checksums differ from ${reffile#"$repopath"/}. In the diff, '<' marks the reference and '>' marks this run." >&2
             exit 1
         fi
-        ;;
-
-    *)
-        usage
         ;;
 esac

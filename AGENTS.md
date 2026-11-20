@@ -219,8 +219,11 @@ preset. The setup script downloads about 15 MB of atomic data from a GitHub
 release, so this step needs the network. The script keeps the archive in
 `tests/`, and a later run of the script uses that copy.
 
-The script does these steps in order. To run only one step, give its name as
-the second argument.
+The script does these steps in order. It stops at the first step that fails,
+except a checksum step. After a checksum step fails, the other steps run, and
+the script lists the files that differ at the end and exits with an error
+status. To run only one step, give its name as the second argument.
+`tests/runtest.sh --list` prints the names of the tests.
 
 - `setup` removes the model folder `tests/<testname>_testrun` and runs
   `tests/setup_<testname>.sh`. That script copies a preset and then changes

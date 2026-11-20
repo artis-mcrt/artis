@@ -45,11 +45,11 @@ This is the quickest complete simulation of the repository. The script downloads
 15 MB), builds `sn3d` and `exspec`, and makes the model folder `tests/kilonova_1d_testrun`. It then runs the
 simulation in two jobs, and it compares the checksums of the output files with the stored checksums.
 
-A different compiler or CPU type can give different checksums, and the script then stops at the comparison. The
-output files of the first job are complete at that point, so the next section still works. [Testing](testing.md)
-describes the steps and how you run one step by name.
+A different compiler or CPU type can give different checksums. The script then runs the other steps, and at the end it
+lists the files with different checksums and exits with an error status. The output files are complete, so the next
+section still works. [Testing](testing.md) describes the steps and how you run one step by name.
 
-`tests/runtest.sh` without arguments lists the other test models.
+`tests/runtest.sh --list` lists the other test models.
 
 ## 4. Look at the results
 
