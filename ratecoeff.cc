@@ -586,8 +586,8 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
       static_cast<int>(std::floor(((last_phixs_nuovernuedge - 1.) / globals::NPHIXSNUINCREMENT) + 0.5));
 
   // Give the integrals of t^power * exp(-t) from 0 to thermal_offset, divided by thermal_offset^(power + 1).
-  const auto get_power_integrals = [](const double thermal_offset,
-                                      const double exp_minus_thermal_offset) -> std::array<double, 5> {
+  constexpr auto get_power_integrals = [](const double thermal_offset,
+                                          const double exp_minus_thermal_offset) -> std::array<double, 5> {
     std::array<double, 5> power_integrals{};
     if (thermal_offset < 1.) {
       // The series for the highest power and the downward recurrence have no cancellation for a small offset.
@@ -609,6 +609,7 @@ DEVICE_FUNC auto get_continuum_nu_from_cumulative_probability(const double nu_th
     }
     return power_integrals;
   };
+  static_assert(get_power_integrals(0., 1.)[0] == 1. && get_power_integrals(0., 1.)[4] == 0.2);
 
   // Integrals of t^power * exp(-t) over one table step. All table intervals have the same step.
   auto table_step_moments = get_power_integrals(table_step_over_thermal_width, boltzmann_factor_table_step);
@@ -760,7 +761,7 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 
   const auto photoion_xs = get_phixs_table(lower_uniquelevelindex);
 
-  if (FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL) {
+  if constexpr (FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL) {
     return get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, rng_uniform(rngstate));
   }
 

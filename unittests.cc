@@ -720,7 +720,7 @@ void test_continuum_quantiles_structured_table() {
   std::vector<float> photoion_xs(globals::NPHIXSPOINTS, 1e-18F);
   std::fill_n(photoion_xs.begin(), 10, 0.F);
   photoion_xs[50] = 1e-15F;
-  const double nu_threshold = 13.6 * EV / H;
+  constexpr double nu_threshold = 13.6 * EV / H;
   const double nu_table_step = nu_threshold * globals::NPHIXSNUINCREMENT;
   // At 100 K, the table step is 47 times the thermal width.
   for (const float T_e : {100.F, 1000.F, 10000.F, 100000.F}) {
@@ -740,7 +740,7 @@ void test_continuum_quantiles_structured_table() {
       check(std::abs(integral_probability - cumulative_probability) < 3e-6,
             "the free-bound quantile agrees with the integral of the emissivity");
     }
-    const int first_table_interval_with_emission = PHIXS_CLASSIC_NO_INTERPOLATION ? 10 : 9;
+    constexpr int first_table_interval_with_emission = PHIXS_CLASSIC_NO_INTERPOLATION ? 10 : 9;
     check_close(get_continuum_nu_from_cumulative_probability(nu_threshold, T_e, photoion_xs, 0.),
                 nu_threshold * (1. + (first_table_interval_with_emission * globals::NPHIXSNUINCREMENT)), 1e-12,
                 "the zero quantile is the lowest frequency with emission");
@@ -752,7 +752,7 @@ void test_continuum_quantiles_zero_at_table_point() {
   globals::NPHIXSPOINTS = 2;
   globals::NPHIXSNUINCREMENT = 0.03;
   last_phixs_nuovernuedge = 1. + (globals::NPHIXSNUINCREMENT * (globals::NPHIXSPOINTS - 1));
-  const double nu_threshold = 13.6 * EV / H;
+  constexpr double nu_threshold = 13.6 * EV / H;
   const double nu_table_step = nu_threshold * globals::NPHIXSNUINCREMENT;
   // With the linear interpolation, the emissivity is zero at one end of the table interval, and the integral is
   // flat there.
