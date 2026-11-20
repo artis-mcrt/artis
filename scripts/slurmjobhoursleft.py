@@ -23,10 +23,10 @@ def get_hours_left(strendtime: str, now: dt.datetime) -> float:
 def main() -> None:
     """Print the hours between now and the end time that squeue gives for the job."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("jobid", type=int, help="the ID of the Slurm job, e.g. $SLURM_JOB_ID")
+    parser.add_argument("jobid", help="the ID of the Slurm job, e.g. $SLURM_JOB_ID")
     jobid = parser.parse_args().jobid
     # the time format of the user, e.g. SLURM_TIME_FORMAT=relative, gives an end time that fromisoformat() cannot read
-    cmd = ["env", "SLURM_TIME_FORMAT=standard", "squeue", "-j", str(jobid), "--noheader", "--Format", "EndTime"]
+    cmd = ["env", "SLURM_TIME_FORMAT=standard", "squeue", "-j", jobid, "--noheader", "--Format", "EndTime"]
     try:
         cmdendtime = subprocess.run(cmd, capture_output=True, check=True, text=True)
         print(get_hours_left(cmdendtime.stdout.strip(), dt.datetime.now().astimezone()))
