@@ -1,0 +1,26 @@
+---
+name: Label pull requests
+on:
+    # pull_request_target gives write access also for a pull request from a fork.
+    # The job runs no code of the pull request and reads the rules from the base branch.
+    pull_request_target:
+        types: [opened, synchronize, reopened]
+    workflow_dispatch:
+        inputs:
+            pr-number:
+                description: The numbers of the pull requests to label, one on each line
+                required: true
+                type: string
+permissions: {}
+jobs:
+    labeler:
+        permissions:
+            contents: read
+            pull-requests: write
+        timeout-minutes: 10
+        runs-on: ubuntu-26.04-arm
+        steps:
+            - uses: actions/labeler@v7
+              with:
+                  sync-labels: true
+                  pr-number: ${{ inputs.pr-number }}
