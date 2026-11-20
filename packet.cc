@@ -207,7 +207,12 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
   std::string line;
   std::vector<Packet> packets;
   std::getline(packets_file, line);  // read header line to make sure it matches
-  assert_always(line == get_packets_text_header());
+  if (line != get_packets_text_header()) {
+    fatal_crash(
+        "{} has the header line '{}', but this exspec expects '{}'. Build exspec from the same source version and "
+        "with the same artisoptions.h as the sn3d that wrote the packet files",
+        filename, line, get_packets_text_header());
+  }
 
   packets.reserve((NUM_PACKETS / globals::nprocs_exspec) + 1);
   while (get_noncommentline(packets_file, line)) {

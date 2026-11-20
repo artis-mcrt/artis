@@ -296,8 +296,14 @@ void read_recombrate_file() {
 
   std::string line;
   while (get_noncommentline(recombrate_file, line)) {
-    assert_always(std::stringstream(line) >> atomicnumber >> upperionstage >> tablerows);
-    const auto tabulated_rates = read_recombination_rate_rows(recombrate_file, tablerows, log_Te_estimate);
+    if (!(std::stringstream(line) >> atomicnumber >> upperionstage >> tablerows) || tablerows < 0) {
+      fatal_crash(
+          "recombrates.txt has the table header '{}', but a header needs Z, the upper ionstage, and a row count that "
+          "is zero or positive",
+          line);
+    }
+    const auto tabulated_rates =
+        read_recombination_rate_rows(recombrate_file, atomicnumber, upperionstage, tablerows, log_Te_estimate);
     const int element = get_elementindex(atomicnumber);
     if (element >= 0) {
       const int ion = upperionstage - get_ionstage(element, 0);  // the index of the upper ion
@@ -492,7 +498,8 @@ template <typename T, typename U>
 
 }  // anonymous namespace
 
-auto read_recombination_rate_rows(std::istream& recombrate_file, const int tablerows, const double log_Te_estimate)
+auto read_recombination_rate_rows(std::istream& recombrate_file, const int atomicnumber, const int upperionstage,
+                                  const int tablerows, const double log_Te_estimate)
     -> std::optional<std::pair<double, double>> {
   assert_always(tablerows >= 0);
   struct RRCRow {
@@ -509,8 +516,16 @@ auto read_recombination_rate_rows(std::istream& recombrate_file, const int table
   for (int i = 0; i < tablerows; i++) {
     RRCRow row{};
     // Each declared row must supply a temperature and both rates.
-    assert_always(get_noncommentline(recombrate_file, line));
-    assert_always(std::stringstream(line) >> row.log_Te >> row.rrc_low_n >> row.rrc_total);
+    if (!get_noncommentline(recombrate_file, line)) {
+      fatal_crash("recombrates.txt ends after {} of the {} rows of the table of Z={} upper ionstage {}", i, tablerows,
+                  atomicnumber, upperionstage);
+    }
+    if (!(std::stringstream(line) >> row.log_Te >> row.rrc_low_n >> row.rrc_total)) {
+      fatal_crash(
+          "recombrates.txt: the table of Z={} upper ionstage {} has the row '{}', but a row needs log10(T_e) and two "
+          "rate coefficients",
+          atomicnumber, upperionstage, line);
+    }
 
     if (row.log_Te <= log_Te_estimate + log_Te_tolerance) {
       if (!row_at_or_below_Te || row.log_Te > row_at_or_below_Te->log_Te) {
