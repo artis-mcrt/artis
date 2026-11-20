@@ -21,7 +21,8 @@ inline MPI_shared_array<double> nltepops_allcells;
 inline MPI_shared_array<float> Te_prev_allcells;
 inline MPI_shared_array<double> solution_time_allcells;  // t_mid of the solution that the grid holds, or -1
 
-static_assert(!NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value() || *NLTE_TIME_DEPENDENT_FIRST_TIMESTEP >= 0);
+static_assert(!NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value() || *NLTE_TIME_DEPENDENT_FIRST_TIMESTEP >= 0,
+              "NLTE_TIME_DEPENDENT_FIRST_TIMESTEP must be zero or positive");
 
 // The timestep uses the time-dependent ionisation and thermal balance equations
 [[nodiscard]] constexpr auto timestep_is_time_dependent(const int nts) -> bool {
@@ -44,7 +45,9 @@ void nltepop_reset_cell(int nonemptymgi);
 // therefore counts as a change only when it takes a significant ion.
 constexpr double NLTE_SIGNIFICANT_ION_FRACTION = 1e-4;
 static_assert(NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION.value_or(0.) <
-              NLTE_SIGNIFICANT_ION_FRACTION);
+                  NLTE_SIGNIFICANT_ION_FRACTION,
+              "NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION must be below "
+              "NLTE_SIGNIFICANT_ION_FRACTION = 1e-4");
 [[nodiscard]] auto elem_has_nlte_solution(int nonemptymgi, int element) -> bool;
 // The ion range of the last NLTE matrix solution of the element in the cell, as the lowermost and the
 // uppermost solved ion (see grid.h). The range is {-1, -1} before the first solve and after a fallback

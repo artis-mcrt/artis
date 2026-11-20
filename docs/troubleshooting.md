@@ -218,7 +218,7 @@ Each of these messages stops the run. The page in the last column gives more inf
 
 | Start of the message | Cause | Page |
 | --- | --- | --- |
-| `Could not open file '...'` | The message ends with the file name. `sn3d` cannot read an input file in the model folder or in the data folders `data/` and `artis/data/`. The file is absent, or it has no read permission. | [Input files](inputfiles.md) |
+| `Could not open file '...'. The search tried ... in the folder '...'.` | `sn3d` cannot read an input file in the model folder or in the data folders `data/` and `artis/data/`. The message names each path that `sn3d` tried, and the working folder. The file is absent, or it has no read permission. | [Input files](inputfiles.md) |
 | `Could not open file '...' for mode '...'.` | The mode `rb` says that a resumed run cannot read a restart file of its first timestep, e.g. `gridsave_ts<timestep>.tmp`. The file is absent, or it has no read permission. The mode `wb` says that `sn3d` cannot write a restart file, e.g. because the file system is full or the model folder has no write permission. For a packet restart file, `sn3d` first writes this text with the tag `[error]` and no source line, and tries again. The next row gives the message that then stops the run. | [Output files](outputfiles.md#the-files-of-the-whole-simulation) |
 | `The write of ... failed after ... attempts` | `sn3d` cannot write the packet restart file of a rank, e.g. because the file system is full. | [Output files](outputfiles.md#the-files-of-the-whole-simulation) |
 | `Found '...', but this build has no libzstd.` | The input file is zstd compressed, and the build has no libzstd. | [Make options](makeoptions.md) |

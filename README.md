@@ -1,6 +1,6 @@
 # ARTIS
 
-[![DOI](https://zenodo.org/badge/11279591.svg)](https://zenodo.org/badge/latestdoi/11279591)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7728326.svg)](https://doi.org/10.5281/zenodo.7728326)
 [![CI](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml/badge.svg)](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml)
 [![Documentation](https://readthedocs.org/projects/artis-mcrt/badge/?version=latest)](https://artis-mcrt.readthedocs.io/)
 [![License](https://img.shields.io/github/license/artis-mcrt/artis)](https://github.com/artis-mcrt/artis/blob/main/LICENSE)
@@ -54,7 +54,7 @@ This builds the code and runs a small 1D kilonova model in two jobs, and then po
 
 ## Citing ARTIS
 
-If you use ARTIS, please cite it using the [DOI from Zenodo](https://zenodo.org/records/18670358). [Citing ARTIS](https://artis-mcrt.readthedocs.io/en/latest/#citing-artis) lists the paper of each feature, and we maintain a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg).
+If you use ARTIS, please cite it with the Zenodo DOI [10.5281/zenodo.7728326](https://doi.org/10.5281/zenodo.7728326). This DOI always resolves to the newest version. [Citing ARTIS](https://artis-mcrt.readthedocs.io/en/latest/#citing-artis) lists the paper of each feature, and we maintain a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg).
 
 An early version of the code is described in [Sim (2007), MNRAS, 375, 154-162, doi:10.1111/j.1365-2966.2006.11271.x](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract) and [Kromer & Sim (2009), MNRAS, 398, 1809-1826, doi:10.1111/j.1365-2966.2009.15256.x](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract).
 
