@@ -27,8 +27,8 @@ struct HeatingCoolingRates {
   double heating_ff{0};
   double heating_dep{0};  // the share of the deposition below that goes to heating
 
-  // heating_dep over the total deposition (leptons + alpha + spontaneous fission). The lepton share comes
-  // from the Spencer-Fano solution; alpha and spontaneous fission are assumed to thermalise completely.
+  // heating_dep over the total deposition (leptons + alpha + spontaneous fission + input energy). The lepton share
+  // comes from the Spencer-Fano solution. Alpha, spontaneous fission, and the input energy thermalise completely.
   double dep_frac_heating{0};
 
   // Deposition actually seen in this cell. dep_gamma is always from the Monte Carlo estimators and so noisy,
@@ -39,6 +39,8 @@ struct HeatingCoolingRates {
   double dep_electron{0};
   double dep_alpha{0};
   double dep_spfission{0};
+  // the analytic release rate of the input energy (THERMAL_ENERGY_INPUT_FROM_FILES), all of it heating
+  double dep_thermal_input{0};
 
   // Analytic rates at t_mid (density times decay power per mass): what the cell would absorb if everything
   // thermalised locally and instantly, so dep_* against eps_*_ana shows how much escapes or moves elsewhere.

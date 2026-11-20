@@ -23,6 +23,7 @@
 #include "atomic.h"
 #include "constants.h"
 #include "decay.h"
+#include "energyinput.h"
 #include "globals.h"
 #include "grid.h"
 #include "kpkt.h"
@@ -271,6 +272,9 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
              heatingcoolingrates.dep_alpha);
   if (any_fission) {
     std::print(estimators_file, " spfission {:11.5e}", heatingcoolingrates.dep_spfission);
+  }
+  if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
+    std::print(estimators_file, " thermalinput {:11.5e}", heatingcoolingrates.dep_thermal_input);
   }
   std::println(estimators_file);
 
@@ -779,6 +783,9 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   }
 
   nonthermal::calculate_deposition_rate_density(nonemptymgi, heatingcoolingrates, emission_power_per_mass);
+  if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
+    heatingcoolingrates.dep_thermal_input = energyinput::get_release_rate_density(nonemptymgi, nts);
+  }
 
   const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
   const double estimator_normfactor_over4pi = (1. / (4 * PI)) * estimator_normfactor;

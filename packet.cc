@@ -24,6 +24,7 @@
 #include "artisoptions.h"
 #include "constants.h"
 #include "decay.h"
+#include "energyinput.h"
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
@@ -79,9 +80,12 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   assert_always(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == cellindex);
 #endif
 
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
-
-  decay::setup_radioactive_pellet(e_cmf_per_packet, nonemptymgi, pkt, energy_per_massoftopnuc_decaypath);
+  if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
+    energyinput::setup_thermal_input_pellet(e_cmf_per_packet, pkt);
+  } else {
+    const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
+    decay::setup_radioactive_pellet(e_cmf_per_packet, nonemptymgi, pkt, energy_per_massoftopnuc_decaypath);
+  }
 
   // initial e_rf is probably never needed (e_rf is set at pellet decay time), but we
   // might as well give it a correct value since this code is fast and runs only once
@@ -134,21 +138,36 @@ void packet_init(std::span<Packet> packets) {
 
   printlnlog("INITIAL_PACKETS_ON is {}", INITIAL_PACKETS_ON ? "true" : "false");
 
-  // the total decay energy from t_model to t_inf, for the log only. The pellets share etot_simtime below.
-  const double etot_tmodel_tinf = decay::get_global_etot_tmodel_tinf();
+  if constexpr (!THERMAL_ENERGY_INPUT_FROM_FILES) {
+    // the total decay energy from t_model to t_inf, for the log only. The pellets share etot_simtime below.
+    const double etot_tmodel_tinf = decay::get_global_etot_tmodel_tinf();
 
-  printlnlog("etot {:g} [erg] (t_model to t_inf)", etot_tmodel_tinf);
+    printlnlog("etot {:g} [erg] (t_model to t_inf)", etot_tmodel_tinf);
 
-  printlnlog("e_cmf per packet (t_model to t_inf) {:g} [erg]", etot_tmodel_tinf / std::ssize(packets));
+    printlnlog("e_cmf per packet (t_model to t_inf) {:g} [erg]", etot_tmodel_tinf / std::ssize(packets));
+  }
 
-  const auto energy_per_massoftopnuc_decaypath = decay::calc_energy_per_massoftopnuc_decaypath();
+  // the decay data of the pellets, which THERMAL_ENERGY_INPUT_FROM_FILES does not use
+  const auto energy_per_massoftopnuc_decaypath =
+      THERMAL_ENERGY_INPUT_FROM_FILES ? std::vector<double>{} : decay::calc_energy_per_massoftopnuc_decaypath();
 
-  // decay energy per unit ejecta mass of each model cell (computed once per model cell, since many propagation
-  // cells can map to the same model cell)
-  auto cell_endecay_per_mass = std::vector<double>(grid::get_nonempty_npts_model());
+  // the fraction of the cell energy of THERMAL_ENERGY_INPUT_FROM_FILES that the pellets release
+  const double thermal_input_fraction_released_by_pellets =
+      THERMAL_ENERGY_INPUT_FROM_FILES ? energyinput::get_fraction_released_by_pellets() : 0.;
+
+  // the pellet energy per unit ejecta mass of each model cell (computed once per model cell, since many propagation
+  // cells can map to the same model cell): the decay energy, or the input energy that the pellets release
+  auto cell_pellet_energy_per_mass = std::vector<double>(grid::get_nonempty_npts_model());
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    cell_endecay_per_mass[nonemptymgi] =
-        decay::get_modelcell_endecay_per_mass(nonemptymgi, energy_per_massoftopnuc_decaypath);
+    if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
+      const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+      cell_pellet_energy_per_mass[nonemptymgi] = grid::get_thermal_input_energy(mgi) *
+                                                 thermal_input_fraction_released_by_pellets /
+                                                 (grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi));
+    } else {
+      cell_pellet_energy_per_mass[nonemptymgi] =
+          decay::get_modelcell_endecay_per_mass(nonemptymgi, energy_per_massoftopnuc_decaypath);
+    }
   }
 
   // the cumulative energy of the propagation cells, for the sampling of the pellet cell
@@ -163,13 +182,15 @@ void packet_init(std::span<Packet> packets) {
       const auto initial_en_per_mass = INITIAL_PACKETS_ON ? grid::get_initenergyq(mgi) : 0.;
 
       etot_simtime += grid::get_propcell_volume_tmin(propcellindex) * grid::get_rho_tmin(mgi) *
-                      (cell_endecay_per_mass[nonemptymgi] + initial_en_per_mass);
+                      (cell_pellet_energy_per_mass[nonemptymgi] + initial_en_per_mass);
     }
     en_cumulative[propcellindex] = etot_simtime;
   }
   assert_always(etot_simtime > 0);
 
-  constexpr auto strtimelow{INITIAL_PACKETS_ON ? "tmodel" : "tmin"};
+  // the pellets of THERMAL_ENERGY_INPUT_FROM_FILES with INITIAL_PACKETS_ON release from the first row of energyrate.txt
+  constexpr auto strtimelow_with_initial_packets{THERMAL_ENERGY_INPUT_FROM_FILES ? "0" : "tmodel"};
+  constexpr auto strtimelow{INITIAL_PACKETS_ON ? strtimelow_with_initial_packets : "tmin"};
   printlnlog("etot ({} to tmax) {:g} [erg]", strtimelow, etot_simtime);
 
   // So energy per pellet is:

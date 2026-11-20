@@ -104,6 +104,9 @@ struct TimeStep {
       // rather than at a separate deposition event, because a spontaneous fission pellet converts straight
       // to TYPE_NTALPHA_FISPROD_DEPOSITED. Emission and deposition therefore coincide, which is why
       // write_deposition_file() uses this same member in both the total deposition and the total emission sums.
+  // the input energy that the pellets of THERMAL_ENERGY_INPUT_FROM_FILES release as heat in this timestep [erg]. As for
+  // spfission_dep_discrete, the release and the deposition coincide.
+  ALIGNAS_AVOID_FALSE_SHARING double thermal_input_release{0.};
   double eps_spfission_ana_power{0.};  // cmf spontaneous fission energy generation rate analytical [erg/s]
   ALIGNAS_AVOID_FALSE_SHARING double gamma_emission{0.};  // gamma decay energy generation in this timestep [erg]
   double qdot_betaminus{0.};  // energy generation rate of the beta-minus decays (with neutrinos) [erg/s]
