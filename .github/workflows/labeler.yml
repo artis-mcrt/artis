@@ -18,7 +18,7 @@ jobs:
             contents: read
             pull-requests: write
         timeout-minutes: 10
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-26.04-arm
         steps:
             - uses: actions/labeler@v7
               with:
