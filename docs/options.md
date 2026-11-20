@@ -6,9 +6,10 @@
 A change of an option needs a new build. The log file of rank 0 holds the options of the run, so the log of a finished
 simulation shows the values that gave its results.
 
-This page lists every option, with the value of each preset of [Option presets](presets.md). `std::optional` options
-with no value are empty, e.g. `GRID_TYPE_OVERRIDE` keeps the grid type of `model.txt`. The summary gives the first
-sentence of each description. Click the name of an option to read its full description.
+This page lists every option, with the value of each preset of [Option presets](presets.md). For a `std::optional`
+option, "no value" means that the option is empty, e.g. `GRID_TYPE_OVERRIDE` with no value keeps the grid type of
+`model.txt`. The summary gives the first sentence of each description. Click the name of an option to read its full
+description.
 
 ## Summary
 
@@ -109,7 +110,7 @@ sentence of each description. Click the name of an option to read its full descr
 
 | Option | Description | Preset values |
 | --- | --- | --- |
-| [GAMMA_THERMALISATION_SCHEME](#gamma_thermalisation_scheme) | The thermalisation of the gamma-ray photons. | see the option |
+| [GAMMA_THERMALISATION_SCHEME](#gamma_thermalisation_scheme) | The thermalisation of the gamma-ray photons. | every preset: `GammaThermalisationScheme::FREQUENCYDEPENDENT` |
 | [GAMMA_USE_XCOM_PHOTOION](#gamma_use_xcom_photoion) | Use the XCOM table for the gamma-ray photoelectric absorption instead of the Si and Fe power laws of Ambwani & Sutherland 1988, ApJ, 325, 820-827, doi:10.1086/166052, eq. 2, after Veigele 1973, Atomic Data and Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4. | every preset: `false` |
 | [GAMMA_USE_KAPPA_GREY](#gamma_use_kappa_grey) | Replace the frequency-dependent gamma-ray opacity with this grey opacity [cm^2/g]. | every preset: no value |
 | [KEEP_ESCAPED_GAMMAS](#keep_escaped_gammas) | Keep the escaped gamma-ray packets in the packet files, and write gamma_light_curve.out and gamma_spec.out. | every preset: `false` |
@@ -118,8 +119,8 @@ sentence of each description. Click the name of an option to read its full descr
 
 | Option | Description | Preset values |
 | --- | --- | --- |
-| [NU_MIN_R](#nu_min_r) | The frequency limits of the UVOIR spectra and of the blackbody sampling of a k-packet [Hz] | classic `1e14`, kilonova_lte `1e13`, nltenebular `1e13`, nltephotospheric `1e13` |
-| [NU_MAX_R](#nu_max_r) | The frequency limits of the UVOIR spectra and of the blackbody sampling of a k-packet [Hz] | classic `5e15`, kilonova_lte `5e16`, nltenebular `5e15`, nltephotospheric `5e15` |
+| [NU_MIN_R](#nu_min_r) | The frequency limits of the UVOIR spectra and of the blackbody sampling of a k-packet [Hz]. | classic `1e14`, kilonova_lte `1e13`, nltenebular `1e13`, nltephotospheric `1e13` |
+| [NU_MAX_R](#nu_max_r) | The frequency limits of the UVOIR spectra and of the blackbody sampling of a k-packet [Hz]. | classic `5e15`, kilonova_lte `5e16`, nltenebular `5e15`, nltephotospheric `5e15` |
 | [DIPOLE](#dipole) | Sample the electron scattering direction of a real packet from the dipole phase function of Thomson scattering, 1 + cos^2(theta) for unpolarised light. | classic `true`, kilonova_lte `false`, nltenebular `false`, nltephotospheric `false` |
 | [POL_ON](#pol_on) | Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out. | classic `true`, kilonova_lte `false`, nltenebular `false`, nltephotospheric `false` |
 | [USE_RELATIVISTIC_DOPPLER_SHIFT](#use_relativistic_doppler_shift) | Use the full relativistic Doppler factor instead of the first-order 1 - n.v/c. | classic `false`, kilonova_lte `true`, nltenebular `false`, nltephotospheric `false` |

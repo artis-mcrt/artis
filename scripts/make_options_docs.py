@@ -8,8 +8,8 @@ artisoptions_doc.md holds one fenced C++ block. The block has a group marker of 
 for each option a comment block and a declaration. This script turns each group into a section of the page, and each
 option into a subsection with its type, its description, and the value of each preset. A comment block with no
 declaration after it becomes a note at the top of its section. A summary at the top of the page has one table for each
-group, with the first sentence and the preset values of each option. In each description, the name of another option
-is a link to its subsection.
+group, with the first sentence and the preset values of each option. In the descriptions, the notes, and the summary,
+the name of another option is a link to its subsection.
 
 The script reads the presets that the repository tracks, so an untracked preset of your own stays out of the page.
 It also checks that the presets and artisoptions_doc.md name the same options, in both directions. An option that the
@@ -32,8 +32,8 @@ PAGE_PATH = REPO_ROOT / "docs" / "options.md"
 PRESETS_PAGE_PATH = REPO_ROOT / "docs" / "presets.md"
 PRESET_TABLE_BEGIN = "<!-- begin the table that scripts/make_options_docs.py writes -->"
 PRESET_TABLE_END = "<!-- end the table that scripts/make_options_docs.py writes -->"
-# a longer value, e.g. the body of a function option, stays on the options page
-MAX_PRESET_TABLE_VALUE_LENGTH = 40
+# a longer value, e.g. the body of a function option, gets a code block in a subsection and "see the option" in a table
+MAX_INLINE_PRESET_VALUE_LENGTH = 40
 
 # the presets that the page leaves out, because they are work in progress and their values will change
 PRESETS_NOT_ON_PAGE = ("kilonova_nlte",)
@@ -43,7 +43,7 @@ COMMENT_PATTERN = re.compile(r"^\s*//(.*)$")
 DECLARATION_PATTERN = re.compile(r"^constexpr\s+(.+?)\s*\b([A-Z][A-Z0-9_]*)\b\s*(\([^)]*\))?\s*;$")
 # the name of an option of a preset, before its value, its body, or its semicolon
 PRESET_OPTION_PATTERN = re.compile(r"^constexpr\s+.*?\b([A-Z][A-Z0-9_]*)\b\s*[(;={]", re.MULTILINE)
-# the full stop that ends the first sentence of a description, but not the full stop of "e.g." or "et al."
+# the full stop that ends the first sentence of a description, but not the full stop of "e.g.", "i.e.", or "et al."
 END_OF_SENTENCE_PATTERN = re.compile(r"(?<!\be\.g)(?<!\bi\.e)(?<!\bet al)\.(?=\s+[A-Z(])")
 
 PAGE_HEADER = """# Compile-time options
@@ -54,9 +54,10 @@ PAGE_HEADER = """# Compile-time options
 A change of an option needs a new build. The log file of rank 0 holds the options of the run, so the log of a finished
 simulation shows the values that gave its results.
 
-This page lists every option, with the value of each preset of [Option presets](presets.md). `std::optional` options
-with no value are empty, e.g. `GRID_TYPE_OVERRIDE` keeps the grid type of `model.txt`. The summary gives the first
-sentence of each description. Click the name of an option to read its full description.
+This page lists every option, with the value of each preset of [Option presets](presets.md). For a `std::optional`
+option, "no value" means that the option is empty, e.g. `GRID_TYPE_OVERRIDE` with no value keeps the grid type of
+`model.txt`. The summary gives the first sentence of each description. Click the name of an option to read its full
+description.
 """
 
 
@@ -253,8 +254,9 @@ def preset_values(presets: dict[str, str], option: Option) -> list[str]:
     one_line = all("\n" not in value for value in shown.values())
     if len(set(shown.values())) == 1 and one_line:
         return [f"**Every preset:** {format_preset_value(next(iter(shown.values())))}"]
-    if one_line and all(len(value) <= MAX_PRESET_TABLE_VALUE_LENGTH for value in shown.values()):
-        return ["**Preset values:** " + ", ".join(f"{preset} {format_preset_value(v)}" for preset, v in shown.items())]
+    if one_line and all(len(value) <= MAX_INLINE_PRESET_VALUE_LENGTH for value in shown.values()):
+        inline_values = ", ".join(f"{preset} {format_preset_value(value)}" for preset, value in shown.items())
+        return [f"**Preset values:** {inline_values}"]
     blocks: list[str] = ["**Preset values:**"]
     blocks.extend(
         f"{preset}\n\n```c++\n{value}\n```" if value else f"{preset}: no value" for preset, value in shown.items()
@@ -269,8 +271,7 @@ def heading_anchor(heading: str) -> str:
 
 def link_option_names(text: str, option_names: list[str], own_name: str) -> str:
     """Give the text with each name of another option as a link to the subsection of that option."""
-    # the longest names come first, so that a name that is the start of a longer name does not match inside it
-    names_pattern = "|".join(re.escape(name) for name in sorted(option_names, key=len, reverse=True))
+    names_pattern = "|".join(re.escape(name) for name in option_names)
 
     def link(match: re.Match[str]) -> str:
         name = match.group(1)
@@ -280,20 +281,24 @@ def link_option_names(text: str, option_names: list[str], own_name: str) -> str:
 
 
 def first_sentence(option: Option) -> str:
-    """Give the first sentence of the description of the option, with a full stop in place of a final colon."""
+    """Give the first sentence of the description of the option, and end it with a full stop.
+
+    A final colon becomes a full stop. An empty description gives an empty sentence.
+    """
     first_block = option.description[0] if option.description else ""
     end_match = END_OF_SENTENCE_PATTERN.search(first_block)
-    sentence = first_block[: end_match.end()] if end_match else first_block
-    return sentence.removesuffix(":") + "." if sentence.endswith(":") else sentence
+    sentence = (first_block[: end_match.end()] if end_match else first_block).removesuffix(":")
+    return f"{sentence}." if sentence and not sentence.endswith(".") else sentence
 
 
 def summary_preset_values(presets: dict[str, str], option: Option) -> str:
     """Give the preset values of the option for one cell of the summary table."""
     shown = shown_preset_values(presets, option)
-    if any("\n" in value or len(value) > MAX_PRESET_TABLE_VALUE_LENGTH for value in shown.values()):
-        return "see the option"
-    if len(set(shown.values())) == 1:
+    one_line = all("\n" not in value for value in shown.values())
+    if len(set(shown.values())) == 1 and one_line:
         return f"every preset: {format_preset_value(next(iter(shown.values())))}"
+    if not one_line or any(len(value) > MAX_INLINE_PRESET_VALUE_LENGTH for value in shown.values()):
+        return "see the option"
     return ", ".join(f"{preset} {format_preset_value(value)}" for preset, value in shown.items())
 
 
@@ -337,7 +342,7 @@ def make_preset_table(groups: list[Group], presets: dict[str, str]) -> str:
         if len(set(values)) > 1:
             cells = [
                 format_preset_value(value).replace("|", "\\|")
-                if "\n" not in value and len(value) <= MAX_PRESET_TABLE_VALUE_LENGTH
+                if "\n" not in value and len(value) <= MAX_INLINE_PRESET_VALUE_LENGTH
                 else "see the option"
                 for value in values
             ]
