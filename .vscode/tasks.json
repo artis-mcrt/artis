@@ -14,7 +14,15 @@
         {
             "label": "clean",
             "type": "process",
-            "command": "make clean",
+            "command": "make",
+            "args": ["clean"],
+            "problemMatcher": []
+        },
+        {
+            "label": "make unittests",
+            "type": "process",
+            "command": "make",
+            "args": ["TESTMODE=ON", "OPTIMIZE=OFF", "unittests"],
             "problemMatcher": []
         }
     ]
