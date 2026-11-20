@@ -1,6 +1,6 @@
 # ARTIS
 
-[![DOI](https://zenodo.org/badge/11279591.svg)](https://zenodo.org/badge/latestdoi/11279591)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7728326.svg)](https://doi.org/10.5281/zenodo.7728326)
 [![CI](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml/badge.svg)](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml)
 [![Documentation](https://readthedocs.org/projects/artis-mcrt/badge/?version=latest)](https://artis-mcrt.readthedocs.io/)
 [![License](https://img.shields.io/github/license/artis-mcrt/artis)](https://github.com/artis-mcrt/artis/blob/main/LICENSE)
@@ -13,17 +13,30 @@ ARTIS is a 3D Monte Carlo radiative transfer code for ejecta in homologous expan
 
 The full documentation is at [artis-mcrt.readthedocs.io](https://artis-mcrt.readthedocs.io/). It comes from the [docs](docs) folder of this repository.
 
-- [Quickstart](https://artis-mcrt.readthedocs.io/en/latest/quickstart.html): a first simulation and a plot on a laptop.
-- [Example: a nebular spectrum](https://artis-mcrt.readthedocs.io/en/latest/example.html): a complete run of a small model with non-LTE (NLTE) populations, with the checks and a spectrum.
-- [How a simulation works](https://artis-mcrt.readthedocs.io/en/latest/simulation.html): the packets, the two grids, and the timestep loop.
-- [Methods and references](https://artis-mcrt.readthedocs.io/en/latest/methods.html): each method, its options, and its reference.
-- [Plan a simulation](https://artis-mcrt.readthedocs.io/en/latest/planning.html): what sets the cost and the memory of a run, and how you measure them.
-- [Installation](https://artis-mcrt.readthedocs.io/en/latest/installation.html): the compiler, the MPI library, and the build.
-- [Option presets](https://artis-mcrt.readthedocs.io/en/latest/presets.html) and [Compile-time options](https://artis-mcrt.readthedocs.io/en/latest/options.html): the physics of the run.
-- [Atomic and model data](https://artis-mcrt.readthedocs.io/en/latest/data.html): the data that a simulation reads.
-- [Runs on a cluster](https://artis-mcrt.readthedocs.io/en/latest/clusters.html): the Slurm job scripts and the wall-time mechanism.
-- [Troubleshooting](https://artis-mcrt.readthedocs.io/en/latest/troubleshooting.html): the messages that stop a build or a run, and the warnings of the log.
-- [Development setup](https://artis-mcrt.readthedocs.io/en/latest/development.html) and [Testing](https://artis-mcrt.readthedocs.io/en/latest/testing.html): the tools, the linters, and the tests.
+- Tutorials:
+  - [Quickstart](https://artis-mcrt.readthedocs.io/en/latest/quickstart.html)
+  - [Example: a nebular spectrum](https://artis-mcrt.readthedocs.io/en/latest/example.html)
+  - [Make your own model](https://artis-mcrt.readthedocs.io/en/latest/ownmodel.html)
+- Guides:
+  - [Installation](https://artis-mcrt.readthedocs.io/en/latest/installation.html)
+  - [Atomic and model data](https://artis-mcrt.readthedocs.io/en/latest/data.html)
+  - [Plan a simulation](https://artis-mcrt.readthedocs.io/en/latest/planning.html)
+  - [Runs on a cluster](https://artis-mcrt.readthedocs.io/en/latest/clusters.html)
+  - [Analyse the results](https://artis-mcrt.readthedocs.io/en/latest/analysis.html)
+  - [Troubleshooting](https://artis-mcrt.readthedocs.io/en/latest/troubleshooting.html)
+- Concepts:
+  - [How a simulation works](https://artis-mcrt.readthedocs.io/en/latest/simulation.html)
+  - [Methods and references](https://artis-mcrt.readthedocs.io/en/latest/methods.html)
+- Reference:
+  - [Option presets](https://artis-mcrt.readthedocs.io/en/latest/presets.html)
+  - [Compile-time options](https://artis-mcrt.readthedocs.io/en/latest/options.html)
+  - [Input files](https://artis-mcrt.readthedocs.io/en/latest/inputfiles.html)
+  - [Output files](https://artis-mcrt.readthedocs.io/en/latest/outputfiles.html)
+- Development:
+  - [Development setup](https://artis-mcrt.readthedocs.io/en/latest/development.html)
+  - [Testing](https://artis-mcrt.readthedocs.io/en/latest/testing.html)
+
+The links above go to the version `latest`, which describes the branch `main`. The version [stable](https://artis-mcrt.readthedocs.io/en/stable/) describes the newest release tag, and the branch `release` holds the same code ([Runs on a cluster](https://artis-mcrt.readthedocs.io/en/latest/clusters.html#which-version-to-use) says which one to use).
 
 ## Quickstart
 
@@ -33,20 +46,15 @@ cd artis
 tests/runtest.sh kilonova_1d
 ```
 
-This builds the code and runs a small 1D kilonova model in two jobs, and then post-processes the packets with `exspec`. The [Quickstart](https://artis-mcrt.readthedocs.io/en/latest/quickstart.html) page describes the steps and makes a model folder of your own. [Installation](https://artis-mcrt.readthedocs.io/en/latest/installation.html) lists the compiler, the MPI library, and the commands that the test needs.
+This builds the code and runs a small 1D kilonova model in two jobs, and then post-processes the packets with `exspec`. The script compares the checksums of the output files with the stored checksums. A different compiler or CPU type can give different checksums. At the end, the script then lists the files that differ. The [Quickstart](https://artis-mcrt.readthedocs.io/en/latest/quickstart.html) page describes the steps and makes a model folder of your own. [Installation](https://artis-mcrt.readthedocs.io/en/latest/installation.html) lists the compiler, the MPI library, and the commands that the test needs.
 
 ## Key features
 
-- **Multi-dimensional geometry**: 1D spherical, 2D cylindrical, and 3D Cartesian ejecta, with polarised radiative transfer through real and virtual packets.
-- **Physics**: line-by-line Sobolev opacities, the Lucy macroatom, non-LTE level populations with a multibin radiation field model, a Spencer-Fano solver for the non-thermal electrons, and alpha, beta, and fission decays.
-- **Both phases**: the presets cover the photospheric phase and the nebular phase of a transient.
-- **High-performance computing**: modern C++ with MPI, shared-memory windows inside a node, optional OpenMP or C++ standard parallelism, and GPU builds with nvc++ or hipcc.
-
-[Key features](https://artis-mcrt.readthedocs.io/en/latest/#key-features) on the documentation site describes each one, with the references.
+[Key features](https://artis-mcrt.readthedocs.io/en/latest/#key-features) on the documentation site describes the geometry, the physics, and the parallel runs, with the references.
 
 ## Citing ARTIS
 
-If you use ARTIS, please cite it using the [DOI from Zenodo](https://zenodo.org/records/18670358). [Citing ARTIS](https://artis-mcrt.readthedocs.io/en/latest/#citing-artis) lists the paper of each feature, and we maintain a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg).
+If you use ARTIS, please cite it with the Zenodo DOI [10.5281/zenodo.7728326](https://doi.org/10.5281/zenodo.7728326). This DOI always resolves to the newest version. [Citing ARTIS](https://artis-mcrt.readthedocs.io/en/latest/#citing-artis) lists the paper of each feature, and we maintain a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg).
 
 An early version of the code is described in [Sim (2007), MNRAS, 375, 154-162, doi:10.1111/j.1365-2966.2006.11271.x](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract) and [Kromer & Sim (2009), MNRAS, 398, 1809-1826, doi:10.1111/j.1365-2966.2009.15256.x](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract).
 
