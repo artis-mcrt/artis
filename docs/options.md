@@ -20,6 +20,7 @@ description.
 | [NUM_PACKETS](#num_packets) | The number of energy packets of all MPI ranks together. | classic `5e8`, kilonova_lte `2e8`, nltenebular `1e9`, nltephotospheric `9.6e6` |
 | [INITIAL_PACKETS_ON](#initial_packets_on) | Seed the cells at tmin with k-packets that carry the decay energy from t_model to tmin and the snapshot energy at t_model (the q column of model.txt [erg/g]). | classic `true`, kilonova_lte `true`, nltenebular `false`, nltephotospheric `true` |
 | [UNIFORM_PELLET_ENERGIES](#uniform_pellet_energies) | True: every pellet gets the same energy, and the decay time of each pellet is a sample of the decay curve. | every preset: `true` |
+| [THERMAL_ENERGY_INPUT_FROM_FILES](#thermal_energy_input_from_files) | True: two input files give the energy source, and the radioactive decays give no energy. energydistribution.txt gives the energy of each model cell [erg]. energyrate.txt gives the cumulative fraction F(t) of that energy that the model cells release by the time t. | every preset: `false` |
 | [TIMESTEP_SIZE_METHOD](#timestep_size_method) | The timestep scheme. | every preset: `TimeStepSizeMethod::LOGARITHMIC` |
 | [TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS](#timestep_size_constant_max_width_days) | The maximum width of a constant timestep in days. | every preset: no value |
 | [TIMESTEP_SIZE_TRANSITION_TIME_DAYS](#timestep_size_transition_time_days) | The time of the change between the two schemes in days. | every preset: no value |
@@ -183,9 +184,9 @@ True: every pellet gets the same energy, and the decay time of each pellet is a 
 
 True: two input files give the energy source, and the radioactive decays give no energy. energydistribution.txt gives the energy of each model cell [erg]. energyrate.txt gives the cumulative fraction F(t) of that energy that the model cells release by the time t. F is linear in t between the rows.
 
-The energy of a model cell goes to its propagation cells by volume. Each pellet samples its propagation cell from these energies and its release time from F, between tmin and tmax. At the release time, the pellet becomes a k-packet in its propagation cell. With INITIAL_PACKETS_ON, the pellets also carry the energy that the model cells release before tmin. This energy seeds the cells at tmin and keeps tdecay / tmin of its energy, as for a decay. The q column of model.txt has no effect.
+The energy of a model cell goes to its propagation cells by volume. Each pellet samples its propagation cell from these energies and its release time from F, between tmin and tmax. At the release time, the pellet becomes a k-packet in its propagation cell. With [INITIAL_PACKETS_ON](#initial_packets_on), the pellets also carry the energy that the model cells release before tmin. This energy seeds the cells at tmin and keeps tdecay / tmin of its energy, as for a decay. The q column of model.txt has no effect.
 
-The initial temperature of a cell comes from the input energy that the cell releases before the midpoint t_mid of the first timestep. A release at the time t keeps t / t_mid of its energy. The thermal balance adds the analytic release rate of the timestep as heating. The nuclides of model.txt still decay and change the composition, but all analytic decay powers in deposition.out and in the estimators files are zero. The option requires UNIFORM_PELLET_ENERGIES = true.
+The initial temperature of a cell comes from the input energy that the cell releases before the midpoint t_mid of the first timestep. A release at the time t keeps t / t_mid of its energy. The thermal balance adds the analytic release rate of the timestep as heating. The nuclides of model.txt still decay and change the composition, but all analytic decay powers in deposition.out and in the estimators files are zero. The option requires [UNIFORM_PELLET_ENERGIES](#uniform_pellet_energies) = true.
 
 **Every preset:** `false`
 
