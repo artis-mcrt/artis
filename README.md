@@ -33,7 +33,7 @@ cd artis
 tests/runtest.sh kilonova_1d
 ```
 
-This builds the code and runs a small 1D kilonova model in two jobs, and then post-processes the packets with `exspec`. After each job, the script compares the checksums of the output files with the stored checksums. A different compiler or CPU type can give different checksums. The script then lists the files that differ at the end. The [Quickstart](https://artis-mcrt.readthedocs.io/en/latest/quickstart.html) page describes the steps and makes a model folder of your own. [Installation](https://artis-mcrt.readthedocs.io/en/latest/installation.html) lists the compiler, the MPI library, and the commands that the test needs.
+This builds the code and runs a small 1D kilonova model in two jobs, and then post-processes the packets with `exspec`. The script compares the checksums of the output files with the stored checksums. A different compiler or CPU type can give different checksums. At the end, the script then lists the files that differ. The [Quickstart](https://artis-mcrt.readthedocs.io/en/latest/quickstart.html) page describes the steps and makes a model folder of your own. [Installation](https://artis-mcrt.readthedocs.io/en/latest/installation.html) lists the compiler, the MPI library, and the commands that the test needs.
 
 ## Key features
 

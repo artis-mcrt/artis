@@ -9,7 +9,7 @@ export LC_ALL=C
 testsdir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 repopath=$(dirname "$testsdir")
 testname=$1
-step=${2:-all}
+step=${2-all}
 modelpath="$testsdir/${testname}_testrun"
 testmode=${TESTMODE:-OFF}
 mpirun_command=(mpirun --oversubscribe --mca osc '^ucx' --mca mpi_yield_when_idle 1)
@@ -32,10 +32,11 @@ usage() {
     cat <<EOF
 Usage: tests/runtest.sh <testname> [step]
        tests/runtest.sh --list
+       tests/runtest.sh --help
 
 Without a step, the script runs these steps in order. It stops at the first step that fails, except a checksum
-step. After a checksum step fails, the other steps run. At the end, the script lists the files with different
-checksums and exits with an error status.
+step that finds different checksums. The other steps then run, and at the end the script lists the files that
+differ and exits with an error status.
   setup            remove tests/<testname>_testrun and make it again with tests/setup_<testname>.sh
   build            build sn3d and exspec from the artisoptions.h of the model folder, and copy them into it
   inputcheck       check the input of the new simulation with sn3d -c
@@ -108,31 +109,35 @@ run_inputcheck() {
 
 case $step in
     all)
-        failed_checksum_steps=()
+        checksum_steps_with_differences=()
+        failed_step=
         for step_name in "${steps[@]}"; do
             if "$testsdir/runtest.sh" "$testname" "$step_name"; then
                 continue
             fi
-            echo "[error] The step $step_name of the test $testname failed." >&2
-            # a different compiler or CPU type can give different checksums, so the other steps still run
-            if [[ $step_name != checksums_* ]]; then
-                exit 1
+            # A different compiler or CPU type can give different checksums, so the other steps still run. After a
+            # failure, the checksum file exists only if the step stopped at the comparison.
+            if [[ $step_name == checksums_* ]] && [ -f "$modelpath/results_md5_${step_name#checksums_}.txt" ]; then
+                echo "[error] The step $step_name of the test $testname failed." >&2
+                checksum_steps_with_differences+=("$step_name")
+            else
+                failed_step=$step_name
+                break
             fi
-            failed_checksum_steps+=("$step_name")
         done
-        if [ ${#failed_checksum_steps[@]} -gt 0 ]; then
-            for step_name in "${failed_checksum_steps[@]}"; do
-                checksumfile=results_md5_${step_name#checksums_}.txt
-                if [ ! -f "$modelpath/$checksumfile" ]; then
-                    echo "[error] The step $step_name wrote no $checksumfile. Its output above gives the cause." >&2
-                    continue
-                fi
-                echo "[error] These files have checksums that differ from tests/${testname}_inputfiles/$checksumfile:" >&2
-                # a line that is in only one of the two files names a changed, a missing, or an extra output file
-                comm -3 <(sort "$testsdir/${testname}_inputfiles/$checksumfile") <(sort "$modelpath/$checksumfile") |
-                    sed 's/^[[:space:]]*[0-9a-f]*  /  /' | sort -u >&2
-            done
-            echo "[error] The other steps of the test $testname succeeded. The model folder is $modelpath." >&2
+        for step_name in "${checksum_steps_with_differences[@]}"; do
+            checksumfile=results_md5_${step_name#checksums_}.txt
+            echo "[error] These output files differ from tests/${testname}_inputfiles/$checksumfile. Each is changed, missing, or extra:" >&2
+            # diff exits with status 1 when the files differ
+            diff "$testsdir/${testname}_inputfiles/$checksumfile" "$modelpath/$checksumfile" |
+                sed -n 's/^[<>] [0-9a-f]*  /  /p' | sort -u >&2 || true
+        done
+        if [ -n "$failed_step" ]; then
+            echo "[error] The step $failed_step of the test $testname failed." >&2
+            exit 1
+        fi
+        if [ ${#checksum_steps_with_differences[@]} -gt 0 ]; then
+            echo "[error] The test $testname failed only at the comparison of the checksums. The model folder is $modelpath." >&2
             exit 1
         fi
         echo "All steps of the test $testname succeeded. The model folder is $modelpath."

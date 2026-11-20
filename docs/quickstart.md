@@ -46,8 +46,8 @@ This is the quickest complete simulation of the repository. The script downloads
 simulation in two jobs, and it compares the checksums of the output files with the stored checksums.
 
 A different compiler or CPU type can give different checksums. The script then runs the other steps, and at the end it
-lists the files with different checksums and exits with an error status. The output files are complete, so the next
-section still works. [Testing](testing.md) describes the steps and how you run one step by name.
+lists the files that differ and exits with an error status. The output files are complete, so the next section still
+works. [Testing](testing.md) describes the steps and how you run one step by name.
 
 `tests/runtest.sh --list` lists the other test models.
 
