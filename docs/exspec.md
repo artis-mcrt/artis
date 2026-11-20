@@ -36,7 +36,10 @@ mpirun -np 8 artis/exspec
 
 `exspec` reads the same `input.txt`, model, and atomic data files as `sn3d`, so it must run in the same folder. The
 `nprocs_exspec` line of `input.txt` gives the number of packet files, which is the number of `sn3d` ranks and not the
-number of `exspec` ranks. Rank 0 writes the log to `exspec.txt`. `exspec` changes no input file.
+number of `exspec` ranks. Rank 0 writes the log to `exspec.txt`, and it writes one line to the standard output at the
+start and one line at the end. `exspec` changes no input file. `artis/exspec -h` gives the help, and
+`artis/exspec --version` gives the git version, the preset, and the compiler of the build. An unknown option or
+argument stops `exspec` before it reads a file.
 
 It writes `light_curve.out`, `spec.out`, `emission.out`, `emissiontrue.out`, and `absorption.out`. A run with
 `KEEP_ESCAPED_GAMMAS` also gets `gamma_light_curve.out` and `gamma_spec.out`, and a run with `POL_ON` also gets

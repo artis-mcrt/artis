@@ -632,8 +632,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
     }
     if (nlte_iter == NLTE_TE_NNE_MAXITER) {
       printlnlog(
-          "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: failed to converge... Keeping "
-          "solution from last iteration",
+          "[warning] NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: failed to converge... "
+          "Keeping solution from last iteration",
           mgi, nts, nlte_iter);
     }
   }
