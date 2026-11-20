@@ -1,6 +1,7 @@
 {
     "recommendations": [
         "llvm-vs-code-extensions.vscode-clangd",
-        "usernamehw.errorlens"
+        "usernamehw.errorlens",
+        "vadimcn.vscode-lldb"
     ]
 }
