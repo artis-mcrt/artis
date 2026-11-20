@@ -27,7 +27,7 @@ environment variable, e.g. `export OMPI_CXX=g++-16`.
 
 ### gcc is older than the minimum version
 
-The build needs gcc 14 or a later version. Load a newer gcc. With Open MPI you can also point `OMPI_CXX` at it.
+The build needs gcc 14 or a later version. Load a newer gcc. With Open MPI you can also export `OMPI_CXX` with the name of the newer g++.
 
 ### The binary does not hold your change
 

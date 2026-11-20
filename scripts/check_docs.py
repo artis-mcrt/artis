@@ -6,7 +6,8 @@
 
 The script makes three checks:
 
-- the help text of the Makefile and the table of docs/makeoptions.md have the same options;
+- the help text of the Makefile, MAKE_OPTION_NAMES of the Makefile, and the table of docs/makeoptions.md have the
+  same options;
 - each log message that docs/troubleshooting.md quotes is in the source;
 - the table of docs/inputfiles.md has the lines of inputlinecomments in input.cc that are not unused.
 
@@ -26,18 +27,27 @@ MIN_QUOTED_FRAGMENT_LENGTH = 12
 
 
 def find_make_option_differences() -> list[str]:
-    """Give a message for each option that only the Makefile help or only docs/makeoptions.md names."""
+    """Give a message for each option that the Makefile help, MAKE_OPTION_NAMES, and the page do not all name."""
     makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
     help_match = re.search(r"^define HELP_TEXT$(.*?)^endef$", makefile, re.MULTILINE | re.DOTALL)
     if help_match is None:
         return ["Makefile: the definition of HELP_TEXT is absent"]
     options_text = help_match.group(1).partition("Options:")[2]
     names_in_help = set(re.findall(r"\b([A-Z_]+)=", options_text))
+    names_match = re.search(r"^MAKE_OPTION_NAMES := (.*)$", makefile, re.MULTILINE)
+    if names_match is None:
+        return ["Makefile: the definition of MAKE_OPTION_NAMES is absent"]
+    names_accepted_by_make = set(names_match.group(1).split())
     page = (DOCS_PATH / "makeoptions.md").read_text(encoding="utf-8")
     first_table_cells = re.findall(r"^\| (`.*?) \|", page, re.MULTILINE)
     names_on_page = {name for cell in first_table_cells for name in re.findall(r"`([A-Z_]+)=", cell)}
     return [
-        f"the Makefile help and docs/makeoptions.md differ on {name}" for name in sorted(names_in_help ^ names_on_page)
+        f"the Makefile help and {compared_list} differ on {name}"
+        for compared_list, compared_names in (
+            ("docs/makeoptions.md", names_on_page),
+            ("MAKE_OPTION_NAMES", names_accepted_by_make),
+        )
+        for name in sorted(names_in_help ^ compared_names)
     ]
 
 

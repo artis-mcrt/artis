@@ -162,7 +162,7 @@ The scripts of `scripts/` name the modules and the partitions of four clusters. 
 A job script must do these steps:
 
 1. Set the Slurm values, e.g. the rank count, the wall time, the partition, and the account.
-2. Load a compiler and an MPI library, or set `OMPI_CXX`.
+2. Load a compiler and an MPI library, or export `OMPI_CXX`.
 3. Go to the model folder. Slurm gives it in `SLURM_SUBMIT_DIR`.
 4. Run `make sn3d exspec` in `artis`, so that `exspec` has the same source version as `sn3d`.
 5. Get the hours that remain with `scripts/slurmjobhoursleft.py`, and give them to `sn3d -w`.
