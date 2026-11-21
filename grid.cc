@@ -1282,6 +1282,11 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
   if (parse_next_token(remainder, valuein)) {
     fatal_crash("model.txt cell {} has more values than the header has columns", mgi);
   }
+  // a cell line of format version 2 has only whitespace after its values. Text there shows a damaged line
+  remainder.remove_prefix(std::min(remainder.find_first_not_of(token_whitespace), remainder.size()));
+  if (model_format_version == 2 && !remainder.empty()) {
+    fatal_crash("model.txt cell {} has the text '{}' after the values of the columns", mgi, remainder);
+  }
 }
 
 auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
