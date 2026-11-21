@@ -752,9 +752,10 @@ void add_standard_nuclides() {
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
   nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 0.836359 * MEV;
 
-  // Fe52 decays to the 21.1 min state of Mn52, and that state decays to Cr52. The beta-plus shares and the mean
-  // positron energies of both, and the lines of data/gamma_fe52.txt and data/gamma_mn52.txt, are from the evaluation
-  // for A = 52 of Yang Dong & Huo Junde (2015), Nucl. Data Sheets, 128, 185-314, doi:10.1016/j.nds.2015.08.003.
+  // Fe52 decays to the 21.1 min state of Mn52, and that state decays to Cr52. The decay data of both come from the
+  // evaluation for A = 52 of Yang Dong & Huo Junde (2015), Nucl. Data Sheets, 128, 185-314,
+  // doi:10.1016/j.nds.2015.08.003. These data are the beta-plus shares, the mean positron energies, and the lines of
+  // data/gamma_fe52.txt and data/gamma_mn52.txt.
   nuclides.push_back({.z = 26, .a = 52, .meanlife = 0.497429 * DAY});
   nuclides.back().endecay_positron = 0.340 * MEV;
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.5549;
