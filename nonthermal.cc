@@ -43,6 +43,7 @@
 #include "ltepop.h"
 #include "macroatom.h"
 #include "mpi_logging.h"
+#include "nltepop.h"
 #include "packet.h"
 #include "random.h"
 #include "sn3d.h"
@@ -1538,6 +1539,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       // excitation from all levels is expensive, so we limit it to a maximum number of levels
       const int nlevels = std::min(get_nlevels(element, ion), NTEXCITATION_MAXNLEVELS_LOWER);
       const bool above_minionfraction = (nnion >= MIN_ION_OVER_NNTOT * get_nnion_tot(nonemptymgi));
+      const bool levelpops_follow_nt_excitation =
+          elem_has_nlte_levels(element) && !elem_nlte_solve_fell_back_to_lte(nonemptymgi, element);
 
       // mark the current size so that this ion's entries can be removed again if its
       // frac_excitation_ion total turns out to be invalid below
@@ -1574,11 +1577,12 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
           assert_always(std::isfinite(ratecoeffperdeposition));
           // Fe V is excluded. Its small atomic data set depletes the ground multiplet and stops the
-          // recombination. With COLLISIONAL_HEATING_FROM_LEVELPOPS, an element without NLTE levels is also excluded:
-          // its level populations do not follow the excitation, so the thermal balance would lose the part of this
-          // energy that the macro atom gives to the gas in collisions.
+          // recombination. With COLLISIONAL_HEATING_FROM_LEVELPOPS, an element with level populations that do not
+          // follow the excitation is also excluded: an element without NLTE levels, and an element whose last NLTE
+          // solve in the cell fell back to LTE. The thermal balance would otherwise lose the part of this energy
+          // that the macro atom gives to the gas in collisions.
           if (above_minionfraction && ratecoeffperdeposition > 0 && (Z != 26 || ionstage != 5) &&
-              (elem_has_nlte_levels(element) || !COLLISIONAL_HEATING_FROM_LEVELPOPS)) {
+              (levelpops_follow_nt_excitation || !COLLISIONAL_HEATING_FROM_LEVELPOPS)) {
             tmp_excitation_list.push_back({
                 .frac_deposition = frac_excitation_thistrans,
                 .ratecoeffperdeposition = ratecoeffperdeposition,
