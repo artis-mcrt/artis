@@ -13,7 +13,7 @@ step=${2-all}
 modelpath="$testsdir/${testname}_testrun"
 testmode=${TESTMODE:-OFF}
 mpirun_command=(mpirun --oversubscribe --mca osc '^ucx' --mca mpi_yield_when_idle 1)
-steps=(setup build inputcheck job0 checksums_job0 resume exspec checksums_final)
+steps=(setup build inputcheck formatcheck job0 checksums_job0 resume exspec checksums_final)
 
 # the sanitizers of TESTMODE=ON need these settings
 if [ "$testmode" = ON ]; then
@@ -40,6 +40,8 @@ differ and exits with an error status.
   setup            remove tests/<testname>_testrun and make it again with tests/setup_<testname>.sh
   build            build sn3d and exspec from the artisoptions.h of the model folder, and copy them into it
   inputcheck       check the input of the new simulation with sn3d -c
+  formatcheck      check the reader of model.txt of format version 2 with sn3d -c, for the small models in
+                   tests/<testname>_inputfiles/formatcheck_models. A test with no such folder checks nothing
   job0             start a new simulation
   checksums_job0   compare the checksums of the output files with results_md5_job0.txt (only directly after job0)
   resume           check the input and the restart files with sn3d -c, then resume the simulation
@@ -176,6 +178,133 @@ case $step in
         # without input.txt, the check reads input-newrun.txt
         rm -f input.txt
         run_inputcheck 2
+        ;;
+
+    formatcheck)
+        checkmodels="$testsdir/${testname}_inputfiles/formatcheck_models"
+        if [ ! -d "$checkmodels" ]; then
+            echo "The test $testname has no folder formatcheck_models. The step checks nothing."
+            exit 0
+        fi
+        # each case runs in its own folder outside the model folder, thus the model folder gets no new file
+        checkroot=$(mktemp -d)
+        trap 'rm -rf "$checkroot"' EXIT
+
+        # Run sn3d -c for one case. $1 is the name of the case, and $2 is its model.txt. $3 is "complete" for a model
+        # that sn3d must read, or the text of the stop message for a model that sn3d must stop for. Each other
+        # argument is a text that the output must also have. An argument "file:name" makes the file name in the case
+        # folder, with the content 0.
+        run_formatcheck_case() {
+            local casename=$1 modelfile=$2 expected=$3
+            shift 3
+            local casefolder="$checkroot/$casename" path status=0 text
+            mkdir "$casefolder"
+            for path in "$modelpath"/*; do
+                case ${path##*/} in
+                    model.txt* | input.txt | inputcheck | formatcheck_models) ;;
+                    *) ln -s "$path" "$casefolder/" ;;
+                esac
+            done
+            cp "$modelfile" "$casefolder/model.txt"
+            local texts=()
+            for text in "$@"; do
+                if [ "${text#file:}" != "$text" ]; then
+                    echo 0 > "$casefolder/${text#file:}"
+                else
+                    texts+=("$text")
+                fi
+            done
+            (cd "$casefolder" && "${mpirun_command[@]}" -np 2 ./sn3d -c) > "$casefolder/sn3d_check.log" 2>&1 \
+                || status=$?
+            if [ "$expected" = complete ]; then
+                texts+=("input check: complete")
+                if [ "$status" != 0 ]; then
+                    tail -n 20 "$casefolder/sn3d_check.log" >&2
+                    echo "[error] formatcheck $casename: sn3d -c stopped, but it must read this model." >&2
+                    exit 1
+                fi
+            else
+                texts+=("$expected")
+                if [ "$status" = 0 ]; then
+                    echo "[error] formatcheck $casename: sn3d -c read this model, but it must stop." >&2
+                    exit 1
+                fi
+            fi
+            for text in "${texts[@]}"; do
+                if ! grep -rqF -- "$text" "$casefolder/sn3d_check.log" "$casefolder/inputcheck"; then
+                    tail -n 20 "$casefolder/sn3d_check.log" >&2
+                    echo "[error] formatcheck $casename: the output of sn3d -c does not have the text '$text'." >&2
+                    exit 1
+                fi
+            done
+            echo "formatcheck $casename: correct"
+        }
+
+        model1d="$checkmodels/spherical1d_nofegroup_model.txt"
+        model2d="$checkmodels/cylindrical2d_model.txt"
+        run_formatcheck_case spherical1d_nofegroup "$model1d" complete "model.txt has no column X_Fegroup"
+        run_formatcheck_case cylindrical2d "$model2d" complete
+
+        # damaged copies of the 2D model, for which sn3d must stop
+        celllinecount=$(grep -c '^[0-9]' "$model2d")
+        sed "s/^cell_line_count .*/cell_line_count $((celllinecount - 1))/" "$model2d" > "$checkroot/wrongcount.txt"
+        run_formatcheck_case wrongcount "$checkroot/wrongcount.txt" \
+            "the key cell_line_count gives $((celllinecount - 1)) cell lines, but the file has $celllinecount"
+        # a file that lost its last three lines
+        sed -e '$d' "$model2d" | sed -e '$d' | sed -e '$d' > "$checkroot/cutlines.txt"
+        run_formatcheck_case cutlines "$checkroot/cutlines.txt" \
+            "the key cell_line_count gives $celllinecount cell lines, but the file has $((celllinecount - 3))"
+        # a cell line that lost its end
+        sed -e '$s/ [^ ]*$//' "$model2d" > "$checkroot/cutvalue.txt"
+        run_formatcheck_case cutvalue "$checkroot/cutvalue.txt" "has no readable value for the column"
+        # a version line with text after the version
+        sed '1s/^format_version 2$/format_version 2 junk/' "$model2d" > "$checkroot/textafterversion.txt"
+        run_formatcheck_case textafterversion "$checkroot/textafterversion.txt" "has the format version '2 junk'"
+        # a cell line with text after its values
+        sed -e '$s/$/ junk/' "$model2d" > "$checkroot/textaftervalues.txt"
+        run_formatcheck_case textaftervalues "$checkroot/textaftervalues.txt" "after the values of the columns"
+        # a key cells_per_axis that does not agree with the lists of edges
+        sed 's/^cells_per_axis 5 10$/cells_per_axis 5 9/' "$model2d" > "$checkroot/wrongcellsperaxis.txt"
+        run_formatcheck_case wrongcellsperaxis "$checkroot/wrongcellsperaxis.txt" \
+            "the key cells_per_axis gives the cell counts '5 9', but the cell edges give '5 10'"
+        run_formatcheck_case yefile "$model2d" "Ye.txt is present, but model.txt has format version 2" file:Ye.txt
+        run_formatcheck_case abundancefile "$model2d" \
+            "abundances.txt is present, but model.txt has format version 2" file:abundances.txt
+        # A mirrored model has the masses of its full twin. A mirrored 2D spherical model of the 1D shells has the
+        # masses of the 1D model
+        get_masses_of_case() {
+            sed -E 's/^[0-9TZ:-]+ //' "$checkroot/$1/inputcheck/output_0-0.txt" |
+                grep -E '^(Total input model mass|  [0-9A-Z][A-Za-z0-9-]*: [0-9])'
+        }
+        require_same_masses() {
+            if [ -z "$(get_masses_of_case "$1")" ] || [ "$(get_masses_of_case "$1")" != "$(get_masses_of_case "$2")" ]; then
+                echo "[error] formatcheck: the cases $1 and $2 have different masses." >&2
+                exit 1
+            fi
+            echo "formatcheck $1 and $2: the same masses"
+        }
+        modelmirror="$checkmodels/cylindrical2d_mirror_model.txt"
+        run_formatcheck_case cylindrical2d_mirror "$modelmirror" complete "model.txt has mirror symmetry in the plane z = 0"
+        run_formatcheck_case cylindrical2d_mirrortwin "$checkmodels/cylindrical2d_mirrortwin_model.txt" complete
+        require_same_masses cylindrical2d_mirror cylindrical2d_mirrortwin
+        run_formatcheck_case spherical2d_mirror "$checkmodels/spherical2d_mirror_model.txt" complete
+        require_same_masses spherical2d_mirror spherical1d_nofegroup
+        sed 's/^mirror_plane z=0$/mirror_plane z=1/' "$modelmirror" > "$checkroot/mirrorvalue.txt"
+        run_formatcheck_case mirrorvalue "$checkroot/mirrorvalue.txt" "the key mirror_plane must have the value z=0"
+        sed 's/^cell_line_count/mirror_plane z=0\ncell_line_count/' "$model1d" > "$checkroot/mirror1d.txt"
+        run_formatcheck_case mirror1d "$checkroot/mirror1d.txt" "a spherical1d model takes no key mirror_plane"
+        # a polar edge near the z axis
+        sed 's/^theta_edges_radians 0.0 /theta_edges_radians 0.0 5e-05 /' "$checkmodels/spherical2d_mirror_model.txt" \
+            > "$checkroot/polaredgeataxis.txt"
+        run_formatcheck_case polaredgeataxis "$checkroot/polaredgeataxis.txt" "is less than 0.0001 rad from the z axis"
+        # the z axis of a mirrored cylindrical model starts at the plane z = 0
+        sed 's/^cell_line_count/mirror_plane z=0\ncell_line_count/' "$model2d" > "$checkroot/mirrorfullaxis.txt"
+        run_formatcheck_case mirrorfullaxis "$checkroot/mirrorfullaxis.txt" \
+            "the values of vel_z_edges_kmps must have equal steps from 0 to"
+        # two radial edges of the 1D model that differ in km/s and give the same velocity in cm/s
+        sed 's/^vel_r_edges_kmps 0.0 /vel_r_edges_kmps 0.0 1000.0000000000002 1000.0000000000003 /' "$model1d" \
+            > "$checkroot/equaledges.txt"
+        run_formatcheck_case equaledges "$checkroot/equaledges.txt" "The values must also increase in cm/s"
         ;;
 
     job0)

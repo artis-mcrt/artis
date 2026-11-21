@@ -610,6 +610,19 @@ auto write_nuclides_list() {
 
 [[gnu::pure]] [[nodiscard]] auto get_num_nuclides() -> ptrdiff_t { return std::ssize(nuclides); }
 
+// Return the atomic number of an element symbol, e.g. 26 for Fe, or -1 if no element has that symbol. The case of
+// the letters has no effect.
+[[nodiscard]] auto get_atomic_number_of_elsymbol(const std::string_view elsymbol) -> int {
+  for (int z = 1; z <= Z_MAX; z++) {
+    if (std::ranges::equal(
+            elsymbol, std::string_view{elsymbols.at(z)},
+            [](const unsigned char a, const unsigned char b) { return std::tolower(a) == std::tolower(b); })) {
+      return z;
+    }
+  }
+  return -1;
+}
+
 [[nodiscard]] auto get_elname(const int z) -> std::string {
   assert_testmodeonly(z <= Z_MAX);
   return elsymbols.at(z);

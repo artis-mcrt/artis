@@ -296,6 +296,343 @@ void test_expanding_shell_intersection() {
   check(roots_agree, "the selected root agrees with the reference for random paths");
 }
 
+// the polar angle theta from the +z axis and the azimuthal angle phi = atan2(y, x) in [0, 2 pi) of a position
+auto get_theta_phi(const Vec3d& pos) -> std::array<double, 2> {
+  const double phi = std::atan2(pos[1], pos[0]);
+  return {std::atan2(std::hypot(pos[0], pos[1]), pos[2]), (phi < 0.) ? phi + (2 * PI) : phi};
+}
+
+auto get_pos_on_path(const Vec3d& pos, const Vec3d& dir, const double distance) -> Vec3d {
+  return {pos[0] + (distance * dir[0]), pos[1] + (distance * dir[1]), pos[2] + (distance * dir[2])};
+}
+
+void test_spherical_angle_boundary_intersections() {
+  std::println("theta cone and phi half-plane intersections...");
+  using grid::BoundaryType;
+  const double cos45 = std::numbers::sqrt2 / 2.;
+
+  // A path parallel to the z axis at the distance 1 from it has theta = 45 degrees at z = 1.
+  check_close(grid::theta_cone_intersection<BoundaryType::LOWER>(Vec3d{1., 0., 0.}, Vec3d{0., 0., 1.}, cos45), 1.,
+              1e-12, "theta decreases through 45 degrees on an upward path beside the z axis");
+  check(grid::theta_cone_intersection<BoundaryType::UPPER>(Vec3d{1., 0., 0.}, Vec3d{0., 0., 1.}, cos45) < 0.,
+        "theta does not increase through 45 degrees on an upward path beside the z axis");
+  check_close(grid::theta_cone_intersection<BoundaryType::UPPER>(Vec3d{1., 0., 0.}, Vec3d{0., 0., -1.}, -cos45), 1.,
+              1e-12, "theta increases through 135 degrees on a downward path beside the z axis");
+  // The cone of 90 degrees is the plane z = 0.
+  check_close(grid::theta_cone_intersection<BoundaryType::UPPER>(Vec3d{1., 0., 0.5}, Vec3d{0., 0., -1.}, 0.), 0.5,
+              1e-12, "theta increases through 90 degrees where a downward path meets the plane z = 0");
+  check(grid::theta_cone_intersection<BoundaryType::LOWER>(Vec3d{1., 0., 0.5}, Vec3d{0., 0., -1.}, 0.) < 0.,
+        "theta does not decrease through 90 degrees on a downward path");
+  // theta is constant on a radial path, e.g. the path of a new packet.
+  const auto radial_dir = vec_norm(Vec3d{1., 1., 1.});
+  check(grid::theta_cone_intersection<BoundaryType::UPPER>(Vec3d{1., 1., 1.}, radial_dir, cos45) < 0. &&
+            grid::theta_cone_intersection<BoundaryType::LOWER>(Vec3d{1., 1., 1.}, radial_dir, cos45) < 0.,
+        "a radial path crosses no cone");
+  // A direction along the cone gives a path that comes near to the cone and does not cross it.
+  check(grid::theta_cone_intersection<BoundaryType::LOWER>(Vec3d{1., 0., 0.}, Vec3d{cos45, 0., cos45}, cos45) < 0.,
+        "a path parallel to the cone does not cross it");
+
+  // phi increases from 315 degrees through 0 on a path along +y at x = 1.
+  check_close(grid::phi_halfplane_intersection<BoundaryType::UPPER>(Vec3d{1., -1., 0.3}, Vec3d{0., 1., 0.}, 1., 0.), 1.,
+              1e-12, "phi increases through 0 where a path along +y meets the plane y = 0 at x > 0");
+  check(grid::phi_halfplane_intersection<BoundaryType::LOWER>(Vec3d{1., -1., 0.3}, Vec3d{0., 1., 0.}, 1., 0.) < 0.,
+        "phi does not decrease on a path with a positive z component of pos x dir");
+  // The same path at x = -1 meets the plane y = 0 at phi = 180 degrees, which is the other half of the plane.
+  check(grid::phi_halfplane_intersection<BoundaryType::UPPER>(Vec3d{-1., -1., 0.3}, Vec3d{0., 1., 0.}, 1., 0.) < 0. &&
+            grid::phi_halfplane_intersection<BoundaryType::LOWER>(Vec3d{-1., -1., 0.3}, Vec3d{0., 1., 0.}, 1., 0.) < 0.,
+        "a path that meets the other half of the plane does not cross phi = 0");
+
+  // Compare random paths with a reference that finds each point of the path on the full surface (both cones of a
+  // double cone, or the full plane). The reference keeps a point if it is on the boundary itself and if the angle
+  // changes there in the sense of the boundary type. It finds that sense from the angle before and after the point.
+  rngstate_type rngstate{8571};
+  bool cone_roots_agree = true;
+  bool halfplane_roots_agree = true;
+  const double step_for_sense = 1e-6;
+  for (int i = 0; i < 20000; i++) {
+    const auto pos = vec_scale(get_rand_isotropic_unitvec(rngstate), 0.1 + (2. * rng_uniform(rngstate)));
+    const auto dir = get_rand_isotropic_unitvec(rngstate);
+
+    // some cones are very near to the polar axis or to the plane z = 0, where a simple formula loses precision
+    double theta_edge = 0.05 + ((PI - 0.1) * rng_uniform(rngstate));
+    if (i % 10 == 0) {
+      theta_edge = (PI / 2) + ((i % 20 == 0) ? 1e-6 : -1e-6);
+    } else if (i % 10 == 1) {
+      theta_edge = (i % 20 == 1) ? 1e-3 : PI - 1e-3;
+    }
+    const double cos_edge = std::cos(theta_edge);
+    const double a = pow2(dir[2]) - pow2(cos_edge);
+    const double half_b = (pos[2] * dir[2]) - (pow2(cos_edge) * dot(pos, dir));
+    const double c = pow2(pos[2]) - (pow2(cos_edge) * dot(pos, pos));
+    const double quarter_discriminant = pow2(half_b) - (a * c);
+    for (const bool theta_increases : {true, false}) {
+      double expected_distance = -1.;
+      if (quarter_discriminant > 0.) {
+        for (const double root :
+             {(-half_b + std::sqrt(quarter_discriminant)) / a, (-half_b - std::sqrt(quarter_discriminant)) / a}) {
+          const double theta_before = get_theta_phi(get_pos_on_path(pos, dir, root - step_for_sense))[0];
+          const double theta_after = get_theta_phi(get_pos_on_path(pos, dir, root + step_for_sense))[0];
+          const bool is_on_this_cone = (get_pos_on_path(pos, dir, root)[2] * cos_edge) > 0.;
+          if (root >= 0. && is_on_this_cone && ((theta_after > theta_before) == theta_increases) &&
+              (expected_distance < 0. || root < expected_distance)) {
+            expected_distance = root;
+          }
+        }
+      }
+      const double distance_to_crossing = theta_increases
+                                              ? grid::theta_cone_intersection<BoundaryType::UPPER>(pos, dir, cos_edge)
+                                              : grid::theta_cone_intersection<BoundaryType::LOWER>(pos, dir, cos_edge);
+      // the reference loses precision for a cone near the plane z = 0, and it has no result within one step of zero
+      const bool reference_is_reliable = std::abs(cos_edge) > 1e-3 && std::abs(expected_distance) > 1e-4;
+      if (reference_is_reliable) {
+        cone_roots_agree =
+            cone_roots_agree && ((expected_distance < 0.) ? distance_to_crossing < 0.
+                                                          : std::abs(distance_to_crossing - expected_distance) <=
+                                                                1e-6 * (1. + expected_distance));
+      } else if (distance_to_crossing >= 0.) {
+        // the result must be a point of the cone, where theta changes in the sense of the boundary type
+        const double theta_before = get_theta_phi(get_pos_on_path(pos, dir, distance_to_crossing - step_for_sense))[0];
+        const double theta_after = get_theta_phi(get_pos_on_path(pos, dir, distance_to_crossing + step_for_sense))[0];
+        const double theta_at_crossing = get_theta_phi(get_pos_on_path(pos, dir, distance_to_crossing))[0];
+        cone_roots_agree = cone_roots_agree && std::abs(theta_at_crossing - theta_edge) < 1e-9 &&
+                           ((theta_after > theta_before) == theta_increases);
+      }
+    }
+
+    const double phi_edge = 2 * PI * rng_uniform(rngstate);
+    const double distance_from_plane = (std::cos(phi_edge) * pos[1]) - (std::sin(phi_edge) * pos[0]);
+    const double distance_from_plane_rate = (std::cos(phi_edge) * dir[1]) - (std::sin(phi_edge) * dir[0]);
+    const double distance_to_plane = -distance_from_plane / distance_from_plane_rate;
+    const auto pos_at_plane = get_pos_on_path(pos, dir, distance_to_plane);
+    const bool is_on_this_half = ((std::cos(phi_edge) * pos_at_plane[0]) + (std::sin(phi_edge) * pos_at_plane[1])) > 0.;
+    const bool phi_increases_on_path = ((pos[0] * dir[1]) - (pos[1] * dir[0])) > 0.;
+    for (const bool phi_increases : {true, false}) {
+      const double expected_distance =
+          (distance_to_plane >= 0. && is_on_this_half && (phi_increases_on_path == phi_increases)) ? distance_to_plane
+                                                                                                   : -1.;
+      const double distance_to_crossing =
+          phi_increases
+              ? grid::phi_halfplane_intersection<BoundaryType::UPPER>(pos, dir, std::cos(phi_edge), std::sin(phi_edge))
+              : grid::phi_halfplane_intersection<BoundaryType::LOWER>(pos, dir, std::cos(phi_edge), std::sin(phi_edge));
+      halfplane_roots_agree =
+          halfplane_roots_agree && ((expected_distance < 0.) ? distance_to_crossing < 0.
+                                                             : std::abs(distance_to_crossing - expected_distance) <=
+                                                                   1e-9 * (1. + expected_distance));
+    }
+  }
+  check(cone_roots_agree, "the selected crossing of a theta cone agrees with the reference for random paths");
+  check(halfplane_roots_agree, "the selected crossing of a phi half-plane agrees with the reference for random paths");
+}
+
+// Follow a straight packet path through a spherical propagation grid to the escape. Return false if a step breaks a
+// rule: each step must stay in the cell that holds its middle point, and the sum of the steps must be the distance
+// to the outer surface of the grid.
+auto path_through_spherical_grid_is_consistent(const Vec3d& pos_start, const Vec3d& dir, const double time_start,
+                                               const int cellindex_start) -> bool {
+  const double distance_to_surface = grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(
+      pos_start, dir, CLIGHT_PROP, globals::rmax * time_start / globals::tmin, time_start);
+  auto pos = pos_start;
+  double time = time_start;
+  int cellindex = cellindex_start;
+  double distance_sum = 0.;
+  const int max_steps = 4 * static_cast<int>(grid::ngrid);
+  for (int step = 0; step < max_steps; step++) {
+    const auto [distance, next_cellindex] = grid::boundary_distance(dir, pos, time, cellindex);
+    if (!(distance >= 0.)) {
+      return false;
+    }
+    // a step of zero length changes the cell of a packet that is at a cell boundary
+    if (distance > 1e3) {
+      const double time_at_middle = time + (distance / 2. / CLIGHT_PROP);
+      if (grid::get_cellindex_from_pos(get_pos_on_path(pos, dir, distance / 2.), time_at_middle) != cellindex) {
+        return false;
+      }
+    }
+    pos = get_pos_on_path(pos, dir, distance);
+    time += distance / CLIGHT_PROP;
+    distance_sum += distance;
+    if (next_cellindex < 0) {
+      return std::abs(distance_sum - distance_to_surface) <= 1e-9 * distance_to_surface;
+    }
+    cellindex = next_cellindex;
+  }
+  return false;
+}
+
+void test_spherical_grid_boundary_distance() {
+  if (GRID_TYPE_OVERRIDE.has_value() || FORCE_SPHERICAL_ESCAPE_SURFACE) {
+    std::println("spherical grid paths: no test, because the options select a different propagation grid");
+    return;
+  }
+  std::println("packet paths through spherical grids...");
+  globals::tmin = 1e5;
+  globals::max_path_step = 1e35;
+  const double vmax = 0.3 * CLIGHT;
+
+  const auto get_uniform_edges = [](const double last_edge, const int num_cells) {
+    std::vector<double> edges(num_cells + 1);
+    for (int i = 0; i <= num_cells; i++) {
+      edges[i] = last_edge * i / num_cells;
+    }
+    edges.back() = last_edge;
+    return edges;
+  };
+  const std::vector<double> vel_r_edges_not_uniform{0., 0.02 * vmax, 0.1 * vmax, 0.15 * vmax, 0.5 * vmax, vmax};
+  // these polar edges are uniform in cos(theta), with an edge at exactly pi / 2
+  const std::vector<double> theta_edges_with_equator{0., std::acos(0.5), PI / 2, std::acos(-0.5), PI};
+  const std::vector<double> theta_edges_without_equator{0., 0.3, 1.2, 2.0, PI};
+  // the second azimuthal cell is wider than pi
+  const std::vector<double> phi_edges_with_wide_cell{0., 1.0, 4.5, 2 * PI};
+
+  struct SphericalGridCase {
+    GridType gridtype{GridType::SPHERICAL3D};
+    std::vector<double> vel_r_edges;
+    std::vector<double> theta_edges;
+    std::vector<double> phi_edges;
+  };
+  const std::vector<SphericalGridCase> gridcases{
+      {
+          .gridtype = GridType::SPHERICAL3D,
+          .vel_r_edges = get_uniform_edges(vmax, 6),
+          .theta_edges = get_uniform_edges(PI, 5),
+          .phi_edges = get_uniform_edges(2 * PI, 16),
+      },
+      {
+          .gridtype = GridType::SPHERICAL3D,
+          .vel_r_edges = vel_r_edges_not_uniform,
+          .theta_edges = theta_edges_with_equator,
+          .phi_edges = get_uniform_edges(2 * PI, 2),
+      },
+      {
+          .gridtype = GridType::SPHERICAL3D,
+          .vel_r_edges = vel_r_edges_not_uniform,
+          .theta_edges = theta_edges_without_equator,
+          .phi_edges = phi_edges_with_wide_cell,
+      },
+      {
+          .gridtype = GridType::SPHERICAL3D,
+          .vel_r_edges = get_uniform_edges(vmax, 1),
+          .theta_edges = get_uniform_edges(PI, 1),
+          .phi_edges = get_uniform_edges(2 * PI, 1),
+      },
+      {
+          .gridtype = GridType::SPHERICAL2D,
+          .vel_r_edges = vel_r_edges_not_uniform,
+          .theta_edges = theta_edges_with_equator,
+          .phi_edges = {},
+      },
+      {
+          .gridtype = GridType::SPHERICAL2D,
+          .vel_r_edges = get_uniform_edges(vmax, 8),
+          .theta_edges = theta_edges_without_equator,
+          .phi_edges = {},
+      },
+  };
+
+  rngstate_type rngstate{3141};
+  for (const auto& gridcase : gridcases) {
+    grid::setup_spherical_grid_from_edges(gridcase.gridtype, gridcase.vel_r_edges, gridcase.theta_edges,
+                                          gridcase.phi_edges);
+    const auto num_cells = static_cast<int>(grid::ngrid);
+
+    double volume_sum = 0.;
+    for (int cellindex = 0; cellindex < num_cells; cellindex++) {
+      volume_sum += grid::get_propcell_volume_tmin(cellindex);
+    }
+    check_close(volume_sum, 4. / 3. * PI * pow3(globals::rmax), 1e-12,
+                "the cells of a spherical grid fill the sphere of the outer radius");
+
+    bool random_positions_are_in_their_cells = true;
+    bool random_paths_are_consistent = true;
+    for (int i = 0; i < 3000; i++) {
+      const int cellindex = std::min(static_cast<int>(rng_uniform(rngstate) * num_cells), num_cells - 1);
+      const auto pos_tmin = grid::get_propcell_random_xyz_position_tmin(cellindex, rngstate);
+      random_positions_are_in_their_cells =
+          random_positions_are_in_their_cells && (grid::get_cellindex_from_pos(pos_tmin, globals::tmin) == cellindex);
+      // the cells keep their velocity coordinates, thus the position at a later time is in the same cell
+      const double time_start = globals::tmin * (1. + (3. * rng_uniform(rngstate)));
+      const auto pos_start = vec_scale(pos_tmin, time_start / globals::tmin);
+      random_paths_are_consistent =
+          random_paths_are_consistent && path_through_spherical_grid_is_consistent(
+                                             pos_start, get_rand_isotropic_unitvec(rngstate), time_start, cellindex);
+    }
+    check(random_positions_are_in_their_cells, "a random position of a cell of a spherical grid is in that cell");
+    check(random_paths_are_consistent, "random paths through a spherical grid change cell at the cell boundaries");
+
+    // Paths through the points where many cells meet: the centre, and the z axis. Paths with a constant angle: along
+    // the z axis direction, radial, and in the plane z = 0. Each start position is in its cell at tmin.
+    bool special_paths_are_consistent = true;
+    for (int i = 0; i < 300; i++) {
+      const int cellindex = std::min(static_cast<int>(rng_uniform(rngstate) * num_cells), num_cells - 1);
+      const auto pos = grid::get_propcell_random_xyz_position_tmin(cellindex, rngstate);
+      const auto dir_to_centre = vec_scale(vec_norm(pos), -1.);
+      const double rcyl = std::hypot(pos[0], pos[1]);
+      // towards the point of the z axis at a random height
+      const auto dir_to_axis =
+          vec_norm(Vec3d{-pos[0], -pos[1], (rng_uniform(rngstate) - 0.5) * 2. * (rcyl + std::abs(pos[2]))});
+      for (const auto& dir : {dir_to_centre, vec_norm(pos), Vec3d{0., 0., 1.}, Vec3d{0., 0., -1.}, dir_to_axis}) {
+        special_paths_are_consistent = special_paths_are_consistent &&
+                                       path_through_spherical_grid_is_consistent(pos, dir, globals::tmin, cellindex);
+      }
+      // a path in the plane z = 0, which is a cell boundary of some of the grids
+      const auto pos_in_plane = Vec3d{pos[0], pos[1], 0.};
+      const auto dir_in_plane = vec_norm(Vec3d{rng_uniform(rngstate) - 0.5, rng_uniform(rngstate) - 0.5, 0.});
+      special_paths_are_consistent =
+          special_paths_are_consistent &&
+          path_through_spherical_grid_is_consistent(pos_in_plane, dir_in_plane, globals::tmin,
+                                                    grid::get_cellindex_from_pos(pos_in_plane, globals::tmin));
+    }
+    check(special_paths_are_consistent,
+          "paths through the centre, through the z axis, along the z direction, and in the plane z = 0 change cell "
+          "at the cell boundaries");
+
+    // A packet a small distance [cm] before a cell boundary, with the direction of the ray from the centre (or from
+    // the z axis) through the point at that distance after the boundary. The centre (or the z axis) is behind the
+    // packet, and the path stays in the position tolerance of the boundary until it goes through it.
+    bool outward_paths_change_cell_at_once = true;
+    constexpr double distance_from_boundary = 3.;
+    const double radius = 0.3 * globals::rmax;
+    const auto path_changes_cell_at_once = [](const Vec3d& pos, const Vec3d& pos_after_boundary, const Vec3d& dir) {
+      const int cellindex = grid::get_cellindex_from_pos(pos, globals::tmin);
+      const int cellindex_after = grid::get_cellindex_from_pos(pos_after_boundary, globals::tmin);
+      const auto [distance, next_cellindex] = grid::boundary_distance(dir, pos, globals::tmin, cellindex);
+      return cellindex != cellindex_after && distance == 0. && next_cellindex == cellindex_after;
+    };
+    for (const double sense : {1., -1.}) {
+      for (auto edgeindex = 1Z; edgeindex < std::ssize(gridcase.theta_edges) - 1; edgeindex++) {
+        const double theta = gridcase.theta_edges[edgeindex];
+        const double phi = 0.3;
+        const auto pos_on_cone =
+            vec_scale(Vec3d{std::sin(theta) * std::cos(phi), std::sin(theta) * std::sin(phi), std::cos(theta)}, radius);
+        const Vec3d dir_of_theta{std::cos(theta) * std::cos(phi), std::cos(theta) * std::sin(phi), -std::sin(theta)};
+        const auto pos_after_boundary = get_pos_on_path(pos_on_cone, dir_of_theta, sense * distance_from_boundary);
+        outward_paths_change_cell_at_once =
+            outward_paths_change_cell_at_once &&
+            path_changes_cell_at_once(get_pos_on_path(pos_on_cone, dir_of_theta, -sense * distance_from_boundary),
+                                      pos_after_boundary, vec_norm(pos_after_boundary));
+      }
+      for (auto edgeindex = 0Z; edgeindex < std::ssize(gridcase.phi_edges) - 1 && gridcase.phi_edges.size() > 2;
+           edgeindex++) {
+        const double theta = 1.;
+        const double phi = gridcase.phi_edges[edgeindex];
+        const auto pos_on_halfplane =
+            vec_scale(Vec3d{std::sin(theta) * std::cos(phi), std::sin(theta) * std::sin(phi), std::cos(theta)}, radius);
+        const Vec3d dir_of_phi{-std::sin(phi), std::cos(phi), 0.};
+        const auto pos_after_boundary = get_pos_on_path(pos_on_halfplane, dir_of_phi, sense * distance_from_boundary);
+        // this direction is not radial, thus only the z axis is on the line of the path
+        outward_paths_change_cell_at_once =
+            outward_paths_change_cell_at_once &&
+            path_changes_cell_at_once(get_pos_on_path(pos_on_halfplane, dir_of_phi, -sense * distance_from_boundary),
+                                      pos_after_boundary,
+                                      vec_norm(Vec3d{pos_after_boundary[0], pos_after_boundary[1], 0.}));
+      }
+    }
+    check(outward_paths_change_cell_at_once,
+          "a path away from the centre or the z axis, in the position tolerance of a cell boundary, changes cell at "
+          "once");
+  }
+}
+
 void test_escapedirectionbin() {
   std::println("get_escapedirectionbin...");
   rngstate_type rngstate{5501};
@@ -1825,6 +2162,8 @@ auto main() -> int {
   test_range_chunks();
   test_vector_geometry();
   test_expanding_shell_intersection();
+  test_spherical_angle_boundary_intersections();
+  test_spherical_grid_boundary_distance();
   test_escapedirectionbin();
   test_frame_transform();
   test_zero_polarisation_intensity();

@@ -254,7 +254,8 @@ error status. To run only one step, give its name as the second argument.
   `scripts/mergeangleres.py`. That script merges the direction bin files into
   `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. The tests with
   a 2D or a 3D model, e.g. `kilonova_2d`, have the first two files in
-  `results_md5_final.txt`. Only `classicmode_3d` also has `specpol_res.out`.
+  `results_md5_final.txt`. Only `classicmode_3d` and
+  `classicmode_3d_formatversion2` also have `specpol_res.out`.
 - `checksums_final` writes `results_md5_final.txt` into the model folder and
   compares it with the reference file.
 
