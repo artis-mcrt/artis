@@ -37,7 +37,8 @@ these steps:
    `classicmode_3d_formatversion2`, the step `formatcheck` comes between the two. It runs `sn3d -c` on the small 1D
    and 2D models of format version 2 in the folder `formatcheck_models` of the input files. It also runs `sn3d -c`
    on damaged copies of them. `sn3d` must read each model and must stop with the correct message for each damaged
-   copy.
+   copy. Two models have mirror symmetry in the plane z = 0, and each must give the masses of a model without the
+   mirror: the full twin of the cylindrical model, and the 1D model with the shells of the spherical model.
 4. It checks the input and the {term}`restart files <restart file>` with `sn3d -c`, and it resumes the simulation from the restart files. It
    then removes the restart files and runs `exspec`.
 5. It compares the checksums of the output files with `results_md5_final.txt`.

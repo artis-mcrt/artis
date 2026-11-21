@@ -220,6 +220,8 @@ The header:
 - The key `cells_per_axis` is optional. It gives the number of cells on each axis, in the sequence of the axes of
   the table above, e.g. `cells_per_axis 5 4 4` for n_r = 5, n_theta = 4, and n_phi = 4. Each number is an integer.
   `sn3d` stops if a number is different from the number that the list of edges of that axis gives.
+- The key `mirror_plane` is optional, and its only value is `z=0`. It gives mirror symmetry in the plane z = 0, for
+  a `cylindrical2d`, a `spherical2d`, or a `spherical3d` model. See [Mirror symmetry](#mirror-symmetry).
 - The key `cell_line_count` is optional. It gives the number of the cell lines of the file, as one integer from 1 to
   the number of cells of the grid. `sn3d` stops if the file has a different number of cell lines. A file that lost
   lines at its end has more empty cells and no other sign of the loss. Only this key finds such a file. Thus write
@@ -279,6 +281,27 @@ is a half of a plane through the z axis. These boundaries have constant velocity
 in the homologous expansion. The cells near the centre and near the z axis are small. A packet path within 10 cm of
 the centre changes its cell there in one step. Thus `sn3d` stops if the outer radius of the first radial shell is not
 above 1e5 cm at the start time.
+
+### Mirror symmetry
+
+A `cylindrical2d`, `spherical2d`, or `spherical3d` model of format version 2 can have mirror symmetry in the plane
+z = 0. The header then has the line `mirror_plane z=0`, and the file holds the cells with z >= 0:
+
+- The list `vel_z_edges_kmps` of a cylindrical model has equal steps from 0 to `vmax`.
+- The list `theta_edges_radians` of a spherical model ends at pi / 2. `sn3d` accepts a difference of 1e-8 and then
+  uses the exact value.
+- `cells_per_axis` and the cell ids are of this half. The index of z of a cylindrical model starts at the plane
+  z = 0, and the index of theta of a spherical model starts at the +z axis.
+
+Each cell of the file is one model cell that fills its cell with z >= 0 and the mirror cell with z <= 0. Thus its
+volume and its mass are two times the values of the half cell. The propagation grid has the cells of both halves,
+and the two cells of a mirror pair have the same model cell. Thus the estimators of a model cell use the packets of
+both cells, and the output files give the model cells of the file. With
+[GRID_TYPE_OVERRIDE](options.md#grid_type_override), each Cartesian cell with z < 0 takes the model cell of its mirror
+position.
+
+A version of `sn3d` without this key gives a warning for the unknown key and stops at the edge rules above, because
+it needs a z axis from -`vmax` and a polar axis to pi. Format version 1 has no mirror symmetry.
 
 ### The element mass fractions
 

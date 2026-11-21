@@ -264,6 +264,33 @@ case $step in
         run_formatcheck_case yefile "$model2d" "Ye.txt is present, but model.txt has format version 2" file:Ye.txt
         run_formatcheck_case abundancefile "$model2d" \
             "abundances.txt is present, but model.txt has format version 2" file:abundances.txt
+        # A mirrored model has the masses of its full twin. A mirrored 2D spherical model of the 1D shells has the
+        # masses of the 1D model
+        get_masses_of_case() {
+            sed -E 's/^[0-9TZ:-]+ //' "$checkroot/$1/inputcheck/output_0-0.txt" |
+                grep -E '^(Total input model mass|  [0-9A-Z][A-Za-z0-9-]*: [0-9])'
+        }
+        require_same_masses() {
+            if [ -z "$(get_masses_of_case "$1")" ] || [ "$(get_masses_of_case "$1")" != "$(get_masses_of_case "$2")" ]; then
+                echo "[error] formatcheck: the cases $1 and $2 have different masses." >&2
+                exit 1
+            fi
+            echo "formatcheck $1 and $2: the same masses"
+        }
+        modelmirror="$checkmodels/cylindrical2d_mirror_model.txt"
+        run_formatcheck_case cylindrical2d_mirror "$modelmirror" complete "model.txt has mirror symmetry in the plane z = 0"
+        run_formatcheck_case cylindrical2d_mirrortwin "$checkmodels/cylindrical2d_mirrortwin_model.txt" complete
+        require_same_masses cylindrical2d_mirror cylindrical2d_mirrortwin
+        run_formatcheck_case spherical2d_mirror "$checkmodels/spherical2d_mirror_model.txt" complete
+        require_same_masses spherical2d_mirror spherical1d_nofegroup
+        sed 's/^mirror_plane z=0$/mirror_plane z=1/' "$modelmirror" > "$checkroot/mirrorvalue.txt"
+        run_formatcheck_case mirrorvalue "$checkroot/mirrorvalue.txt" "the key mirror_plane must have the value z=0"
+        sed 's/^cell_line_count/mirror_plane z=0\ncell_line_count/' "$model1d" > "$checkroot/mirror1d.txt"
+        run_formatcheck_case mirror1d "$checkroot/mirror1d.txt" "a spherical1d model takes no key mirror_plane"
+        # the z axis of a mirrored cylindrical model starts at the plane z = 0
+        sed 's/^cell_line_count/mirror_plane z=0\ncell_line_count/' "$model2d" > "$checkroot/mirrorfullaxis.txt"
+        run_formatcheck_case mirrorfullaxis "$checkroot/mirrorfullaxis.txt" \
+            "the values of vel_z_edges_kmps must have equal steps from 0 to"
         # two radial edges of the 1D model that differ in km/s and give the same velocity in cm/s
         sed 's/^vel_r_edges_kmps 0.0 /vel_r_edges_kmps 0.0 1000.0000000000002 1000.0000000000003 /' "$model1d" \
             > "$checkroot/equaledges.txt"

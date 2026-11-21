@@ -76,6 +76,11 @@ constexpr std::string_view otherstable_suffix = "_otherstable";
 // cell with no line is empty, thus only this count finds a file that lost lines at its end.
 std::optional<ptrdiff_t> model_cell_line_count;
 
+// The optional key mirror_plane z=0 of a model.txt of format version 2 gives mirror symmetry in the plane z = 0. The
+// file then holds the cells with z >= 0, and each model cell also fills its mirror cell. The propagation grid has the
+// cells of both halves, and the two cells of a mirror pair have the same model cell.
+bool model_mirror_z{false};
+
 ptrdiff_t npts_model = 0;  // number of model grid cells
 ptrdiff_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
@@ -86,7 +91,7 @@ std::array<int, 3> ncoord_model{};  // the model.txt input grid dimensions
 // The cell edges of a 2D spherical or a 3D spherical model, which model.txt gives in its header. Each list has one
 // value more than the count of the cells on that axis. A 2D spherical model has one phi cell from 0 to 2 pi.
 std::vector<double> model_vel_r_edges{};  // radial velocity [cm/s], from 0 to vmax
-std::vector<double> model_theta_edges{};  // polar angle from the +z axis [rad], from 0 to pi
+std::vector<double> model_theta_edges{};  // polar angle from the +z axis [rad], from 0 to pi (pi / 2 with a mirror)
 std::vector<double> model_phi_edges{};  // azimuthal angle phi = atan2(y, x) [rad], from 0 to 2 pi
 
 double min_den{-1.};  // minimum model density
@@ -618,8 +623,9 @@ void allocate_nonemptymodelcells() {
         modelgrid_input[mgi].initial_radial_pos_squared_sum += get_cellradialposmeansquared(cellindex);
       }
       assert_always(get_rho_tmin(mgi) > 0);
-      // with direct mapping, there must be exactly one propagation cell per non-empty model cell
-      assert_always(get_modelgridtype() != get_propgridtype() || modelgrid_numpropcells[mgi] == 1);
+      // with direct mapping, a non-empty model cell has one propagation cell, or two with a mirror plane
+      assert_always(get_modelgridtype() != get_propgridtype() ||
+                    modelgrid_numpropcells[mgi] <= (model_mirror_z ? 2 : 1));
     }
   }
 
@@ -777,8 +783,11 @@ void map_2dmodelto3dgrid() {
 
     // 2D grid is uniform so rcyl and z indices can be calculated with no lookup
     const int n_rcyl = static_cast<int>(rcylindrical / globals::tmin / globals::vmax * ncoord_model[0]);
+    // the z axis of a mirrored model starts at the plane z = 0, and a cell with z < 0 takes its mirror cell
     const int n_z =
-        static_cast<int>(((pos_mid[2] / globals::tmin) + globals::vmax) / (2 * globals::vmax) * ncoord_model[1]);
+        model_mirror_z
+            ? static_cast<int>(std::abs(pos_mid[2]) / globals::tmin / globals::vmax * ncoord_model[1])
+            : static_cast<int>(((pos_mid[2] / globals::tmin) + globals::vmax) / (2 * globals::vmax) * ncoord_model[1]);
 
     if (n_rcyl >= 0 && n_rcyl < ncoord_model[0] && n_z >= 0 && n_z < ncoord_model[1]) {
       const int mgi = (n_z * ncoord_model[0]) + n_rcyl;
@@ -826,7 +835,9 @@ void map_2dmodelto3dgrid() {
   if (vel_r > model_vel_r_edges.back()) {
     return -1;
   }
-  const auto [theta, phi] = get_theta_phi_from_xyz(pos_tmin);
+  const auto [theta_pos, phi] = get_theta_phi_from_xyz(pos_tmin);
+  // the polar axis of a mirrored model ends at pi / 2, and a position with z < 0 takes its mirror cell
+  const double theta = (model_mirror_z && theta_pos > PI / 2) ? PI - theta_pos : theta_pos;
   // the last value of each list is the upper edge of the last cell
   const auto lower_edges = [](const std::vector<double>& edges) {
     return std::span<const double>{edges}.first(edges.size() - 1);
@@ -849,6 +860,42 @@ void map_sphericalmodelto3dgrid() {
     const int mgi = get_spherical_model_cellindex_tmin(pos_mid);
     // the corner cells outside the outermost shell are empty, and so is a cell of a model cell with zero density
     set_propcell_modelgridindex(cellindex, (mgi >= 0 && modelgrid_input[mgi].rhoinit > 0) ? mgi : -1);
+  }
+}
+
+// The mirror axis of a model with the key mirror_plane is the axis 1: z of a cylindrical model and theta of a
+// spherical model.
+constexpr int mirror_axis = 1;
+
+// Get the index on the mirror axis of the model grid for an index on that axis of the propagation grid. The model
+// grid of a mirrored model holds the half with z >= 0. A cylindrical model counts its z cells from the plane z = 0,
+// and a spherical model counts its polar cells from the +z axis.
+[[nodiscard]] auto get_model_mirror_axis_index(const int propindex) -> int {
+  const int num_half = ncoord_model[mirror_axis];
+  if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
+    return (propindex >= num_half) ? propindex - num_half : num_half - 1 - propindex;
+  }
+  return (propindex < num_half) ? propindex : (2 * num_half) - 1 - propindex;
+}
+
+// Get the propagation cell with z >= 0 of a model cell of a mirrored model on its own grid type
+[[nodiscard]] auto get_upper_propcell_of_mirrored_mgi(const int mgi) -> int {
+  const int index0 = mgi % ncoord_model[0];
+  const int index1 = (mgi / ncoord_model[0]) % ncoord_model[1];
+  const int index2 = mgi / (ncoord_model[0] * ncoord_model[1]);
+  const int propindex1 = (get_modelgridtype() == GridType::CYLINDRICAL2D) ? ncoord_model[1] + index1 : index1;
+  return index0 + (ncoordgrid[0] * (propindex1 + (ncoordgrid[1] * index2)));
+}
+
+// Map a mirrored model onto a propagation grid of its own type. The propagation grid has the cells of both halves,
+// and each propagation cell takes the model cell of the mirror pair.
+void map_mirroredmodeltogrid() {
+  for (int cellindex = 0; cellindex < ngrid; cellindex++) {
+    const int index0 = get_cellcoordindex(cellindex, 0);
+    const int index1 = get_model_mirror_axis_index(get_cellcoordindex(cellindex, mirror_axis));
+    const int index2 = (get_modelgridtype() == GridType::SPHERICAL3D) ? get_cellcoordindex(cellindex, 2) : 0;
+    const int mgi = index0 + (ncoord_model[0] * (index1 + (ncoord_model[1] * index2)));
+    set_propcell_modelgridindex(cellindex, (modelgrid_input[mgi].rhoinit > 0) ? mgi : -1);
   }
 }
 
@@ -1376,8 +1423,11 @@ auto get_inputcellvolume(const int mgi) -> double {
     case GridType::CYLINDRICAL2D: {
       const int n_r = mgi % ncoord_model[0];
       const double delta_rcyl = globals::vmax * t_model / ncoord_model[0];
-      const double delta_z = 2. * globals::vmax * t_model / ncoord_model[1];
-      return pow3(globals::tmin / t_model) * delta_z * PI * (pow2((n_r + 1) * delta_rcyl) - pow2(n_r * delta_rcyl));
+      // the z axis of a mirrored model is from 0 to vmax, and each cell also fills its mirror cell
+      const double delta_z = (model_mirror_z ? 1. : 2.) * globals::vmax * t_model / ncoord_model[1];
+      const double mirrorfactor = model_mirror_z ? 2. : 1.;
+      return mirrorfactor * pow3(globals::tmin / t_model) * delta_z * PI *
+             (pow2((n_r + 1) * delta_rcyl) - pow2(n_r * delta_rcyl));
     }
 
     case GridType::CARTESIAN3D: {
@@ -1394,7 +1444,9 @@ auto get_inputcellvolume(const int mgi) -> double {
       const double radialpart =
           (pow3(model_vel_r_edges[index_r + 1]) - pow3(model_vel_r_edges[index_r])) * pow3(globals::tmin) / 3.;
       const double polarpart = std::cos(model_theta_edges[index_theta]) - std::cos(model_theta_edges[index_theta + 1]);
-      return radialpart * polarpart * (model_phi_edges[index_phi + 1] - model_phi_edges[index_phi]);
+      // each cell of a mirrored model also fills its mirror cell
+      const double mirrorfactor = model_mirror_z ? 2. : 1.;
+      return mirrorfactor * radialpart * polarpart * (model_phi_edges[index_phi + 1] - model_phi_edges[index_phi]);
     }
   }
 
@@ -1740,9 +1792,13 @@ void setup_grid_cylindrical_2d() {
   assert_always(get_modelgridtype() == GridType::CYLINDRICAL2D);
 
   ncoordgrid = ncoord_model;
+  if (model_mirror_z) {
+    // the propagation grid has the z cells of both halves
+    ncoordgrid[1] = 2 * ncoord_model[1];
+  }
 
   ngrid = static_cast<ptrdiff_t>(ncoordgrid[0]) * ncoordgrid[1];
-  assert_always(ngrid == get_npts_model());
+  assert_always(ngrid == get_npts_model() * (model_mirror_z ? 2 : 1));
 
   reserve_resize(coord_pos_min_tmin[0], ncoordgrid[0]);
   for (int n_rcyl = 0; n_rcyl < ncoordgrid[0]; n_rcyl++) {
@@ -1751,7 +1807,7 @@ void setup_grid_cylindrical_2d() {
 
   reserve_resize(coord_pos_min_tmin[1], ncoordgrid[1]);
   for (int n_z = 0; n_z < ncoordgrid[1]; n_z++) {
-    coord_pos_min_tmin[1][n_z] = globals::rmax * (-1 + (n_z * 2. / ncoord_model[1]));
+    coord_pos_min_tmin[1][n_z] = globals::rmax * (-1 + (n_z * 2. / ncoordgrid[1]));
   }
   coord_pos_max_of_grid_tmin = {globals::rmax, globals::rmax, globals::rmax};
 }
@@ -1762,7 +1818,14 @@ void setup_grid_spherical() {
   assert_always(has_spherical_angle_axes(get_modelgridtype()));
   assert_always(get_propgridtype() == get_modelgridtype());
 
-  const std::array<std::span<const double>, 3> model_edges{model_vel_r_edges, model_theta_edges, model_phi_edges};
+  // the propagation grid of a mirrored model has the polar cells of both halves
+  std::vector<double> prop_theta_edges = model_theta_edges;
+  if (model_mirror_z) {
+    for (auto i = std::ssize(model_theta_edges) - 2; i >= 0; i--) {
+      prop_theta_edges.push_back(PI - model_theta_edges[i]);
+    }
+  }
+  const std::array<std::span<const double>, 3> model_edges{model_vel_r_edges, prop_theta_edges, model_phi_edges};
   for (int axis = 0; axis < 3; axis++) {
     ncoordgrid[axis] = static_cast<int>(std::ssize(model_edges[axis])) - 1;
     // the last edge of each axis is the upper bound of the grid
@@ -1775,7 +1838,7 @@ void setup_grid_spherical() {
   require_increasing_shell_radii_at_tmin();
 
   ngrid = static_cast<ptrdiff_t>(ncoordgrid[0]) * ncoordgrid[1] * ncoordgrid[2];
-  assert_always(ngrid == get_npts_model());
+  assert_always(ngrid == get_npts_model() * (model_mirror_z ? 2 : 1));
 
   // The centre of the grid is a point of every polar cell and every azimuthal cell of the first shell. A packet
   // path within cellbound_tolerance(0.) of the centre changes its cell there in one event, thus that distance must
@@ -1801,12 +1864,22 @@ void setup_grid_spherical() {
     sin_of_edges.front() = 0.;
     sin_of_edges.back() = 0.;
   };
-  set_cos_sin_of_edges(model_theta_edges, theta_edge_cos, theta_edge_sin);
+  set_cos_sin_of_edges(prop_theta_edges, theta_edge_cos, theta_edge_sin);
   theta_edge_cos.back() = -1.;
-  for (auto i = 0Z; i < std::ssize(model_theta_edges); i++) {
-    if (model_theta_edges[i] == PI / 2) {
+  for (auto i = 0Z; i < std::ssize(prop_theta_edges); i++) {
+    if (prop_theta_edges[i] == PI / 2) {
       theta_edge_cos[i] = 0.;
       theta_edge_sin[i] = 1.;
+    }
+  }
+  if (model_mirror_z) {
+    // the edges of the mirror half have the exact opposite cosines, thus the two cells of a mirror pair have the
+    // same volume
+    const auto num_half_edges = std::ssize(model_theta_edges);
+    for (auto i = num_half_edges; i < std::ssize(prop_theta_edges); i++) {
+      const auto mirrorindex = (2 * (num_half_edges - 1)) - i;
+      theta_edge_cos[i] = -theta_edge_cos[mirrorindex];
+      theta_edge_sin[i] = theta_edge_sin[mirrorindex];
     }
   }
   // A polar edge very near the z axis has the cosine of the axis. The cell between two edges with one cosine has no
@@ -1816,7 +1889,7 @@ void setup_grid_spherical() {
       fatal_crash(
           "model.txt: the polar edges {:.17g} and {:.17g} [rad] have the same cosine, thus the polar cell between "
           "them is too thin for the precision of the numbers",
-          model_theta_edges[i - 1], model_theta_edges[i]);
+          prop_theta_edges[i - 1], prop_theta_edges[i]);
     }
   }
   set_cos_sin_of_edges(model_phi_edges, phi_edge_cos, phi_edge_sin);
@@ -2082,6 +2155,11 @@ struct AngularBoundaryCrossing {
   if (get_propgridtype() == GridType::CARTESIAN3D) {
     // underlying input model could be 1D, 2D, or 3D
     return get_propcell_volume_tmin(0) * get_numpropcells(modelgridindex);
+  }
+
+  if (model_mirror_z) {
+    // the two propagation cells of a mirror pair have the same volume
+    return 2 * get_propcell_volume_tmin(get_upper_propcell_of_mirrored_mgi(modelgridindex));
   }
 
   // direct mapping, so cellindex = modelgridindex and one propagation cell per model cell
@@ -2655,6 +2733,25 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
         coordinates);
   }
   const auto detected_model_type = named_model_type.value();
+
+  model_mirror_z = false;
+  if (find_key("mirror_plane") != keylines.end()) {
+    if (get_text_of_key("mirror_plane") != "z=0") {
+      fatal_crash("model.txt: the key mirror_plane must have the value z=0, but it has '{}'",
+                  get_text_of_key("mirror_plane"));
+    }
+    if (detected_model_type != GridType::CYLINDRICAL2D && detected_model_type != GridType::SPHERICAL2D &&
+        detected_model_type != GridType::SPHERICAL3D) {
+      fatal_crash(
+          "model.txt: a {} model takes no key mirror_plane. The key applies to cylindrical2d, spherical2d, and "
+          "spherical3d models",
+          coordinates);
+    }
+    model_mirror_z = true;
+    printlnlog(
+        "model.txt has mirror symmetry in the plane z = 0. Each model cell fills its cell with z >= 0 and the mirror "
+        "cell with z <= 0");
+  }
   printlnlog("Detected {} model of format version 2", coordinates);
 
   const auto t_model_days = get_numbers_of_key("t_model_init_days");
@@ -2691,8 +2788,8 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
   }
   for (const auto& keyline : keylines) {
     const std::string_view key = keyline.first;
-    if (key == "coordinates" || key == "cells_per_axis" || key == "t_model_init_days" || key == "cell_line_count" ||
-        key == "columns") {
+    if (key == "coordinates" || key == "cells_per_axis" || key == "mirror_plane" || key == "t_model_init_days" ||
+        key == "cell_line_count" || key == "columns") {
       continue;
     }
     if (std::ranges::find(edge_keys, key) == edge_keys.end()) {
@@ -2718,7 +2815,8 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
       const auto vel_z_edges = get_velocity_edges("vel_z_edges_kmps", false);
       globals::vmax = vel_rcyl_edges.back();
       require_uniform_edges(vel_rcyl_edges, "vel_rcyl_edges_kmps", 0., globals::vmax);
-      require_uniform_edges(vel_z_edges, "vel_z_edges_kmps", -globals::vmax, globals::vmax);
+      // with a mirror plane, the z axis of the file starts at the plane z = 0
+      require_uniform_edges(vel_z_edges, "vel_z_edges_kmps", model_mirror_z ? 0. : -globals::vmax, globals::vmax);
       ncoord_model = {
           static_cast<int>(std::ssize(vel_rcyl_edges)) - 1,
           static_cast<int>(std::ssize(vel_z_edges)) - 1,
@@ -2761,7 +2859,8 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
       }
       // this check comes after the change to pi / 2, because two edges that become equal there make a cell with no
       // volume
-      require_valid_edges(model_theta_edges, "theta_edges_radians", true, PI);
+      // with a mirror plane, the polar axis of the file ends at the plane z = 0
+      require_valid_edges(model_theta_edges, "theta_edges_radians", true, model_mirror_z ? PI / 2 : PI);
 
       if (detected_model_type == GridType::SPHERICAL3D) {
         model_phi_edges = get_numbers_of_key("phi_edges_radians");
@@ -3362,7 +3461,11 @@ void init_grid() {
       assert_always(ncoord_model[2] == ncoordgrid[2]);
     }
 
-    map_modeltogrid_direct();
+    if (model_mirror_z) {
+      map_mirroredmodeltogrid();
+    } else {
+      map_modeltogrid_direct();
+    }
   } else if (get_modelgridtype() == GridType::SPHERICAL1D) {
     map_1dmodelto3dgrid();
   } else if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
