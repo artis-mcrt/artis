@@ -2514,7 +2514,8 @@ constexpr double model_uniform_edge_tolerance = 1e-9;
 // Read the header of a model.txt of format version 2, after its first line "format_version 2". Each header line is
 // a key and its values, and the keys can come in any sequence. The key columns gives the column names and ends the
 // header. The other keys are coordinates, t_model_init_days, and one list of cell edges for each axis of the
-// coordinates, e.g. vel_r_edges_kmps. A list has one value more than the count of the cells on its axis. A key that
+// coordinates, e.g. vel_r_edges_kmps. A list has one value more than the count of the cells on its axis. The optional
+// key cells_per_axis gives these counts again, in the sequence of the axes, e.g. "5 4 4". A key that
 // this version of sn3d does not know gets a warning, thus a later version of sn3d can add a key to format version 2.
 // The function gives the column names back to the reader as a header line of format version 1.
 auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
@@ -2690,7 +2691,8 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
   }
   for (const auto& keyline : keylines) {
     const std::string_view key = keyline.first;
-    if (key == "coordinates" || key == "t_model_init_days" || key == "cell_line_count" || key == "columns") {
+    if (key == "coordinates" || key == "cells_per_axis" || key == "t_model_init_days" || key == "cell_line_count" ||
+        key == "columns") {
       continue;
     }
     if (std::ranges::find(edge_keys, key) == edge_keys.end()) {
@@ -2773,6 +2775,23 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
   }
   if (npts_model > std::numeric_limits<int>::max()) {
     fatal_crash("model.txt: the cell edges give {} cells, which is more than the largest cell index", npts_model);
+  }
+
+  // An edge list that lost a value or got one more value gives a different number of cells on its axis. The key is
+  // optional.
+  if (find_key("cells_per_axis") != keylines.end()) {
+    const auto cells_per_axis = get_numbers_of_key("cells_per_axis");
+    const auto num_axes = std::ssize(edge_keys_of_model);
+    std::string edge_cell_counts;
+    bool counts_agree = (std::ssize(cells_per_axis) == num_axes);
+    for (int axis = 0; axis < num_axes; axis++) {
+      edge_cell_counts += std::format("{}{}", (axis > 0) ? " " : "", ncoord_model[axis]);
+      counts_agree = counts_agree && (cells_per_axis[axis] == ncoord_model[axis]);
+    }
+    if (!counts_agree) {
+      fatal_crash("model.txt: the key cells_per_axis gives the cell counts '{}', but the cell edges give '{}'",
+                  get_text_of_key("cells_per_axis"), edge_cell_counts);
+    }
   }
 
   model_cell_line_count.reset();

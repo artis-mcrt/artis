@@ -4,7 +4,8 @@ format_version 2
 # Dimension reduced from 3-dimensional model
 # created: 2026-11-19 16:33:16 UTC
 # column units: rho [g/cm^3] at t_model_init_days. Each X_ column is a mass fraction
-coordinates spherical1d  # 5 cells
+coordinates spherical1d
+cells_per_axis 5
 t_model_init_days 0.0011599
 vel_r_edges_kmps 0.0 5784.04 11568.08 17352.12 23136.16 28920.2
 cell_line_count 5

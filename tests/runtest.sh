@@ -257,6 +257,10 @@ case $step in
         # a cell line that lost its end
         sed -e '$s/ [^ ]*$//' "$model2d" > "$checkroot/cutvalue.txt"
         run_formatcheck_case cutvalue "$checkroot/cutvalue.txt" "has no readable value for the column"
+        # a key cells_per_axis that does not agree with the lists of edges
+        sed 's/^cells_per_axis 5 10$/cells_per_axis 5 9/' "$model2d" > "$checkroot/wrongcellsperaxis.txt"
+        run_formatcheck_case wrongcellsperaxis "$checkroot/wrongcellsperaxis.txt" \
+            "the key cells_per_axis gives the cell counts '5 9', but the cell edges give '5 10'"
         run_formatcheck_case yefile "$model2d" "Ye.txt is present, but model.txt has format version 2" file:Ye.txt
         run_formatcheck_case abundancefile "$model2d" \
             "abundances.txt is present, but model.txt has format version 2" file:abundances.txt

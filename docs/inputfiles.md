@@ -184,6 +184,7 @@ line, with the edges of the cells on each axis. This is a 3D spherical model:
 ```text
 format_version 2
 coordinates spherical3d
+cells_per_axis <n_r> <n_theta> <n_phi>
 t_model_init_days <t_model in days>
 vel_r_edges_kmps <n_r + 1 radial velocities in km/s>
 theta_edges_radians <n_theta + 1 polar angles in radians>
@@ -216,6 +217,9 @@ The header:
   time.
 - The keys `coordinates`, `t_model_init_days`, `columns`, and the edge keys of the coordinates are necessary. An edge
   key of different coordinates stops the run, e.g. `phi_edges_radians` in a `spherical2d` model.
+- The key `cells_per_axis` is optional. It gives the number of cells on each axis, in the sequence of the axes of
+  the table above, e.g. `cells_per_axis 5 4 4` for n_r = 5, n_theta = 4, and n_phi = 4. Each number is an integer.
+  `sn3d` stops if a number is different from the number that the list of edges of that axis gives.
 - The key `cell_line_count` is optional. It gives the number of the cell lines of the file, as one integer from 1 to
   the number of cells of the grid. `sn3d` stops if the file has a different number of cell lines. A file that lost
   lines at its end has more empty cells and no other sign of the loss. Only this key finds such a file. Thus write

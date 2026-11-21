@@ -3,7 +3,8 @@ format_version 2
 # Dimension reduced from 3-dimensional model
 # created: 2026-11-19 16:33:17 UTC
 # column units: rho [g/cm^3] at t_model_init_days. Each X_ column is a mass fraction
-coordinates cylindrical2d  # 5 x 10 cells, the index of rcyl changes fastest
+coordinates cylindrical2d
+cells_per_axis 5 10
 t_model_init_days 0.0011599
 vel_rcyl_edges_kmps 0.0 5784.04 11568.08 17352.12 23136.16 28920.2
 vel_z_edges_kmps -28920.2 -23136.16 -17352.120000000003 -11568.080000000002 -5784.040000000001 0.0 5784.039999999997 11568.079999999998 17352.12 23136.16 28920.2
