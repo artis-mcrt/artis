@@ -465,7 +465,5 @@ the run and has no file:
 - Ni56 and Co56;
 - Cr48 and V48;
 - Ni57 and Co57;
-- Sc44.
-
-Fe52 and Mn52 have no file and no gamma-ray energy in the decay data. Without a file, they get one line each, at
-0.86 MeV and at 3.415 MeV.
+- Sc44;
+- Fe52 and Mn52.

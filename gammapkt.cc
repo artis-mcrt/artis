@@ -180,21 +180,12 @@ void read_gamma_tables() {
       assert_always(z != 28 || a != 57);  // Ni-57 must have a gamma spectrum if present in list of nuclides
       assert_always(z != 27 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
       assert_always(z != 21 || a != 44);  // Sc-44 must have a gamma spectrum if present in list of nuclides
+      assert_always(z != 26 || a != 52);  // Fe-52 must have a gamma spectrum if present in list of nuclides
+      assert_always(z != 25 || a != 52);  // Mn-52 must have a gamma spectrum if present in list of nuclides
       if (decay::nucdecayenergygamma(nucindex) > 0.) {
         set_trivial_gamma_spectrum(nucindex);
         nuclides_without_table++;
       }
-    }
-  }
-
-  // 52Fe and 52Mn have no gamma-ray table and no gamma energy in the decay data, so they get these mean energies
-  // per decay. Each then gets a single line at that energy, as the other nuclides without a table do. The .empty()
-  // test keeps an existing spectrum, because choose_gamma_ray() normalises the lines by its mean.
-  for (const auto& [z, a, mean_gamma_energy] : {std::tuple{26, 52, 0.86 * MEV}, std::tuple{25, 52, 3.415 * MEV}}) {
-    if (decay::nuc_exists(z, a) && gamma_spectra[decay::get_nucindex(z, a)].empty()) {
-      decay::set_nucdecayenergygamma(decay::get_nucindex(z, a), mean_gamma_energy);
-      set_trivial_gamma_spectrum(decay::get_nucindex(z, a));
-      nuclides_without_table++;
     }
   }
 
