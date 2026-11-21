@@ -50,9 +50,7 @@ inline void check_already_running() {
       std::istringstream{line} >> artispid_in;
       std::getline(pidfile, line);
       pidfile.close();
-      // a stale file from a crash can hold the pid that this process got again, e.g. in a container
-      if (artispid_in != artispid && is_pid_running(artispid_in) &&
-          std::filesystem::current_path().generic_string() == line) {
+      if (is_pid_running(artispid_in) && std::filesystem::current_path().generic_string() == line) {
         fatal_crash(
             "artis or exspec is already running in this folder with existing pid {}. Refusing to "
             "start. (delete artis.pid if you are sure this is incorrect)",
