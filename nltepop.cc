@@ -782,14 +782,18 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
       const double A_a = autoiontransition.autoion_A;
       const int target_ion = autoiontransition.upperionindex;
       const int target_level = autoiontransition.upperlevelindex;
-      assert_always(target_ion <= max_ion_used);  // the target ion must be included in the NLTE matrix
+      // an ion above the matrix has a negligible population: the autoionisation goes to the ground level of the
+      // uppermost ion of the matrix, as the non-thermal ionisation does, and no capture comes from it
+      const bool target_ion_in_matrix = target_ion <= max_ion_used;
 
       const double epsilon_trans = epsilon_level - epsilon(element, target_ion, target_level);
 
       double R = A_a * s_renorm[level];
 
       const int upper_index = level_index;
-      const int lower_index = get_nlte_vector_index(element, target_ion, target_level, first_ion_used);
+      const int lower_index = target_ion_in_matrix
+                                  ? get_nlte_vector_index(element, target_ion, target_level, first_ion_used)
+                                  : get_nlte_vector_index(element, max_ion_used, 0, first_ion_used);
 
       rate_matrices.autoion[(upper_index * nlte_dimension) + upper_index] -= R;
       rate_matrices.autoion[(lower_index * nlte_dimension) + upper_index] += R;
@@ -797,6 +801,10 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
         printlnlog("  [warning] cell {} ts {}: negative autoionisation rate from Z={} ionstage {} level {} to level {}",
                    nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, ion),
                    level, target_level);
+      }
+
+      if (!target_ion_in_matrix) {
+        continue;
       }
 
       // capture (which is an excitation process, and the first part of di-electronic recomb).

@@ -175,8 +175,13 @@ void read_inputtxt_line(std::istream& file, const std::string_view filename, con
   if (!get_noncommentline(file, line)) {
     fatal_crash("{} ends before line {}", filename, inputlinecomments[noncomment_linenum]);
   }
-  if (!(std::istringstream{line} >> ... >> values)) {
-    fatal_crash("{} has the unreadable text '{}' at line {}", filename, line, inputlinecomments[noncomment_linenum]);
+  if constexpr (sizeof...(values) > 0) {
+    // each value must be a whole token, so that a value such as 1e3 or 0.5 on an integer line stops the run
+    // cppcheck-suppress unreadVariable
+    auto remainder = std::string_view{line};
+    if (!(parse_next_token(remainder, values) && ...)) {
+      fatal_crash("{} has the unreadable text '{}' at line {}", filename, line, inputlinecomments[noncomment_linenum]);
+    }
   }
 }
 
@@ -343,6 +348,13 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
             atomic_number, lower_ionstage, lowerlevel, phixsline);
       }
       nugrid_in[i] = nu_edge + ((energy * 13.6 * EV) / H);
+      // the interpolation below searches the energies, so they must increase
+      if (i > 0 && !(nugrid_in[i] > nugrid_in[i - 1])) {
+        fatal_crash(
+            "phixsdata.txt: the table of Z={} ionstage {} level {} has the line '{}', but its energy must be above "
+            "the energy of the line before it",
+            atomic_number, lower_ionstage, lowerlevel, phixsline);
+      }
       // the photoionisation cross-sections in the database are given in Mbarn=1e6 * 1e-28m^2
       // to convert to cgs units multiply by 1e-18
       phixs_in[i] = phixs * 1e-18;
@@ -676,6 +688,12 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
     if (!transition_read_ok) {
       fatal_crash("transitiondata.txt: Z={} ionstage {} has the unreadable transition line '{}'", atomicnumber,
                   ionstage, line);
+    }
+    if (!(A >= 0) || (intforbidden != 0 && intforbidden != 1)) {
+      fatal_crash(
+          "transitiondata.txt: Z={} ionstage {} has the transition line '{}'. The A value must be zero or positive, "
+          "and the forbidden flag must be 0 or 1",
+          atomicnumber, ionstage, line);
     }
     const int lower = lower_in - groundstate_index_in;
     const int upper = upper_in - groundstate_index_in;
@@ -1153,10 +1171,11 @@ void read_autoion_data() {
       double autoion_A = -1;
       if (!(std::istringstream(autoionline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >> lowerlevel_in >>
             autoion_A) ||
-          Z <= 0 || lowerionstage < 1 || upperionstage <= lowerionstage || lowerlevel_in < 0 || upperlevel_in < 0) {
+          Z <= 0 || lowerionstage < 1 || upperionstage <= lowerionstage || lowerlevel_in < 0 || upperlevel_in < 0 ||
+          !(autoion_A >= 0)) {
         fatal_crash(
             "autoion.txt has the line '{}'. A line needs Z > 0, an upper ionstage above the lower ionstage >= 1, "
-            "level numbers that are zero or positive, and the rate",
+            "level numbers that are zero or positive, and a rate that is zero or positive",
             autoionline);
       }
       autoion_transitions_read++;
