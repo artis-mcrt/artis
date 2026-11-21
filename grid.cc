@@ -2965,10 +2965,19 @@ void read_ejecta_model() {
   }
   std::string firstword;
   std::string versiontext;
-  std::istringstream{line} >> firstword >> versiontext;
+  std::string textafterversion;
+  // the version line can end with a comment, and it has no other text after the version
+  std::istringstream{line.substr(0, line.find('#'))} >> firstword >> versiontext >> textafterversion;
   model_format_version = (firstword == "format_version") ? 2 : 1;
   if (model_format_version == 2) {
-    if (versiontext != "2") {
+    if (!textafterversion.empty()) {
+      // the message gives each value after the key, without the comment
+      auto versionvalues = std::string_view{line}.substr(0, line.find('#'));
+      versionvalues.remove_prefix(versionvalues.find("format_version") + std::string_view{"format_version"}.size());
+      versionvalues.remove_prefix(std::min(versionvalues.find_first_not_of(token_whitespace), versionvalues.size()));
+      versiontext = std::string{versionvalues.substr(0, versionvalues.find_last_not_of(token_whitespace) + 1)};
+    }
+    if (versiontext != "2" || !textafterversion.empty()) {
       fatal_crash(
           "model.txt has the format version '{}'. This version of sn3d reads format version 2, and format version 1, "
           "which has no format_version line",

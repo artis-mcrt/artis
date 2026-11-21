@@ -257,6 +257,9 @@ case $step in
         # a cell line that lost its end
         sed -e '$s/ [^ ]*$//' "$model2d" > "$checkroot/cutvalue.txt"
         run_formatcheck_case cutvalue "$checkroot/cutvalue.txt" "has no readable value for the column"
+        # a version line with text after the version
+        sed '1s/^format_version 2$/format_version 2 junk/' "$model2d" > "$checkroot/textafterversion.txt"
+        run_formatcheck_case textafterversion "$checkroot/textafterversion.txt" "has the format version '2 junk'"
         # a cell line with text after its values
         sed -e '$s/$/ junk/' "$model2d" > "$checkroot/textaftervalues.txt"
         run_formatcheck_case textaftervalues "$checkroot/textaftervalues.txt" "after the values of the columns"
