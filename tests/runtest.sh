@@ -287,6 +287,10 @@ case $step in
         run_formatcheck_case mirrorvalue "$checkroot/mirrorvalue.txt" "the key mirror_plane must have the value z=0"
         sed 's/^cell_line_count/mirror_plane z=0\ncell_line_count/' "$model1d" > "$checkroot/mirror1d.txt"
         run_formatcheck_case mirror1d "$checkroot/mirror1d.txt" "a spherical1d model takes no key mirror_plane"
+        # a polar edge near the z axis
+        sed 's/^theta_edges_radians 0.0 /theta_edges_radians 0.0 5e-05 /' "$checkmodels/spherical2d_mirror_model.txt" \
+            > "$checkroot/polaredgeataxis.txt"
+        run_formatcheck_case polaredgeataxis "$checkroot/polaredgeataxis.txt" "is less than 0.0001 rad from the z axis"
         # the z axis of a mirrored cylindrical model starts at the plane z = 0
         sed 's/^cell_line_count/mirror_plane z=0\ncell_line_count/' "$model2d" > "$checkroot/mirrorfullaxis.txt"
         run_formatcheck_case mirrorfullaxis "$checkroot/mirrorfullaxis.txt" \

@@ -2589,6 +2589,11 @@ constexpr double model_angle_edge_tolerance = 1e-8;
 // as a fraction of vmax. The model grid of these two types has cells of equal width only
 constexpr double model_uniform_edge_tolerance = 1e-9;
 
+// The smallest angle [rad] between a polar edge and the z axis. A polar edge is a cone with the cosine of the edge,
+// and near the axis this cosine moves the cone by approximately 1.1e-16 / theta of the radius. Below this angle, the
+// movement exceeds the position tolerance of a cell boundary, which is 1e-12 of the radius.
+constexpr double model_min_polar_edge_angle_from_axis = 1e-4;
+
 // Read the header of a model.txt of format version 2, after its first line "format_version 2". Each header line is
 // a key and its values, and the keys can come in any sequence. The key columns gives the column names and ends the
 // header. The other keys are coordinates, t_model_init_days, and one list of cell edges for each axis of the
@@ -2861,6 +2866,17 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
       // volume
       // with a mirror plane, the polar axis of the file ends at the plane z = 0
       require_valid_edges(model_theta_edges, "theta_edges_radians", true, model_mirror_z ? PI / 2 : PI);
+      for (const double theta_edge : model_theta_edges) {
+        if (theta_edge > 0. && theta_edge < PI &&
+            std::min(theta_edge, PI - theta_edge) < model_min_polar_edge_angle_from_axis) {
+          fatal_crash(
+              "model.txt: the polar edge {:.17g} [rad] is less than {:g} rad from the z axis. sn3d takes a polar edge "
+              "as "
+              "a cone with the cosine of the edge, and the cosine of such an edge does not give its angle to the "
+              "position tolerance of a cell boundary",
+              theta_edge, model_min_polar_edge_angle_from_axis);
+        }
+      }
 
       if (detected_model_type == GridType::SPHERICAL3D) {
         model_phi_edges = get_numbers_of_key("phi_edges_radians");

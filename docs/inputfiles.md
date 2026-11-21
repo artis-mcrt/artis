@@ -241,8 +241,9 @@ The header:
 - The last value of `theta_edges_radians` must be pi, and the last value of `phi_edges_radians` must be 2 pi. `sn3d`
   accepts a difference of 1e-8 and then uses the exact value. It does the same for a polar edge at pi / 2, and the
   values of `theta_edges_radians` must still increase after that change.
-- Each cell in theta and in phi must be wider than 1e-8 rad. Two polar edges must also have different cosines, thus a
-  polar cell at the z axis must be wider than approximately 1.06e-8 rad.
+- Each cell in theta and in phi must be wider than 1e-8 rad. Each polar edge other than 0 and pi must be at least 1e-4
+  rad from the z axis. `sn3d` takes a polar edge as a cone with the cosine of the edge, and near the axis that cosine
+  does not give the angle to the position tolerance of a cell boundary.
 - Write each edge with sufficient digits to give the same number again, i.e. a maximum of 17 significant digits.
 - theta is the angle from the +z axis. phi is the angle atan2(y, x) in the range from 0 to 2 pi. Thus
   x = r sin(theta) cos(phi), y = r sin(theta) sin(phi), and z = r cos(theta).
