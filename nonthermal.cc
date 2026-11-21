@@ -1576,11 +1576,11 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
           frac_excitation_ion += frac_excitation_thistrans;
 
           assert_always(std::isfinite(ratecoeffperdeposition));
-          // Fe V is excluded. Its small atomic data set depletes the ground multiplet and stops the
-          // recombination. With COLLISIONAL_HEATING_FROM_LEVELPOPS, an element with level populations that do not
-          // follow the excitation is also excluded: an element without NLTE levels, and an element whose last NLTE
-          // solve in the cell fell back to LTE. The thermal balance would otherwise lose the part of this energy
-          // that the macro atom gives to the gas in collisions.
+          // The list leaves out Fe V, because its small atomic data set depletes the ground multiplet and stops the
+          // recombination. With COLLISIONAL_HEATING_FROM_LEVELPOPS, the list also leaves out each element whose
+          // level populations do not follow the excitation. These are the elements without NLTE levels and the
+          // elements whose last NLTE solve in the cell fell back to LTE. Otherwise the thermal balance loses the
+          // part of this energy that the macro atom gives to the gas in collisions.
           if (above_minionfraction && ratecoeffperdeposition > 0 && (Z != 26 || ionstage != 5) &&
               (levelpops_follow_nt_excitation || !COLLISIONAL_HEATING_FROM_LEVELPOPS)) {
             tmp_excitation_list.push_back({
@@ -2496,7 +2496,13 @@ auto solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
       "{:g} fracdiff {:g}",
       timestep, timestep_last_solved, nne_per_ion, nne_per_ion_last, nne_per_ion_fracdiff);
 
-  if (timestep_last_solved == timestep && nne_per_ion_fracdiff < SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF) {
+  // the excitation list of the last solution can hold an element that fell back to LTE in a later pass
+  const bool cell_has_lte_fallback = COLLISIONAL_HEATING_FROM_LEVELPOPS &&
+                                     std::ranges::any_of(std::views::iota(0, get_nelements()), [&](const int element) {
+                                       return elem_nlte_solve_fell_back_to_lte(nonemptymgi, element);
+                                     });
+  if (timestep_last_solved == timestep && nne_per_ion_fracdiff < SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF &&
+      !cell_has_lte_fallback) {
     printlnlog("Keeping Spencer-Fano solution of timestep {} because x_e fracdiff {:g} < {:g}", timestep,
                nne_per_ion_fracdiff, SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF);
 
