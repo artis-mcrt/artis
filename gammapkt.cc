@@ -513,17 +513,17 @@ void compton_scatter(Packet& pkt) {
 
     const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
 
-    const double sigma_cmf_fe = 25.7e-24 * pow(hnu_over_100kev, -3.0);
+    const double sigma_cmf_irongroup = 25.7e-24 * pow(hnu_over_100kev, -3.0);
 
     // Now need to multiply by the particle number density. The composition is approximated as a mix of just
-    // two species: an iron-group one with mass fraction ffegrp, and silicon for the remainder. The nuclide
-    // number densities therefore use A = 56 for the iron group and A = 28 for silicon.
+    // two species: an iron-group one with mass fraction ffegrp, taken as Z = 28 and A = 56, and silicon (Z = 14,
+    // A = 28) for the remainder.
 
     const double chi_cmf_si = sigma_cmf_si * (rho / AMU / 28);
 
-    const double chi_cmf_fe = sigma_cmf_fe * (rho / AMU / 56);
+    const double chi_cmf_irongroup = sigma_cmf_irongroup * (rho / AMU / 56);
 
-    return (chi_cmf_fe * ffegrp) + (chi_cmf_si * (1. - ffegrp));
+    return (chi_cmf_irongroup * ffegrp) + (chi_cmf_si * (1. - ffegrp));
   }
 
   const double hnu_over_1MeV = nu_cmf / (MEV / H);
@@ -610,16 +610,16 @@ static_assert((get_sigma_pair_prod_factor(1.499999 * MEV / H) - get_sigma_pair_p
 
   const double sigma_cmf_si = sigma_factor * 196.e-27;
 
-  const double sigma_cmf_fe = sigma_factor * 784.e-27;
+  const double sigma_cmf_irongroup = sigma_factor * 784.e-27;
 
   // multiply by the particle number density. As in get_chi_photo_electric_cmf(), the composition is
-  // approximated as an iron-group species (A = 56) with mass fraction ffegrp plus silicon (A = 28).
+  // approximated as an iron-group species (Z = 28, A = 56) with mass fraction ffegrp plus silicon (Z = 14, A = 28).
 
   const double chi_cmf_si = sigma_cmf_si * (rho / AMU / 28);
 
-  const double chi_cmf_fe = sigma_cmf_fe * (rho / AMU / 56);
+  const double chi_cmf_irongroup = sigma_cmf_irongroup * (rho / AMU / 56);
 
-  return (chi_cmf_fe * ffegrp) + (chi_cmf_si * (1. - ffegrp));
+  return (chi_cmf_irongroup * ffegrp) + (chi_cmf_si * (1. - ffegrp));
 }
 
 // get the comoving-frame gamma-ray absorption coefficient (with the expected energy loss fraction per interaction

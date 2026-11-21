@@ -480,20 +480,21 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
 }
 
 template <typename T, typename U>
-[[nodiscard]] auto lerp_or_last(const std::span<T> table, const ptrdiff_t rowstart, const U temperature) -> double {
+[[nodiscard]] auto lerp_or_last(const std::span<T> table, const ptrdiff_t temperature_row_start, const U temperature)
+    -> double {
   const auto upperindex = get_temperature_gridupperindex(temperature);
   if (upperindex == 0) {
-    return table[rowstart];
+    return table[temperature_row_start];
   }
   if (upperindex < RATECOEFF_TABLESIZE) {
     const double T_lower = temperature_grid[upperindex - 1];
     const double T_upper = temperature_grid[upperindex];
 
-    const double f_lower = table[rowstart + upperindex - 1];
-    const double f_upper = table[rowstart + upperindex];
+    const double f_lower = table[temperature_row_start + upperindex - 1];
+    const double f_upper = table[temperature_row_start + upperindex];
     return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (temperature - T_lower)));
   }
-  return table[rowstart + RATECOEFF_TABLESIZE - 1];
+  return table[temperature_row_start + RATECOEFF_TABLESIZE - 1];
 }
 
 }  // anonymous namespace
