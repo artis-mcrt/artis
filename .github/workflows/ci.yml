@@ -55,6 +55,7 @@ jobs:
                         kilonova_2dspherical,
                         kilonova_3dspherical,
                         kilonova_3dspherical_3dgrid,
+                        kilonova_3dspherical_mirror,
                         nebular_1d_3dgrid,
                         nebular_1d_3dgrid_limitbfest,
                         nltephotospheric_dynamic_ion_range_1d_1dgrid,
