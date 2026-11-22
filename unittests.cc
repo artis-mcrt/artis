@@ -21,6 +21,7 @@
 #include <limits>
 #include <numbers>
 #include <optional>
+#include <ostream>
 #include <print>
 #include <span>
 #include <sstream>

@@ -178,7 +178,6 @@ void read_inputtxt_line(std::istream& file, const std::string_view filename, con
   if constexpr (sizeof...(values) > 0) {
     // each value before a comment must be a whole token, so that a value such as 1e3 or 0.5 on an integer line
     // stops the run
-    // cppcheck-suppress unreadVariable
     auto remainder = std::string_view{line}.substr(0, line.find('#'));
     if (!(parse_next_token(remainder, values) && ...)) {
       fatal_crash("{} has the unreadable text '{}' at line {}", filename, line, inputlinecomments[noncomment_linenum]);
