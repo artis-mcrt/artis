@@ -2212,9 +2212,10 @@ struct AngularBoundaryCrossing {
     case GridType::SPHERICAL1D: {
       const double r_inner = get_cellcoordmin(cellindex, 0);
       const double r_outer = get_cellcoordmax(cellindex, 0);
-      // use equal volume probability distribution to select radius
-      // (rng_uniform_pos avoids a zero draw placing the packet exactly on the exclusive outer boundary)
-      const double radius = std::cbrt(std::lerp(pow3(r_outer), pow3(r_inner), rng_uniform_pos(rngstate)));
+      // use equal volume probability distribution to select radius. A small draw of a thin shell can round to the
+      // outer radius, which is the exclusive boundary of the next shell, thus the radius stays below it
+      const double radius = std::min(std::cbrt(std::lerp(pow3(r_outer), pow3(r_inner), rng_uniform_pos(rngstate))),
+                                     std::nextafter(r_outer, r_inner));
 
       return vec_scale(get_rand_isotropic_unitvec(rngstate), radius);
     }
@@ -2241,17 +2242,23 @@ struct AngularBoundaryCrossing {
 
     case GridType::SPHERICAL2D:
     case GridType::SPHERICAL3D: {
-      // The volume element is r^2 dr dcos(theta) dphi, thus r^3, cos(theta), and phi have uniform distributions.
-      // rng_uniform_pos() gives no zero and no one, thus the position is not on a cell boundary.
+      // The volume element is r^2 dr dcos(theta) dphi, thus r^3, cos(theta), and phi have uniform distributions. A
+      // draw near the upper edge of a thin cell can round to that edge, which is the exclusive boundary of the next
+      // cell, thus each coordinate stays inside the cell
       const double r_inner = get_cellcoordmin(cellindex, 0);
       const double r_outer = get_cellcoordmax(cellindex, 0);
-      const double radius = std::cbrt(std::lerp(pow3(r_outer), pow3(r_inner), rng_uniform_pos(rngstate)));
+      const double radius = std::min(std::cbrt(std::lerp(pow3(r_outer), pow3(r_inner), rng_uniform_pos(rngstate))),
+                                     std::nextafter(r_outer, r_inner));
       const int index_theta = get_cellcoordindex(cellindex, 1);
+      // the cosine decreases with theta, thus the upper polar edge has the smaller cosine
       const double costheta =
-          std::lerp(theta_edge_cos[index_theta], theta_edge_cos[index_theta + 1], rng_uniform_pos(rngstate));
+          std::max(std::lerp(theta_edge_cos[index_theta], theta_edge_cos[index_theta + 1], rng_uniform_pos(rngstate)),
+                   std::nextafter(theta_edge_cos[index_theta + 1], theta_edge_cos[index_theta]));
       const double sintheta = std::sqrt((1. - costheta) * (1. + costheta));
+      const double phi_lower = get_cellcoordmin(cellindex, 2);
+      const double phi_upper = get_cellcoordmax(cellindex, 2);
       const double phi =
-          std::lerp(get_cellcoordmin(cellindex, 2), get_cellcoordmax(cellindex, 2), rng_uniform_pos(rngstate));
+          std::min(std::lerp(phi_lower, phi_upper, rng_uniform_pos(rngstate)), std::nextafter(phi_upper, phi_lower));
       return {radius * sintheta * std::cos(phi), radius * sintheta * std::sin(phi), radius * costheta};
     }
   }
