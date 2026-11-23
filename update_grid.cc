@@ -332,6 +332,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
   // transfer rates of the other elements read, so it gets its own flag (see the convergence test).
   bool range_changed_prev = false;
   bool extra_range_sweep_used = false;
+  // an element fell back to LTE after the last Spencer-Fano solve
+  bool lte_fallback_started_after_spencerfano = false;
 
   // the ion populations and the NLTE solution ranges of the previous iteration, for the charge
   // transfer convergence test. The buffers are thread-local, so every cell reuses them.
@@ -344,6 +346,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
     if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
       // SF solution depends on the ionisation balance, and weakly on nne
       spencerfano_changed = nonthermal::solve_spencerfano(nonemptymgi, nts, nlte_iter);
+      lte_fallback_started_after_spencerfano = false;
     }
     // a new non-thermal solution after the first pass also changes the map
     map_changed = map_changed || (spencerfano_changed && nlte_iter > 0);
@@ -538,8 +541,12 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
     const auto sys_time_start_nltepops = std::chrono::steady_clock::now();
     for (int element = 0; element < get_nelements(); element++) {
       if (get_nions(element) > 0 && elem_has_nlte_levels(element)) {
+        const bool element_was_in_lte_fallback = elem_nlte_solve_fell_back_to_lte(nonemptymgi, element);
         solve_nlte_pops_element(element, nonemptymgi, nts, nlte_iter);
         calculate_cellpartfuncts(nonemptymgi, element);
+        if (!element_was_in_lte_fallback && elem_nlte_solve_fell_back_to_lte(nonemptymgi, element)) {
+          lte_fallback_started_after_spencerfano = true;
+        }
       }
     }
     const auto duration_solve_nltepops =
@@ -636,6 +643,13 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
           "Keeping solution from last iteration",
           mgi, nts, nlte_iter);
     }
+  }
+
+  // the excitation list of the last Spencer-Fano solution can hold an element that fell back to LTE after that
+  // solve, and the packets of the next propagation read this list
+  if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO && COLLISIONAL_HEATING_FROM_LEVELPOPS &&
+      lte_fallback_started_after_spencerfano) {
+    nonthermal::solve_spencerfano(nonemptymgi, nts, NLTE_TE_NNE_MAXITER + 1);
   }
 
   if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
