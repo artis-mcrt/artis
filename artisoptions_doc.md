@@ -119,7 +119,9 @@ constexpr bool LTEPOP_EXCITATION_USE_TJ;
 constexpr bool FORCE_SAHA_ION_BALANCE(int element_z);
 
 // The largest iteration number of the NLTE/Te/Spencer-Fano loop of a cell. The first pass is iteration 0, so a
-// cell makes at most NLTE_TE_NNE_MAXITER + 1 passes.
+// cell makes at most NLTE_TE_NNE_MAXITER + 1 passes. With NT_SPENCERFANO and COLLISIONAL_HEATING_FROM_LEVELPOPS, a
+// cell makes one more pass when an element falls back to LTE in the last pass. That pass removes the element from the
+// excitation list of the Spencer-Fano solution. The cell makes at most one extra pass for each element.
 constexpr int NLTE_TE_NNE_MAXITER;
 
 // Anderson acceleration (Anderson 1965, Journal of the ACM, 12, 547-560, doi:10.1145/321296.321305) of the
@@ -238,8 +240,9 @@ constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
 // Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator.
 // The estimator also holds the collisional recombination heating. The sum does not.
 // The level populations of an element without NLTE levels do not follow a non-thermal excitation, so the sum would
-// lose the heat of its collisional de-excitation. With this option, the non-thermal excitation energy of such an
-// element therefore goes to the heating, and its packets become k-packets.
+// lose the heat of its collisional de-excitation. The same applies in a cell where the last NLTE solve of an
+// element fell back to LTE. With this option, the non-thermal excitation energy of such an element therefore goes
+// to the heating, and its packets become k-packets.
 constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
 
 // The bound-free cooling coefficient of each (level, target) continuum is per population of the target level of
