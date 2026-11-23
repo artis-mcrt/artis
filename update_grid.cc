@@ -334,13 +334,15 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
   bool extra_range_sweep_used = false;
   // an element fell back to LTE after the last Spencer-Fano solve
   bool lte_fallback_started_after_spencerfano = false;
+  // the last pass is NLTE_TE_NNE_MAXITER, or one more after a fallback in that pass (see the end of the loop)
+  int last_nlte_iter = NLTE_TE_NNE_MAXITER;
 
   // the ion populations and the NLTE solution ranges of the previous iteration, for the charge
   // transfer convergence test. The buffers are thread-local, so every cell reuses them.
   THREADLOCALONHOST std::vector<double> nnion_prev;
   THREADLOCALONHOST std::vector<std::pair<int, int>> nlte_solution_prev;
 
-  for (int nlte_iter = 0; nlte_iter <= NLTE_TE_NNE_MAXITER; nlte_iter++) {
+  for (int nlte_iter = 0; nlte_iter <= last_nlte_iter; nlte_iter++) {
     const auto sys_time_start_spencerfano = std::chrono::steady_clock::now();
     bool spencerfano_changed = false;
     if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
@@ -464,7 +466,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
               mgi, nts, nlte_iter, error_estimate, NLTE_TE_NNE_RELTOL, change[0], change[1], map_changed ? 1 : 0);
           break;
         }
-        if (nlte_iter == NLTE_TE_NNE_MAXITER || map_changed) {
+        if (nlte_iter == last_nlte_iter || map_changed) {
           // no injection and no history entry. The last pass completes the element solves at the T_e of
           // the finder, as the plain iteration does. The populations and nne then match the final T_e. On
           // a pass with a changed map, log_state_solved mixes the old and the new map, so it is not a
@@ -601,6 +603,11 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
         "fracdiff {:g}, prev T_e {:g} new T_e {:g} fracdiff {:g}",
         mgi, nts, nlte_iter, nne_prev, grid::get_nne(nonemptymgi), fracdiff_nne, prev_T_e,
         grid::Te_allcells[nonemptymgi], fracdiff_T_e);
+    // the excitation list of the Spencer-Fano solution of this pass can hold an element that fell back to LTE in the
+    // element solves of this pass. The next pass then solves the Spencer-Fano equation again.
+    const bool excitation_list_has_lte_fallback_element = NT_SCHEME == NonThermalScheme::NT_SPENCERFANO &&
+                                                          COLLISIONAL_HEATING_FROM_LEVELPOPS &&
+                                                          lte_fallback_started_after_spencerfano;
     if constexpr (NLTE_TE_NNE_USE_ANDERSON_ACCEL) {
       // with acceleration, the convergence test and the estimated error are before the injection
       // (see NLTE_TE_NNE_RELTOL). This pass only keeps its results for that test.
@@ -612,11 +619,6 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
       // without the charge transfer option, the ion population test always passes. A change of the
       // solved ion range is not a test of its own: a change that moves no population is a change of
       // the equations only, and the ion population test measures every change that it makes.
-      // The excitation list of the Spencer-Fano solution of this pass can hold an element that fell back to LTE in
-      // the element solves of this pass. The next pass then solves the Spencer-Fano equation again.
-      const bool excitation_list_has_lte_fallback_element = NT_SCHEME == NonThermalScheme::NT_SPENCERFANO &&
-                                                            COLLISIONAL_HEATING_FROM_LEVELPOPS &&
-                                                            lte_fallback_started_after_spencerfano;
       if (fracdiff_nne <= NLTE_TE_NNE_RELTOL && fracdiff_T_e <= NLTE_TE_NNE_RELTOL &&
           fracdiff_nnion <= NLTE_TE_NNE_RELTOL && !excitation_list_has_lte_fallback_element) {
         // The charge transfer rates of an element read the solved ion range of a partner element
@@ -642,7 +644,15 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
         }
       }
     }
-    if (nlte_iter == NLTE_TE_NNE_MAXITER) {
+    if (nlte_iter == NLTE_TE_NNE_MAXITER && excitation_list_has_lte_fallback_element) {
+      // the packets of the next propagation read the excitation list, so one more pass removes the element from it
+      last_nlte_iter = NLTE_TE_NNE_MAXITER + 1;
+      printlnlog(
+          "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: an element fell back to LTE after the "
+          "Spencer-Fano solve of the last pass. The solver makes one more pass.",
+          mgi, nts, nlte_iter);
+    }
+    if (nlte_iter == last_nlte_iter) {
       printlnlog(
           "[warning] NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: failed to converge... "
           "Keeping solution from last iteration",
