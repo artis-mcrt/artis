@@ -108,15 +108,23 @@ static_assert(NT_MAX_AUGER_ELECTRONS == 0 || !NT_USE_VALENCE_IONPOTENTIAL,
               "Overriding the shell potential with the valence potential is not compatible with including Auger "
               "electrons, because the shell potential is used to calculate the energy of Auger electrons.");
 
-// energy grid on which solution is sampled [eV]
+// The energy grid of the Spencer-Fano matrix [eV]. Row i is the equation at the energy engrid(i). Column j holds the
+// electrons of the grid interval from engrid(j) to engrid(j) + DELTA_E.
 constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
 
-const auto logengrid = [] {
-  std::vector<double> _logengrid(SFPTS);
+// The energy at the middle of grid interval index [eV]. The code takes the loss function and each cross section of
+// column j at engrid_mid(j), and the solution y of column j is at that energy. The rows, the source, the
+// secondary-electron distribution, and the energy of each matrix term use engrid(). With the inputs at engrid(j), the
+// left end of the interval, the grid error of the deposition fractions and of the rate coefficients was larger. For
+// the first solution of the test nebular_1d_3dgrid on 4096 points, it was 1.0% to 2.4%, and it is now 0.4% or less.
+constexpr auto engrid_mid(int index) -> double { return engrid(index) + (0.5 * DELTA_E); }
+
+const auto logengrid_mid = [] {
+  std::vector<double> _logengrid_mid(SFPTS);
   for (int i = 0; i < SFPTS; i++) {
-    _logengrid[i] = std::log(engrid(i));
+    _logengrid_mid[i] = std::log(engrid_mid(i));
   }
-  return _logengrid;
+  return _logengrid_mid;
 }();
 
 // evaluate the source function (distribution of deposited energy) [s^-1 cm^-3 eV^-1] at energy engrid(index):
@@ -840,7 +848,12 @@ constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& co
               (u * pow2(ionpot_ev)));
 }
 
-// xs_vec will be set with impact ionisation cross sections [cm2] for E > ionpot_ev (and zeros below this energy)
+// Set xs_vec to the impact ionisation cross section [cm2] of each column of the Spencer-Fano matrix. The cross section
+// of column i is at the middle of its grid interval, engrid_mid(i). It is zero for each interval that starts at or
+// below ionpot_ev, also where the middle of the interval is above ionpot_ev. The matrix terms of a column use the
+// primary energy engrid(i) in the secondary-electron distribution, so the ionisation starts at the first grid point
+// above ionpot_ev. sfmatrix_add_ionisation() and the analysis of the solution both read this vector, so they use the
+// same columns.
 // Return the index of the first energy point >= ionpot_ev, or SFPTS (one past the last index, with xs_vec
 // all zeros) when ionpot_ev is above the top of the energy grid
 auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellParams& colliondata_ion) -> int {
@@ -853,7 +866,8 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
   const int startindex = get_energyindex_ev_gteq(ionpot_ev);
   std::fill_n(xs_vec.begin(), startindex, 0.);
   for (int i = startindex; i < SFPTS; i++) {
-    xs_vec[i] = xs_impactionisation(engrid(i), colliondata_ion);
+    // a grid point at ionpot_ev has no matrix terms, because the normalisation of the distribution is zero there
+    xs_vec[i] = (engrid(i) > ionpot_ev) ? xs_impactionisation(engrid_mid(i), colliondata_ion) : 0.;
   }
   return startindex;
 }
@@ -908,9 +922,10 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
 }
 
 // fraction of deposited energy that goes into heating the thermal electrons: equation 8 of Kozma & Fransson (1992). Its
-// three terms below are the loss-function integral over the solved grid, the boundary term SF_EMIN * y(SF_EMIN) *
-// L(SF_EMIN) for the electrons flowing through the bottom of the grid, and the energy of the electrons that first
-// appear below SF_EMIN (N(E) of equation 11 of Kozma & Fransson 1992).
+// three terms below are the loss-function integral over the solved grid, the boundary term SF_EMIN * y * L of row 0
+// of the matrix for the electrons flowing through the bottom of the grid, and the energy of the electrons that first
+// appear below SF_EMIN (N(E) of equation 11 of Kozma & Fransson 1992). The loss function of each row is at
+// engrid_mid(), as in the matrix.
 // The third term comes from en_below_emin_ev_per_y, which the matrix setup fills from the same row weights as the
 // matrix (see sfmatrix_add_ionisation() and add_excitation_energy_below_emin()). The three terms and the ionisation
 // and excitation fractions of the ions in the matrix then sum to the deposition energy to rounding, on each energy
@@ -922,14 +937,15 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
   const auto nne = grid::get_nne(nonemptymgi);
 
   for (int i = 0; i < SFPTS; i++) {
-    const double endash = engrid(i);
+    // the loss function at the energy of the matrix diagonal (see solve_spencerfano())
+    const double endash = engrid_mid(i);
 
     // first term
     frac_heating_Einit += yfunc[i] * (electron_loss_rate(endash * EV, nne) / EV) * DELTA_E;
   }
 
-  // second term
-  frac_heating_Einit += SF_EMIN * yfunc[0] * (electron_loss_rate(SF_EMIN * EV, nne) / EV);
+  // second term. It takes the loss function of row 0 of the matrix, so that the fractions sum to 1 to rounding.
+  frac_heating_Einit += SF_EMIN * yfunc[0] * (electron_loss_rate(engrid_mid(0) * EV, nne) / EV);
 
   // third term
   for (int j = 0; j < SFPTS; j++) {
@@ -1205,9 +1221,11 @@ auto has_xs_excitation(const int alltransindex, const double epsilon_trans_ev) -
          (globals::alltrans.coll_str[alltransindex] >= 0 || !globals::alltrans.forbidden[alltransindex]);
 }
 
-// call usexs(j, xs) with the collisional excitation cross section xs [cm^2] at every energy grid point
-// j at or above the transition threshold (en >= epsilon_trans), without materialising a cross section
-// vector. The caller must have checked has_xs_excitation(). epsilon_trans is in erg
+// call usexs(j, xs) with the collisional excitation cross section xs [cm^2] of every column j of the Spencer-Fano
+// matrix whose middle energy engrid_mid(j) is at or above the transition threshold, without materialising a cross
+// section vector. The cross section is at engrid_mid(j). The first column can start below the threshold. The matrix
+// bands and the analysis of the solution both call this function, so they use the same columns.
+// The caller must have checked has_xs_excitation(). epsilon_trans is in erg
 template <typename Func>
 void xs_excitation_for_each(const int alltransindex, const double statweight_lower, const double epsilon_trans,
                             Func usexs) {
@@ -1218,10 +1236,10 @@ void xs_excitation_for_each(const int alltransindex, const double statweight_low
     const double constantfactor =
         H_ionpot / statweight_lower * globals::alltrans.coll_str[alltransindex] * PI * A_naught_squared;
 
-    const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
+    const int en_startindex = get_energyindex_ev_gteq((epsilon_trans / EV) - (0.5 * DELTA_E));
 
     for (int j = en_startindex; j < SFPTS; j++) {
-      const double energy = engrid(j) * EV;
+      const double energy = engrid_mid(j) * EV;
       usexs(j, constantfactor / energy);
     }
     return;
@@ -1246,16 +1264,16 @@ void xs_excitation_for_each(const int alltransindex, const double statweight_low
   const double constantfactor =
       epsilon_trans_ev * prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) * trans_osc_strength;
 
-  const int en_startindex = get_energyindex_ev_gteq(epsilon_trans_ev);
+  const int en_startindex = get_energyindex_ev_gteq(epsilon_trans_ev - (0.5 * DELTA_E));
 
   // U = en / epsilon
   // g_bar = mewe_D * std::log(U) + mewe_A
-  // xs = constantfactor * g_bar / engrid(j)
+  // xs = constantfactor * g_bar / engrid_mid(j)
   const double logepsilon = std::log(epsilon_trans_ev);
   for (int j = en_startindex; j < SFPTS; j++) {
-    const double logU = logengrid[j] - logepsilon;
+    const double logU = logengrid_mid[j] - logepsilon;
     const double g_bar = (mewe_D * logU) + mewe_A;
-    usexs(j, constantfactor * g_bar / engrid(j));
+    usexs(j, constantfactor * g_bar / engrid_mid(j));
   }
 }
 
@@ -1594,7 +1612,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
   double nne_nt_max = 0.;
   for (int i = 0; i < SFPTS; i++) {
-    const double endash = engrid(i);
+    // yfunc[i] is the solution at the middle of grid interval i
+    const double endash = engrid_mid(i);
     const double delta_endash = DELTA_E;
     // 1 / v for a non-relativistic electron of kinetic energy endash [eV], in sec/cm
     const double oneovervelocity = std::sqrt(ME / (2 * endash * EV));
@@ -1661,7 +1680,8 @@ struct ExcitationBand {
 // level with population nnlevel,
 //   nnlevel * (integral of y(E') sigma_exc(E') dE' over E' in [E, E + epsilon_trans]).
 // The integral is discretised with quadrature weight DELTA_E per column; the final column, which contains
-// the endpoint E + epsilon_trans, gets only the partial weight epsilon_trans_ev - nbinsfull * DELTA_E.
+// the endpoint E + epsilon_trans, gets only the partial weight epsilon_trans_ev - nbinsfull * DELTA_E. The cross
+// section of each column is at the middle of its grid interval (see xs_excitation_for_each()).
 // (a std::map keyed by band width keeps the iteration order deterministic for reproducible builds)
 void sfmatrix_accumulate_excitation(std::map<int, ExcitationBand>& excitationbands, const int nonemptymgi,
                                     const int element, const int ion) {
@@ -1824,7 +1844,8 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, std::span<doubl
       // int_eps_upper[j] is the antiderivative at epsilon = (E' + I) / 2, the upper limit shared by both
       // integrals of Kozma & Fransson (1992) (the faster post-collision electron is by convention the primary, so the
       // energy transfer cannot exceed (E' + I) / 2). prefactors[j] collects the column-only factors: ion density, shell
-      // cross section sigma_ic(E'), the dE' quadrature weight, and equation 4's normalisation.
+      // cross section sigma_ic at the middle of the grid interval (see get_xs_ionisation_vector()), the dE' quadrature
+      // weight, and equation 4's normalisation.
       //
       // atan_integral(epsilon) is the integral of atan(max(x - I, 0) / J) over x from 0 to epsilon. It gives the mean
       // of the antiderivative over a grid interval with no quadrature. It is zero for epsilon <= I.
@@ -2534,9 +2555,11 @@ auto solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   THREADLOCALONHOST std::vector<double> sfmatrixuppertri(SFPTS * (SFPTS + 1) / 2);
   std::ranges::fill(sfmatrixuppertri, 0.);
   // the y(E) L_e(E) term of equation 7 of Kozma & Fransson (1992): Coulomb losses to the thermal electrons are treated
-  // as continuous slowing-down, so the term involves y only at the row energy itself and is diagonal
+  // as continuous slowing-down, so the term involves y only at the row energy itself and is diagonal. The loss function
+  // of row i is at the middle of the grid interval above the row energy, as are the cross sections of column i (see
+  // engrid_mid()).
   for (int i = 0; i < SFPTS; i++) {
-    sfmatrixuppertri[uppertriangular(i, i)] += electron_loss_rate(engrid(i) * EV, nne) / EV;
+    sfmatrixuppertri[uppertriangular(i, i)] += electron_loss_rate(engrid_mid(i) * EV, nne) / EV;
   }
 
   // the excitation terms of all ions are first summed per band width, then applied to the matrix in one

@@ -420,7 +420,9 @@ $$
 
 The first ionisation integral holds the primary electrons that fall below $E$. The second integral holds the secondary
 electrons that start above $E$. The code writes the equation as an upper triangular matrix and solves it by
-back-substitution. The spectrum gives the
+back-substitution. Each row is the equation at one grid energy, and each column holds the electrons of the grid
+interval above one grid energy. The code takes $L$, $\sigma_\mathrm{exc}$, and the total cross section of each shell
+at the middle of the grid interval, and $y$ of a column is at that energy. The spectrum gives the
 three fractions of the deposited energy, and the non-thermal ionisation and excitation rates for the NLTE solver.
 With [SF_AUGER_CONTRIBUTION_ON](options.md#sf_auger_contribution_on), the equation also has the source term of the
 Auger electrons. The work function approximation is the alternative. It gives ionisation rates and no excitation
