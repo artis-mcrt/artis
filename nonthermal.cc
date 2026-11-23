@@ -1736,16 +1736,18 @@ void sfmatrix_apply_excitation(std::span<double> sfmatrixuppertri,
 // calculate_frac_heating(), these rows hold the energy (j + 1) * DELTA_E + SF_EMIN (see E_init_ev). An excitation with
 // the band width nbinsfull takes all of these rows if j < nbinsfull, so the energy that stays after the transition
 // energy is below SF_EMIN. For j == nbinsfull, the excitation takes the endpoint weight of row 0, and the boundary
-// term loses SF_EMIN times that weight.
+// term loses SF_EMIN times that weight. band.interior[j] holds the rate factors times DELTA_E, and band.endpoint[j]
+// holds them times the endpoint weight in eV.
 void add_excitation_energy_below_emin(std::span<double> en_below_emin_ev_per_y,
                                       const std::map<int, ExcitationBand>& excitationbands) {
   for (const auto& [nbinsfull, band] : excitationbands) {
     for (int j = 0; j < std::min(nbinsfull, SFPTS); j++) {
       // the transition energy times the rate factors is nbinsfull * interior[j] + endpoint[j]
-      en_below_emin_ev_per_y[j] += ((j + 1 - nbinsfull + (SF_EMIN / DELTA_E)) * band.interior[j]) - band.endpoint[j];
+      en_below_emin_ev_per_y[j] +=
+          ((((j + 1 - nbinsfull) * DELTA_E) + SF_EMIN) * band.interior[j]) - (DELTA_E * band.endpoint[j]);
     }
     if (nbinsfull < SFPTS) {
-      en_below_emin_ev_per_y[nbinsfull] += (SF_EMIN / DELTA_E) * band.endpoint[nbinsfull];
+      en_below_emin_ev_per_y[nbinsfull] += SF_EMIN * band.endpoint[nbinsfull];
     }
   }
 }
