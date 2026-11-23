@@ -449,14 +449,18 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   printlnlog("");
 }
 
-void nltepop_reset_element(const int nonemptymgi, const int element) {
+// The NLTE level populations of an element hold this marker after a fallback to LTE, and -1 before the first solve.
+// Both markers are negative, so each reader of a population treats them alike.
+constexpr double nltepop_marker_after_lte_fallback = -2.;
+
+void nltepop_reset_element(const int nonemptymgi, const int element, const double marker = -1.) {
   grid::set_elements_lowermost_ion(nonemptymgi, element, 0);
   for (int ion = 0; ion < get_nions(element); ion++) {
     const auto nlte_start = get_allnltelevelsindexstart(element, ion);
     const auto nlte_count = get_nlevels_excited_nlte(element, ion) + (ion_has_superlevel(element, ion) ? 1 : 0);
     std::ranges::fill(nltepops_allcells.span().subspan(
                           (static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) + nlte_start, nlte_count),
-                      -1.);
+                      marker);
   }
 }
 
@@ -885,7 +889,7 @@ void set_nlte_superlevelpop_over_rho_over_slpartfunc(const int nonemptymgi, cons
 
 void set_element_pops_lte(const int nonemptymgi, const int element) {
   // set NLTE level pops as invalid so that Boltzmann pops will be used instead
-  nltepop_reset_element(nonemptymgi, element);
+  nltepop_reset_element(nonemptymgi, element, nltepop_marker_after_lte_fallback);
   calculate_cellpartfuncts(nonemptymgi, element);
   printlnlog("  [warning] cell {} ts {}: NLTEPOP setting element Z={} level pops to LTE", nltelog.modelgridindex,
              nltelog.timestep, get_atomicnumber(element));
@@ -1657,8 +1661,8 @@ void nltepop_reset_cell(const int nonemptymgi) {
 }
 
 // Report whether the cell holds an NLTE matrix solution for the element. nltepop_reset_element()
-// writes the -1 marker into the NLTE level populations before the first solve and after a fallback
-// to LTE.
+// writes a negative marker into the NLTE level populations before the first solve and after a
+// fallback to LTE.
 auto elem_has_nlte_solution(const int nonemptymgi, const int element) -> bool {
   if (!elem_has_nlte_levels(element)) {
     // an element without NLTE levels holds no solution. The loop below also gives false, because each
@@ -1669,6 +1673,16 @@ auto elem_has_nlte_solution(const int nonemptymgi, const int element) -> bool {
     // an ion with a superlevel also has an excited NLTE level (see setup_nlte_levels())
     if (get_nlevels_excited_nlte(element, ion) > 0) {
       return get_nlte_levelpop_over_rho(nonemptymgi, element, ion, 1) >= 0.;
+    }
+  }
+  return false;
+}
+
+// Report whether the last NLTE matrix solve of the element in the cell fell back to LTE populations
+auto elem_nlte_solve_fell_back_to_lte(const int nonemptymgi, const int element) -> bool {
+  for (int ion = 0; ion < get_nions(element); ion++) {
+    if (get_nlevels_excited_nlte(element, ion) > 0) {
+      return get_nlte_levelpop_over_rho(nonemptymgi, element, ion, 1) == nltepop_marker_after_lte_fallback;
     }
   }
   return false;
@@ -1970,7 +1984,7 @@ auto nltepop_scale_ion_pops(const int nonemptymgi, const int element, const std:
     return false;
   }
   if (!elem_has_nlte_solution(nonemptymgi, element)) {
-    // the level populations hold the -1 marker of nltepop_reset_element(), which no factor may touch
+    // the level populations hold a negative marker of nltepop_reset_element(), which no factor may touch
     return false;
   }
 

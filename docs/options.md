@@ -473,7 +473,7 @@ nltephotospheric
 
 `int NLTE_TE_NNE_MAXITER`
 
-The largest iteration number of the NLTE/Te/Spencer-Fano loop of a cell. The first pass is iteration 0, so a cell makes at most NLTE_TE_NNE_MAXITER + 1 passes.
+The largest iteration number of the NLTE/Te/Spencer-Fano loop of a cell. The first pass is iteration 0, so a cell makes at most NLTE_TE_NNE_MAXITER + 1 passes. With NT_SPENCERFANO and [COLLISIONAL_HEATING_FROM_LEVELPOPS](#collisional_heating_from_levelpops), a cell makes one more pass when an element falls back to LTE in the last pass. That pass removes the element from the excitation list of the Spencer-Fano solution. The cell makes at most one extra pass for each element.
 
 **Every preset:** `30`
 
@@ -593,7 +593,7 @@ The reverse rates come from detailed balance. The rates enter the NLTE rate matr
 
 `bool COLLISIONAL_HEATING_FROM_LEVELPOPS`
 
-Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator. The estimator also holds the collisional recombination heating. The sum does not. The level populations of an element without NLTE levels do not follow a non-thermal excitation, so the sum would lose the heat of its collisional de-excitation. With this option, the non-thermal excitation energy of such an element therefore goes to the heating, and its packets become k-packets.
+Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator. The estimator also holds the collisional recombination heating. The sum does not. The level populations of an element without NLTE levels do not follow a non-thermal excitation, so the sum would lose the heat of its collisional de-excitation. The same applies in a cell where the last NLTE solve of an element fell back to LTE. With this option, the non-thermal excitation energy of such an element therefore goes to the heating, and its packets become k-packets.
 
 **Preset values:** classic `false`, kilonova_lte `true`, nltenebular `true`, nltephotospheric `true`
 

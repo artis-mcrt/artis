@@ -49,6 +49,9 @@ static_assert(NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION.valu
               "NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION must be below "
               "NLTE_SIGNIFICANT_ION_FRACTION = 1e-4");
 [[nodiscard]] auto elem_has_nlte_solution(int nonemptymgi, int element) -> bool;
+// True when the last NLTE matrix solve of the element in the cell fell back to LTE populations. It is false
+// before the first solve.
+[[nodiscard]] auto elem_nlte_solve_fell_back_to_lte(int nonemptymgi, int element) -> bool;
 // The ion range of the last NLTE matrix solution of the element in the cell, as the lowermost and the
 // uppermost solved ion (see grid.h). The range is {-1, -1} before the first solve and after a fallback
 // to LTE. The charge transfer reactions read the range, and the NLTE iteration loop watches it for a
