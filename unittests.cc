@@ -342,6 +342,20 @@ void test_spherical_angle_boundary_intersections() {
             grid::phi_halfplane_intersection<BoundaryType::LOWER>(Vec3d{-1., -1., 0.3}, Vec3d{0., 1., 0.}, 1., 0.) < 0.,
         "a path that meets the other half of the plane does not cross phi = 0");
 
+  // Known crossings of cones near the plane z = 0, where the random paths below have no reliable reference. A path
+  // along -z at x = 0.5 meets the cone at z = 0.5 / tan(theta_edge), and theta increases there. A path along +z meets
+  // the same point, and theta decreases there.
+  for (const double theta_offset : {1e-6, -1e-6, 1e-4, -1e-4}) {
+    const double theta_edge = (PI / 2) + theta_offset;
+    const double z_at_cone = 0.5 / std::tan(theta_edge);
+    check_close(grid::theta_cone_intersection<BoundaryType::UPPER>(Vec3d{0.5, 0., 1.}, Vec3d{0., 0., -1.},
+                                                                   std::cos(theta_edge)),
+                1. - z_at_cone, 1e-9, "a path along -z crosses a cone near the plane z = 0 where theta increases");
+    check_close(grid::theta_cone_intersection<BoundaryType::LOWER>(Vec3d{0.5, 0., -1.}, Vec3d{0., 0., 1.},
+                                                                   std::cos(theta_edge)),
+                1. + z_at_cone, 1e-9, "a path along +z crosses a cone near the plane z = 0 where theta decreases");
+  }
+
   // Compare random paths with a reference that finds each point of the path on the full surface (both cones of a
   // double cone, or the full plane). The reference keeps a point if it is on the boundary itself and if the angle
   // changes there in the sense of the boundary type. It finds that sense from the angle before and after the point.
