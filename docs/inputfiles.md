@@ -184,10 +184,10 @@ line, with the edges of the cells on each axis. This is a 3D spherical model:
 ```text
 format_version 2
 coordinates spherical3d
-cells_per_axis <n_r> <n_theta> <n_phi>
+cells_per_axis <n_r> <n_costheta> <n_phi>
 t_model_init_days <t_model in days>
 vel_r_edges_kmps <n_r + 1 radial velocities in km/s>
-theta_edges_radians <n_theta + 1 polar angles in radians>
+costheta_edges <n_costheta + 1 values of cos(theta) from -1 to 1>
 phi_edges_radians <n_phi + 1 azimuthal angles in radians>
 cell_line_count <number of cell lines>
 columns inputcellid rho X_Fegroup X_Ni56 X_Ni_otherstable Ye
@@ -204,8 +204,8 @@ The key `coordinates` gives the grid, and each grid has its own keys for the edg
 | `spherical1d` | `vel_r_edges_kmps` | Spherical shells. |
 | `cylindrical2d` | `vel_rcyl_edges_kmps`, `vel_z_edges_kmps` | Cells in the cylindrical radius and in z, with rotational symmetry around the z axis. |
 | `cartesian3d` | `vel_x_edges_kmps`, `vel_y_edges_kmps`, `vel_z_edges_kmps` | Cubes. |
-| `spherical2d` | `vel_r_edges_kmps`, `theta_edges_radians` | Cells in the radius r and the polar angle theta, with rotational symmetry around the z axis. |
-| `spherical3d` | `vel_r_edges_kmps`, `theta_edges_radians`, `phi_edges_radians` | Cells in r, in theta, and in the azimuthal angle phi. |
+| `spherical2d` | `vel_r_edges_kmps`, `costheta_edges` | Cells in the radius r and in cos(theta) of the polar angle theta, with rotational symmetry around the z axis. |
+| `spherical3d` | `vel_r_edges_kmps`, `costheta_edges`, `phi_edges_radians` | Cells in r, in cos(theta), and in the azimuthal angle phi. |
 
 The header:
 
@@ -218,7 +218,7 @@ The header:
 - The keys `coordinates`, `t_model_init_days`, `columns`, and the edge keys of the coordinates are necessary. An edge
   key of different coordinates stops the run, e.g. `phi_edges_radians` in a `spherical2d` model.
 - The key `cells_per_axis` is optional. It gives the number of cells on each axis, in the sequence of the axes of
-  the table above, e.g. `cells_per_axis 5 4 4` for n_r = 5, n_theta = 4, and n_phi = 4. Each number is an integer.
+  the table above, e.g. `cells_per_axis 5 4 4` for n_r = 5, n_costheta = 4, and n_phi = 4. Each number is an integer.
   `sn3d` stops if a number is different from the number that the list of edges of that axis gives.
 - The key `mirror_plane` is optional, and its only value is `z=0`. It gives mirror symmetry in the plane z = 0, for
   a `cylindrical2d`, a `spherical2d`, or a `spherical3d` model. See [Mirror symmetry](#mirror-symmetry).
@@ -232,21 +232,24 @@ The header:
   Each value must be larger than the value before. A list of velocities must also increase after the conversion to
   cm/s. At the start time, each radial shell must be wider than 10 cm and wider than 1e-12 of its outer radius,
   which is the position tolerance of a cell boundary.
-- A list of r, rcyl, theta, or phi starts at 0. The last value of the list of the first axis is `vmax`. For the
+- A list of r, rcyl, or phi starts at 0. The last value of the list of the first axis is `vmax`. For the
   spherical coordinates, `vmax` must be less than the speed of light.
 - A cylindrical or a Cartesian grid has cells of equal width, because `sn3d` holds no other grid of these types. The
   lists of x, y, and z must have equal steps from -`vmax` to `vmax`, and the list of rcyl from 0 to `vmax`. `sn3d`
   permits a difference of 1e-9 times `vmax` for each edge. The three lists of a Cartesian grid must have the same
   number of values. The rule of the corner velocity of format version 1 also applies.
-- The last value of `theta_edges_radians` must be pi, and the last value of `phi_edges_radians` must be 2 pi. `sn3d`
-  accepts a difference of 1e-8 and then uses the exact value. It does the same for a polar edge at pi / 2, and the
-  values of `theta_edges_radians` must still increase after that change.
-- Each cell in theta and in phi must be wider than 1e-8 rad. Each polar edge other than 0 and pi must be at least 1e-4
-  rad from the z axis. `sn3d` takes a polar edge as a cone with the cosine of the edge, and near the axis that cosine
-  does not give the angle to the position tolerance of a cell boundary.
+- The values of `costheta_edges` are the cosine of the polar angle theta. The first value must be exactly -1, which
+  is the -z axis. The last value must be exactly 1, which is the +z axis. An edge at 0 is the plane z = 0.
+- The last value of `phi_edges_radians` must be 2 pi. `sn3d` accepts a difference of 1e-8 and then uses the exact
+  value.
+- Each cell in cos(theta) must be wider than 1e-8, and each cell in phi must be wider than 1e-8 rad. A polar edge
+  is a cone with the cosine of the edge. A cell at the z axis with this minimum width has its cone 1.4e-4 rad from
+  the axis. Nearer to the axis, a cosine does not give the position of the cone to the position tolerance of a cell
+  boundary.
 - Write each edge with sufficient digits to give the same number again, i.e. a maximum of 17 significant digits.
 - theta is the angle from the +z axis. phi is the angle atan2(y, x) in the range from 0 to 2 pi. Thus
-  x = r sin(theta) cos(phi), y = r sin(theta) sin(phi), and z = r cos(theta).
+  x = r sin(theta) cos(phi), y = r sin(theta) sin(phi), and z = r cos(theta). A cell holds its lower edge of
+  cos(theta), and the last polar cell also holds the +z axis. The centre is in the first polar cell.
 - The key `columns` gives the column names. The first two names must be `inputcellid` and `rho`. A file of format
   version 2 has no position column, thus a column `vel_r_max_kmps`, `logrho`, or `pos_...` stops the run.
 
@@ -256,8 +259,8 @@ The cells:
 - Each cell line must have one value for each name of the key `columns`. This also applies to the line of an empty
   cell. `sn3d` stops for a line with fewer values or with more values.
 - The cell id is the index of the cell in the grid of the edges, and the first index is 0. The index of the first
-  axis changes fastest. For example, the cell of a 3D spherical model with the indices i_r, i_theta, and i_phi has
-  the id i_r + n_r * (i_theta + n_theta * i_phi). A Cartesian model has x as its first axis, and a cylindrical model
+  axis changes fastest. For example, the cell of a 3D spherical model with the indices i_r, i_costheta, and i_phi
+  has the id i_r + n_r * (i_costheta + n_costheta * i_phi). The index i_costheta counts from the -z axis. A Cartesian model has x as its first axis, and a cylindrical model
   has rcyl.
 - The cell ids must increase through the file. A cell with no line is an empty cell. Thus the file needs a line only
   for a cell that is not empty, and it must have one cell line or more.
@@ -277,8 +280,8 @@ A 1D spherical, a 2D cylindrical, or a 3D Cartesian model gives the same grid in
 version 2. The density of a 1D cell can differ in the last digits, because version 1 holds its logarithm.
 
 For a 2D spherical or a 3D spherical model without [GRID_TYPE_OVERRIDE](options.md#grid_type_override), the
-propagation grid has the cells of the model. A boundary of theta is a cone around the z axis, and a boundary of phi
-is a half of a plane through the z axis. These boundaries have constant velocity coordinates, thus they do not move
+propagation grid has the cells of the model. A boundary of cos(theta) is a cone around the z axis, and a boundary of
+phi is a half of a plane through the z axis. These boundaries have constant velocity coordinates, thus they do not move
 in the homologous expansion. The cells near the centre and near the z axis are small. A packet path within 10 cm of
 the centre changes its cell there in one step. Thus `sn3d` stops if the outer radius of the first radial shell is not
 above 1e5 cm at the start time.
@@ -289,10 +292,9 @@ A `cylindrical2d`, `spherical2d`, or `spherical3d` model of format version 2 can
 z = 0. The header then has the line `mirror_plane z=0`, and the file holds the cells with z >= 0:
 
 - The list `vel_z_edges_kmps` of a cylindrical model has equal steps from 0 to `vmax`.
-- The list `theta_edges_radians` of a spherical model ends at pi / 2. `sn3d` accepts a difference of 1e-8 and then
-  uses the exact value.
-- `cells_per_axis` and the cell ids are of this half. The index of z of a cylindrical model starts at the plane
-  z = 0, and the index of theta of a spherical model starts at the +z axis.
+- The list `costheta_edges` of a spherical model goes from exactly 0 to exactly 1.
+- `cells_per_axis` and the cell ids are of this half. The index of z of a cylindrical model and the index of
+  cos(theta) of a spherical model start at the plane z = 0.
 
 Each cell of the file is one model cell that fills its cell with z >= 0 and the mirror cell with z <= 0. Thus its
 volume and its mass are two times the values of the half cell. The propagation grid has the cells of both halves,

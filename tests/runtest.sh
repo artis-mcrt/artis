@@ -270,11 +270,10 @@ case $step in
         run_formatcheck_case yefile "$model2d" "Ye.txt is present, but model.txt has format version 2" file:Ye.txt
         run_formatcheck_case abundancefile "$model2d" \
             "abundances.txt is present, but model.txt has format version 2" file:abundances.txt
-        # A mirrored model has the masses of its full twin. A mirrored 2D spherical model of the 1D shells has the
-        # masses of the 1D model
+        # a mirrored model has the masses of its full twin
         get_masses_of_case() {
             sed -E 's/^[0-9TZ:-]+ //' "$checkroot/$1/inputcheck/output_0-0.txt" |
-                grep -E '^(Total input model mass|  [0-9A-Z][A-Za-z0-9-]*: [0-9])'
+                grep -E '^(Total input model mass|Total grid-mapped mass|  [0-9A-Z][A-Za-z0-9-]*: [0-9])'
         }
         require_same_masses() {
             if [ -z "$(get_masses_of_case "$1")" ] || [ "$(get_masses_of_case "$1")" != "$(get_masses_of_case "$2")" ]; then
@@ -304,27 +303,45 @@ case $step in
         run_formatcheck_case cylindrical2d_mirror "$modelmirror" complete "model.txt has mirror symmetry in the plane z = 0"
         run_formatcheck_case cylindrical2d_mirrortwin "$modeltwin" complete
         require_same_masses cylindrical2d_mirror cylindrical2d_mirrortwin
-        # each of the 5 shells of the 1D model in two polar cells from the z axis to the plane z = 0
+        # Each of the 5 shells of the 1D model in two polar cells from the plane z = 0 to the +z axis. The polar cells
+        # have different widths in cos(theta), and the second one has two times the density. Thus a mirror cell at
+        # an incorrect polar index gives a different mass
         modelspherical2dmirror="$checkroot/spherical2d_mirror.txt"
         {
             awk '/^coordinates/ { print "coordinates spherical2d"; next }
                 /^cells_per_axis/ { print "cells_per_axis 5 2"; print "mirror_plane z=0"; next }
-                /^vel_r_edges_kmps/ { print; print "theta_edges_radians 0.0 0.7853981633974483 1.5707963267948966"; next }
+                /^vel_r_edges_kmps/ { print; print "costheta_edges 0.0 0.3 1.0"; next }
                 /^cell_line_count/ { next }
                 { print }' "$model1d"
-            awk '/^[0-9]/ { $1 += 5; print }' "$model1d"
+            awk '/^[0-9]/ { $1 += 5; $2 *= 2; print }' "$model1d"
         } > "$modelspherical2dmirror"
+        # the twin has the polar cells from the -z axis to the +z axis
+        modelspherical2dtwin="$checkroot/spherical2d_mirrortwin.txt"
+        {
+            awk '/^cells_per_axis/ { print "cells_per_axis 5 4"; next }
+                /^mirror_plane/ || /^[0-9]/ { next }
+                /^costheta_edges/ { print "costheta_edges -1.0 -0.3 0.0 0.3 1.0"; next }
+                { print }' "$modelspherical2dmirror"
+            awk '/^[0-9]/ { id = $1; $1 = (id % 5) + 5 * (1 - int(id / 5)); print; $1 = (id % 5) + 5 * (2 + int(id / 5)); print }' \
+                "$modelspherical2dmirror" | sort -n
+        } > "$modelspherical2dtwin"
         run_formatcheck_case spherical2d_mirror "$modelspherical2dmirror" complete
-        require_same_masses spherical2d_mirror spherical1d_nofegroup
+        run_formatcheck_case spherical2d_mirrortwin "$modelspherical2dtwin" complete
+        require_same_masses spherical2d_mirror spherical2d_mirrortwin
         sed 's/^mirror_plane z=0$/mirror_plane z=1/' "$modelmirror" > "$checkroot/mirrorvalue.txt"
         run_formatcheck_case mirrorvalue "$checkroot/mirrorvalue.txt" "the key mirror_plane must have the value z=0"
         # BSD sed gives a \n in a replacement as the letter n, thus awk inserts the line
         awk '/^cell_line_count/ { print "mirror_plane z=0" } { print }' "$model1d" > "$checkroot/mirror1d.txt"
         run_formatcheck_case mirror1d "$checkroot/mirror1d.txt" "a spherical1d model takes no key mirror_plane"
-        # a polar edge near the z axis
-        sed 's/^theta_edges_radians 0.0 /theta_edges_radians 0.0 5e-05 /' "$modelspherical2dmirror" \
-            > "$checkroot/polaredgeataxis.txt"
-        run_formatcheck_case polaredgeataxis "$checkroot/polaredgeataxis.txt" "is less than 0.0001 rad from the z axis"
+        # a polar cell at the z axis that is too thin for the position tolerance of a cell boundary
+        sed 's/^costheta_edges 0.0 0.3 1.0$/costheta_edges 0.0 0.999999995 1.0/' "$modelspherical2dmirror" \
+            > "$checkroot/thinpolarcell.txt"
+        run_formatcheck_case thinpolarcell "$checkroot/thinpolarcell.txt" "are the edges of a cell that is too thin"
+        # the polar axis of a mirrored spherical model starts at the plane z = 0
+        sed 's/^costheta_edges 0.0 0.3 1.0$/costheta_edges -1.0 0.3 1.0/' "$modelspherical2dmirror" \
+            > "$checkroot/mirrorfullpolaraxis.txt"
+        run_formatcheck_case mirrorfullpolaraxis "$checkroot/mirrorfullpolaraxis.txt" \
+            "the first value of costheta_edges is -1, but it must be 0"
         # the z axis of a mirrored cylindrical model starts at the plane z = 0
         awk '/^cell_line_count/ { print "mirror_plane z=0" } { print }' "$model2d" > "$checkroot/mirrorfullaxis.txt"
         run_formatcheck_case mirrorfullaxis "$checkroot/mirrorfullaxis.txt" \

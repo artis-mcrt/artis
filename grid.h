@@ -108,24 +108,24 @@ template <BoundaryType boundarytype, size_t VECDIM>
   return distance_to_crossing;
 }
 
-// Get the path length d from pos along dir to the point where a packet crosses a cell boundary of the polar angle
-// theta of a spherical grid. The boundary is the cone with the half angle theta_edge around the z axis and its apex
-// at the centre. The homologous expansion does not move this cone, thus the distance does not depend on the time.
-// dir must be a unit vector.
+// Get the path length d from pos along dir to the point where a packet crosses a cell boundary of cos(theta) of a
+// spherical grid, where theta is the polar angle from the +z axis. The boundary is the cone with the half angle
+// theta_edge around the z axis and its apex at the centre. The homologous expansion does not move this cone, thus the
+// distance does not depend on the time. dir must be a unit vector.
 //
-// For an UPPER boundary, the result is the distance to the point where theta of the packet increases through
-// theta_edge. For a LOWER boundary, theta decreases through theta_edge there. The function returns -1 if no such
-// crossing lies ahead of the packet. theta along a straight path has at most one extremum, thus a packet can cross
-// each of the two boundaries of its cell, whatever its present direction is.
+// For an UPPER boundary, the result is the distance to the point where cos(theta) of the packet increases through
+// cos_theta_edge. For a LOWER boundary, cos(theta) decreases through cos_theta_edge there. The function returns -1 if
+// no such crossing lies ahead of the packet. cos(theta) along a straight path has at most one extremum, thus a packet
+// can cross each of the two boundaries of its cell, whatever its present direction is.
 template <BoundaryType boundarytype>
-[[gnu::pure]] [[nodiscard]] constexpr auto theta_cone_intersection(const Vec3d& pos, const Vec3d& dir,
-                                                                   const double cos_theta_edge) -> double {
+[[gnu::pure]] [[nodiscard]] constexpr auto costheta_cone_intersection(const Vec3d& pos, const Vec3d& dir,
+                                                                      const double cos_theta_edge) -> double {
   assert_testmodeonly(std::fabs(dot(dir, dir) - 1.) < 1e-6);
 
   double distance_to_crossing = -1.;
   if (cos_theta_edge == 0.) {
-    // The cone is the plane z = 0. theta increases where z decreases.
-    const bool moves_towards_boundary = (boundarytype == BoundaryType::UPPER) ? (dir[2] < 0.) : (dir[2] > 0.);
+    // The cone is the plane z = 0. cos(theta) increases where z increases.
+    const bool moves_towards_boundary = (boundarytype == BoundaryType::UPPER) ? (dir[2] > 0.) : (dir[2] < 0.);
     if (!moves_towards_boundary) {
       return -1.;
     }
@@ -150,12 +150,12 @@ template <BoundaryType boundarytype>
     }
     const double half_sqrt_discriminant = std::sqrt(quarter_discriminant);
 
-    // At a root, the derivative f'(d) is +2 * half_sqrt_discriminant or -2 * half_sqrt_discriminant. theta increases
-    // through the cone where the packet moves away from the z axis side of the cone. That is a decrease of f for a
-    // cone above the plane z = 0, and an increase of f for a cone below it. Each root has two equal forms, and the
+    // At a root, the derivative f'(d) is +2 * half_sqrt_discriminant or -2 * half_sqrt_discriminant. cos(theta)
+    // increases through the cone where the packet moves towards the +z axis. That is an increase of f for a cone
+    // above the plane z = 0, and a decrease of f for a cone below it. Each root has two equal forms, and the
     // calculation uses the form that adds two numbers of the same sign (see expanding_shell_intersection).
-    const bool theta_increases = (boundarytype == BoundaryType::UPPER);
-    const bool crossing_has_increasing_f = (cos_theta_edge > 0.) != theta_increases;
+    const bool costheta_increases = (boundarytype == BoundaryType::UPPER);
+    const bool crossing_has_increasing_f = (cos_theta_edge > 0.) == costheta_increases;
     if (crossing_has_increasing_f) {
       distance_to_crossing =
           (half_b < 0.) ? (-half_b + half_sqrt_discriminant) / a : c / (-half_b - half_sqrt_discriminant);
@@ -292,11 +292,11 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_propcell_nonemptymgi(int cellindex) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellindex_from_pos(const Vec3d& pos, double time) -> int;
 void read_ejecta_model();
-// Set up a 2D spherical or a 3D spherical propagation grid from the cell edges of the radial velocity [cm/s], the
-// polar angle [rad], and the azimuthal angle [rad], with no model.txt. globals::tmin must have its value. A 2D
-// spherical grid ignores phi_edges. The unit tests of the cell geometry use this function.
+// Set up a 2D spherical or a 3D spherical propagation grid from the cell edges of the radial velocity [cm/s], of
+// cos(theta) of the polar angle from -1 to 1, and of the azimuthal angle [rad], with no model.txt. globals::tmin must
+// have its value. A 2D spherical grid ignores phi_edges. The unit tests of the cell geometry use this function.
 void setup_spherical_grid_from_edges(GridType spherical_grid_type, std::span<const double> vel_r_edges,
-                                     std::span<const double> theta_edges, std::span<const double> phi_edges);
+                                     std::span<const double> costheta_edges, std::span<const double> phi_edges);
 void write_grid_restart_data(int timestep);
 // init_grid() sets up the rank ranges of the grid update and the output files
 [[nodiscard]] auto get_nstart(int rank) -> int;

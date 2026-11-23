@@ -307,29 +307,30 @@ auto get_pos_on_path(const Vec3d& pos, const Vec3d& dir, const double distance) 
 }
 
 void test_spherical_angle_boundary_intersections() {
-  std::println("theta cone and phi half-plane intersections...");
+  std::println("cos(theta) cone and phi half-plane intersections...");
   using grid::BoundaryType;
   const double cos45 = std::numbers::sqrt2 / 2.;
 
-  // A path parallel to the z axis at the distance 1 from it has theta = 45 degrees at z = 1.
-  check_close(grid::theta_cone_intersection<BoundaryType::LOWER>(Vec3d{1., 0., 0.}, Vec3d{0., 0., 1.}, cos45), 1.,
-              1e-12, "theta decreases through 45 degrees on an upward path beside the z axis");
-  check(grid::theta_cone_intersection<BoundaryType::UPPER>(Vec3d{1., 0., 0.}, Vec3d{0., 0., 1.}, cos45) < 0.,
-        "theta does not increase through 45 degrees on an upward path beside the z axis");
-  check_close(grid::theta_cone_intersection<BoundaryType::UPPER>(Vec3d{1., 0., 0.}, Vec3d{0., 0., -1.}, -cos45), 1.,
-              1e-12, "theta increases through 135 degrees on a downward path beside the z axis");
-  // The cone of 90 degrees is the plane z = 0.
-  check_close(grid::theta_cone_intersection<BoundaryType::UPPER>(Vec3d{1., 0., 0.5}, Vec3d{0., 0., -1.}, 0.), 0.5,
-              1e-12, "theta increases through 90 degrees where a downward path meets the plane z = 0");
-  check(grid::theta_cone_intersection<BoundaryType::LOWER>(Vec3d{1., 0., 0.5}, Vec3d{0., 0., -1.}, 0.) < 0.,
-        "theta does not decrease through 90 degrees on a downward path");
-  // theta is constant on a radial path, e.g. the path of a new packet.
+  // A path parallel to the z axis at the distance 1 from it has theta = 45 degrees at z = 1. cos(theta) = z / r
+  // increases on an upward path and decreases on a downward path.
+  check_close(grid::costheta_cone_intersection<BoundaryType::UPPER>(Vec3d{1., 0., 0.}, Vec3d{0., 0., 1.}, cos45), 1.,
+              1e-12, "cos(theta) increases through cos(45 degrees) on an upward path beside the z axis");
+  check(grid::costheta_cone_intersection<BoundaryType::LOWER>(Vec3d{1., 0., 0.}, Vec3d{0., 0., 1.}, cos45) < 0.,
+        "cos(theta) does not decrease through cos(45 degrees) on an upward path beside the z axis");
+  check_close(grid::costheta_cone_intersection<BoundaryType::LOWER>(Vec3d{1., 0., 0.}, Vec3d{0., 0., -1.}, -cos45), 1.,
+              1e-12, "cos(theta) decreases through cos(135 degrees) on a downward path beside the z axis");
+  // The cone with cos(theta) = 0 is the plane z = 0.
+  check_close(grid::costheta_cone_intersection<BoundaryType::LOWER>(Vec3d{1., 0., 0.5}, Vec3d{0., 0., -1.}, 0.), 0.5,
+              1e-12, "cos(theta) decreases through 0 where a downward path meets the plane z = 0");
+  check(grid::costheta_cone_intersection<BoundaryType::UPPER>(Vec3d{1., 0., 0.5}, Vec3d{0., 0., -1.}, 0.) < 0.,
+        "cos(theta) does not increase through 0 on a downward path");
+  // cos(theta) is constant on a radial path, e.g. the path of a new packet.
   const auto radial_dir = vec_norm(Vec3d{1., 1., 1.});
-  check(grid::theta_cone_intersection<BoundaryType::UPPER>(Vec3d{1., 1., 1.}, radial_dir, cos45) < 0. &&
-            grid::theta_cone_intersection<BoundaryType::LOWER>(Vec3d{1., 1., 1.}, radial_dir, cos45) < 0.,
+  check(grid::costheta_cone_intersection<BoundaryType::UPPER>(Vec3d{1., 1., 1.}, radial_dir, cos45) < 0. &&
+            grid::costheta_cone_intersection<BoundaryType::LOWER>(Vec3d{1., 1., 1.}, radial_dir, cos45) < 0.,
         "a radial path crosses no cone");
   // A direction along the cone gives a path that comes near to the cone and does not cross it.
-  check(grid::theta_cone_intersection<BoundaryType::LOWER>(Vec3d{1., 0., 0.}, Vec3d{cos45, 0., cos45}, cos45) < 0.,
+  check(grid::costheta_cone_intersection<BoundaryType::UPPER>(Vec3d{1., 0., 0.}, Vec3d{cos45, 0., cos45}, cos45) < 0.,
         "a path parallel to the cone does not cross it");
 
   // phi increases from 315 degrees through 0 on a path along +y at x = 1.
@@ -343,17 +344,17 @@ void test_spherical_angle_boundary_intersections() {
         "a path that meets the other half of the plane does not cross phi = 0");
 
   // Known crossings of cones near the plane z = 0, where the random paths below have no reliable reference. A path
-  // along -z at x = 0.5 meets the cone at z = 0.5 / tan(theta_edge), and theta increases there. A path along +z meets
-  // the same point, and theta decreases there.
+  // along -z at x = 0.5 meets the cone at z = 0.5 / tan(theta_edge), and cos(theta) decreases there. A path along +z
+  // meets the same point, and cos(theta) increases there.
   for (const double theta_offset : {1e-6, -1e-6, 1e-4, -1e-4}) {
     const double theta_edge = (PI / 2) + theta_offset;
     const double z_at_cone = 0.5 / std::tan(theta_edge);
-    check_close(grid::theta_cone_intersection<BoundaryType::UPPER>(Vec3d{0.5, 0., 1.}, Vec3d{0., 0., -1.},
-                                                                   std::cos(theta_edge)),
-                1. - z_at_cone, 1e-9, "a path along -z crosses a cone near the plane z = 0 where theta increases");
-    check_close(grid::theta_cone_intersection<BoundaryType::LOWER>(Vec3d{0.5, 0., -1.}, Vec3d{0., 0., 1.},
-                                                                   std::cos(theta_edge)),
-                1. + z_at_cone, 1e-9, "a path along +z crosses a cone near the plane z = 0 where theta decreases");
+    check_close(grid::costheta_cone_intersection<BoundaryType::LOWER>(Vec3d{0.5, 0., 1.}, Vec3d{0., 0., -1.},
+                                                                      std::cos(theta_edge)),
+                1. - z_at_cone, 1e-9, "a path along -z crosses a cone near the plane z = 0 where cos(theta) decreases");
+    check_close(grid::costheta_cone_intersection<BoundaryType::UPPER>(Vec3d{0.5, 0., -1.}, Vec3d{0., 0., 1.},
+                                                                      std::cos(theta_edge)),
+                1. + z_at_cone, 1e-9, "a path along +z crosses a cone near the plane z = 0 where cos(theta) increases");
   }
 
   // Compare random paths with a reference that finds each point of the path on the full surface (both cones of a
@@ -393,9 +394,10 @@ void test_spherical_angle_boundary_intersections() {
           }
         }
       }
-      const double distance_to_crossing = theta_increases
-                                              ? grid::theta_cone_intersection<BoundaryType::UPPER>(pos, dir, cos_edge)
-                                              : grid::theta_cone_intersection<BoundaryType::LOWER>(pos, dir, cos_edge);
+      // cos(theta) decreases where theta increases, thus that crossing is a LOWER boundary of cos(theta)
+      const double distance_to_crossing =
+          theta_increases ? grid::costheta_cone_intersection<BoundaryType::LOWER>(pos, dir, cos_edge)
+                          : grid::costheta_cone_intersection<BoundaryType::UPPER>(pos, dir, cos_edge);
       // the reference loses precision for a cone near the plane z = 0, and it has no result within one step of zero
       const bool reference_is_reliable = std::abs(cos_edge) > 1e-3 && std::abs(expected_distance) > 1e-4;
       if (reference_is_reliable) {
@@ -434,7 +436,7 @@ void test_spherical_angle_boundary_intersections() {
                                                                    1e-9 * (1. + expected_distance));
     }
   }
-  check(cone_roots_agree, "the selected crossing of a theta cone agrees with the reference for random paths");
+  check(cone_roots_agree, "the selected crossing of a cos(theta) cone agrees with the reference for random paths");
   check(halfplane_roots_agree, "the selected crossing of a phi half-plane agrees with the reference for random paths");
 }
 
@@ -492,60 +494,64 @@ void test_spherical_grid_boundary_distance() {
     return edges;
   };
   const std::vector<double> vel_r_edges_not_uniform{0., 0.02 * vmax, 0.1 * vmax, 0.15 * vmax, 0.5 * vmax, vmax};
-  // these polar edges are uniform in cos(theta), with an edge at exactly pi / 2
-  const std::vector<double> theta_edges_with_equator{0., std::acos(0.5), PI / 2, std::acos(-0.5), PI};
-  const std::vector<double> theta_edges_without_equator{0., 0.3, 1.2, 2.0, PI};
+  // the polar edges are values of cos(theta) from -1 to 1. These are uniform, with an edge at the plane z = 0
+  const std::vector<double> costheta_edges_with_equator{-1., -0.5, 0., 0.5, 1.};
+  const std::vector<double> costheta_edges_without_equator{-1., std::cos(2.0), std::cos(1.2), std::cos(0.3), 1.};
+  // these edges are uniform in the polar angle
+  const std::vector<double> costheta_edges_uniform_in_theta{
+      -1., std::cos(0.8 * PI), std::cos(0.6 * PI), std::cos(0.4 * PI), std::cos(0.2 * PI), 1.,
+  };
   // the second azimuthal cell is wider than pi
   const std::vector<double> phi_edges_with_wide_cell{0., 1.0, 4.5, 2 * PI};
 
   struct SphericalGridCase {
     GridType gridtype{GridType::SPHERICAL3D};
     std::vector<double> vel_r_edges;
-    std::vector<double> theta_edges;
+    std::vector<double> costheta_edges;
     std::vector<double> phi_edges;
   };
   const std::vector<SphericalGridCase> gridcases{
       {
           .gridtype = GridType::SPHERICAL3D,
           .vel_r_edges = get_uniform_edges(vmax, 6),
-          .theta_edges = get_uniform_edges(PI, 5),
+          .costheta_edges = costheta_edges_uniform_in_theta,
           .phi_edges = get_uniform_edges(2 * PI, 16),
       },
       {
           .gridtype = GridType::SPHERICAL3D,
           .vel_r_edges = vel_r_edges_not_uniform,
-          .theta_edges = theta_edges_with_equator,
+          .costheta_edges = costheta_edges_with_equator,
           .phi_edges = get_uniform_edges(2 * PI, 2),
       },
       {
           .gridtype = GridType::SPHERICAL3D,
           .vel_r_edges = vel_r_edges_not_uniform,
-          .theta_edges = theta_edges_without_equator,
+          .costheta_edges = costheta_edges_without_equator,
           .phi_edges = phi_edges_with_wide_cell,
       },
       {
           .gridtype = GridType::SPHERICAL3D,
           .vel_r_edges = get_uniform_edges(vmax, 1),
-          .theta_edges = get_uniform_edges(PI, 1),
+          .costheta_edges = {-1., 1.},
           .phi_edges = get_uniform_edges(2 * PI, 1),
       },
       {
           .gridtype = GridType::SPHERICAL2D,
           .vel_r_edges = vel_r_edges_not_uniform,
-          .theta_edges = theta_edges_with_equator,
+          .costheta_edges = costheta_edges_with_equator,
           .phi_edges = {},
       },
       {
           .gridtype = GridType::SPHERICAL2D,
           .vel_r_edges = get_uniform_edges(vmax, 8),
-          .theta_edges = theta_edges_without_equator,
+          .costheta_edges = costheta_edges_without_equator,
           .phi_edges = {},
       },
   };
 
   rngstate_type rngstate{3141};
   for (const auto& gridcase : gridcases) {
-    grid::setup_spherical_grid_from_edges(gridcase.gridtype, gridcase.vel_r_edges, gridcase.theta_edges,
+    grid::setup_spherical_grid_from_edges(gridcase.gridtype, gridcase.vel_r_edges, gridcase.costheta_edges,
                                           gridcase.phi_edges);
     const auto num_cells = static_cast<int>(grid::ngrid);
 
@@ -613,8 +619,8 @@ void test_spherical_grid_boundary_distance() {
       return cellindex != cellindex_after && distance == 0. && next_cellindex == cellindex_after;
     };
     for (const double sense : {1., -1.}) {
-      for (auto edgeindex = 1Z; edgeindex < std::ssize(gridcase.theta_edges) - 1; edgeindex++) {
-        const double theta = gridcase.theta_edges[edgeindex];
+      for (auto edgeindex = 1Z; edgeindex < std::ssize(gridcase.costheta_edges) - 1; edgeindex++) {
+        const double theta = std::acos(gridcase.costheta_edges[edgeindex]);
         const double phi = 0.3;
         const auto pos_on_cone =
             vec_scale(Vec3d{std::sin(theta) * std::cos(phi), std::sin(theta) * std::sin(phi), std::cos(theta)}, radius);
@@ -645,6 +651,41 @@ void test_spherical_grid_boundary_distance() {
           "a path away from the centre or the z axis, in the position tolerance of a cell boundary, changes cell at "
           "once");
   }
+}
+
+// The polar index of a spherical grid counts from the -z axis. A test of paths alone does not find a grid with the
+// opposite sense, because such a grid agrees with itself.
+void test_spherical_grid_polar_sense() {
+  if (GRID_TYPE_OVERRIDE.has_value() || FORCE_SPHERICAL_ESCAPE_SURFACE) {
+    return;
+  }
+  std::println("polar cells of a spherical grid from -z to +z...");
+  globals::tmin = 1e5;
+  globals::max_path_step = 1e35;
+  const std::vector<double> vel_r_edges{0., 0.3 * CLIGHT};
+  const std::vector<double> costheta_edges{-1., 0.2, 1.};
+  grid::setup_spherical_grid_from_edges(GridType::SPHERICAL2D, vel_r_edges, costheta_edges, {});
+  const double rmax = globals::rmax;
+
+  check(grid::get_cellindex_from_pos(Vec3d{0.1 * rmax, 0., -0.5 * rmax}, globals::tmin) == 0 &&
+            grid::get_cellindex_from_pos(Vec3d{0., 0., -0.5 * rmax}, globals::tmin) == 0,
+        "a position at -z is in the first polar cell");
+  check(grid::get_cellindex_from_pos(Vec3d{0.1 * rmax, 0., 0.5 * rmax}, globals::tmin) == 1 &&
+            grid::get_cellindex_from_pos(Vec3d{0., 0., 0.5 * rmax}, globals::tmin) == 1,
+        "a position at +z is in the last polar cell");
+  // the plane z = 0 has cos(theta) = 0, which is below the edge at 0.2
+  check(grid::get_cellindex_from_pos(Vec3d{0.5 * rmax, 0., 0.}, globals::tmin) == 0,
+        "a position in the plane z = 0 is in the polar cell that holds cos(theta) = 0");
+  // the first cell holds cos(theta) from -1 to 0.2, which is the fraction 0.6 of the sphere
+  check_close(grid::get_propcell_volume_tmin(0), 0.6 * 4. / 3. * PI * pow3(rmax), 1e-12,
+              "the volume of the first polar cell is the part of the sphere with cos(theta) below the edge");
+
+  // An upward path at the distance 0.1 rmax from the z axis meets the cone at z = 0.1 rmax * cos / sin of the edge.
+  const double z_at_cone = 0.1 * rmax * 0.2 / std::sqrt(1. - pow2(0.2));
+  const auto [distance, next_cellindex] =
+      grid::boundary_distance(Vec3d{0., 0., 1.}, Vec3d{0.1 * rmax, 0., -0.5 * rmax}, globals::tmin, 0);
+  check_close(distance, (0.5 * rmax) + z_at_cone, 1e-12, "an upward path from the first polar cell meets its cone");
+  check(next_cellindex == 1, "an upward path goes from the first polar cell into the last polar cell");
 }
 
 void test_escapedirectionbin() {
@@ -2178,6 +2219,7 @@ auto main() -> int {
   test_expanding_shell_intersection();
   test_spherical_angle_boundary_intersections();
   test_spherical_grid_boundary_distance();
+  test_spherical_grid_polar_sense();
   test_escapedirectionbin();
   test_frame_transform();
   test_zero_polarisation_intensity();

@@ -19,6 +19,7 @@
 #include <deque>
 #include <format>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <numbers>
 #include <optional>
@@ -91,7 +92,8 @@ std::array<int, 3> ncoord_model{};  // the model.txt input grid dimensions
 // The cell edges of a 2D spherical or a 3D spherical model, which model.txt gives in its header. Each list has one
 // value more than the count of the cells on that axis. A 2D spherical model has one phi cell from 0 to 2 pi.
 std::vector<double> model_vel_r_edges{};  // radial velocity [cm/s], from 0 to vmax
-std::vector<double> model_theta_edges{};  // polar angle from the +z axis [rad], from 0 to pi (pi / 2 with a mirror)
+// cos(theta) of the polar angle theta from the +z axis, from -1 to 1 (from 0 to 1 with a mirror)
+std::vector<double> model_costheta_edges{};
 std::vector<double> model_phi_edges{};  // azimuthal angle phi = atan2(y, x) [rad], from 0 to 2 pi
 
 double min_den{-1.};  // minimum model density
@@ -103,16 +105,17 @@ int first_input_cellid{-1};  // auto-determine first cell index in model.txt (us
 
 constexpr int max_atomic_number = 150;  // abundances.txt can give elements up to this atomic number
 
-// Initial co-ordinates of inner most corner of cell. An angular axis of a spherical grid holds the lower angle [rad]
-// of each cell, which does not change with time.
+// Initial co-ordinates of inner most corner of cell. The polar axis of a spherical grid holds the lower cos(theta) of
+// each cell, and the azimuthal axis holds the lower angle [rad]. These values do not change with time.
 std::array<std::vector<double>, 3> coord_pos_min_tmin{};
 
-// The upper bound of the last cell on each axis. A length axis ends at globals::rmax. The polar angle of a spherical
-// grid ends at pi, and the azimuthal angle ends at 2 pi.
+// The upper bound of the last cell on each axis. A length axis ends at globals::rmax. The polar axis of a spherical
+// grid ends at cos(theta) = 1, and the azimuthal angle ends at 2 pi.
 std::array<double, 3> coord_pos_max_of_grid_tmin{};
 
 // The cosine and the sine of each cell edge of the polar angle and of the azimuthal angle of a spherical propagation
-// grid. boundary_distance() runs for every packet step, thus setup_grid_spherical() calculates them one time.
+// grid. The polar edges have the sequence of the cells, thus their cosine increases. boundary_distance() runs for
+// every packet step, thus setup_grid_spherical() calculates them one time.
 std::vector<double> theta_edge_cos{};
 std::vector<double> theta_edge_sin{};
 std::vector<double> phi_edge_cos{};
@@ -234,7 +237,7 @@ constexpr auto get_grid_type_name(const GridType gridtype) -> std::string_view {
       return "r";
     case GridType::SPHERICAL2D:
     case GridType::SPHERICAL3D:
-      return std::array<std::string_view, 3>{"r", "theta", "phi"}[axis];
+      return std::array<std::string_view, 3>{"r", "costheta", "phi"}[axis];
   }
   fatal_crash("Unknown grid type {}", static_cast<int>(gridtype));
 }
@@ -813,10 +816,12 @@ void map_2dmodelto3dgrid() {
   return std::clamp(index_above - 1, 0, num_cells - 1);
 }
 
-// Get the polar angle theta from the +z axis in [0, pi] and the azimuthal angle phi = atan2(y, x) in [0, 2 pi) of a
-// position or a direction. A vector on the z axis has phi = 0, and a vector of zero length has theta = 0.
-[[nodiscard]] DEVICE_FUNC inline auto get_theta_phi_from_xyz(const Vec3d& vec_xyz) -> std::array<double, 2> {
-  const double theta = std::atan2(std::sqrt(pow2(vec_xyz[0]) + pow2(vec_xyz[1])), vec_xyz[2]);
+// Get cos(theta) of the polar angle theta from the +z axis and the azimuthal angle phi = atan2(y, x) in [0, 2 pi) of
+// a position or a direction. A vector on the z axis has phi = 0. A vector of zero length has cos(theta) = -1, which
+// is in the first polar cell.
+[[nodiscard]] DEVICE_FUNC inline auto get_costheta_phi_from_xyz(const Vec3d& vec_xyz) -> std::array<double, 2> {
+  const double length = vec_len(vec_xyz);
+  const double costheta = (length > 0.) ? std::clamp(vec_xyz[2] / length, -1., 1.) : -1.;
   double phi = std::atan2(vec_xyz[1], vec_xyz[0]);
   if (phi < 0.) {
     phi += 2 * PI;
@@ -825,27 +830,28 @@ void map_2dmodelto3dgrid() {
   if (phi >= 2 * PI) {
     phi = 0.;
   }
-  return {theta, phi};
+  return {costheta, phi};
 }
 
 // Get the index of the cell of a 2D spherical or a 3D spherical model that holds a position at tmin, or -1 for a
-// position outside the outermost shell. The index is i_r + n_r * (i_theta + n_theta * i_phi).
+// position outside the outermost shell. The index is i_r + n_r * (i_costheta + n_costheta * i_phi).
 [[nodiscard]] auto get_spherical_model_cellindex_tmin(const Vec3d& pos_tmin) -> int {
   const double vel_r = vec_len(pos_tmin) / globals::tmin;
   if (vel_r > model_vel_r_edges.back()) {
     return -1;
   }
-  const auto [theta_pos, phi] = get_theta_phi_from_xyz(pos_tmin);
-  // the polar axis of a mirrored model ends at pi / 2, and a position with z < 0 takes its mirror cell
-  const double theta = (model_mirror_z && theta_pos > PI / 2) ? PI - theta_pos : theta_pos;
+  const auto [costheta_pos, phi] = get_costheta_phi_from_xyz(pos_tmin);
+  // The polar axis of a mirrored model starts at the plane z = 0, and a position with z < 0 takes its mirror cell.
+  // The centre is in the first polar cell.
+  const double costheta = (model_mirror_z && vel_r > 0.) ? std::abs(costheta_pos) : costheta_pos;
   // the last value of each list is the upper edge of the last cell
   const auto lower_edges = [](const std::vector<double>& edges) {
     return std::span<const double>{edges}.first(edges.size() - 1);
   };
   const int index_r = get_cellindex_from_lower_edges(lower_edges(model_vel_r_edges), vel_r);
-  const int index_theta = get_cellindex_from_lower_edges(lower_edges(model_theta_edges), theta);
+  const int index_costheta = get_cellindex_from_lower_edges(lower_edges(model_costheta_edges), costheta);
   const int index_phi = get_cellindex_from_lower_edges(lower_edges(model_phi_edges), phi);
-  return index_r + (ncoord_model[0] * (index_theta + (ncoord_model[1] * index_phi)));
+  return index_r + (ncoord_model[0] * (index_costheta + (ncoord_model[1] * index_phi)));
 }
 
 // Map a 2D spherical or a 3D spherical model onto the 3D Cartesian propagation grid. Each propagation cell takes the
@@ -863,19 +869,16 @@ void map_sphericalmodelto3dgrid() {
   }
 }
 
-// The mirror axis of a model with the key mirror_plane is the axis 1: z of a cylindrical model and theta of a
+// The mirror axis of a model with the key mirror_plane is the axis 1: z of a cylindrical model and cos(theta) of a
 // spherical model.
 constexpr int mirror_axis = 1;
 
 // Get the index on the mirror axis of the model grid for an index on that axis of the propagation grid. The model
-// grid of a mirrored model holds the half with z >= 0. A cylindrical model counts its z cells from the plane z = 0,
-// and a spherical model counts its polar cells from the +z axis.
+// grid of a mirrored model holds the half with z >= 0, and it counts its cells on the mirror axis from the plane
+// z = 0. The propagation grid counts them from the -z end.
 [[nodiscard]] auto get_model_mirror_axis_index(const int propindex) -> int {
   const int num_half = ncoord_model[mirror_axis];
-  if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
-    return (propindex >= num_half) ? propindex - num_half : num_half - 1 - propindex;
-  }
-  return (propindex < num_half) ? propindex : (2 * num_half) - 1 - propindex;
+  return (propindex >= num_half) ? propindex - num_half : num_half - 1 - propindex;
 }
 
 // Get the propagation cell with z >= 0 of a model cell of a mirrored model on its own grid type
@@ -883,7 +886,8 @@ constexpr int mirror_axis = 1;
   const int index0 = mgi % ncoord_model[0];
   const int index1 = (mgi / ncoord_model[0]) % ncoord_model[1];
   const int index2 = mgi / (ncoord_model[0] * ncoord_model[1]);
-  const int propindex1 = (get_modelgridtype() == GridType::CYLINDRICAL2D) ? ncoord_model[1] + index1 : index1;
+  // the cells with z >= 0 are the second half of the mirror axis of the propagation grid
+  const int propindex1 = ncoord_model[mirror_axis] + index1;
   return index0 + (ncoordgrid[0] * (propindex1 + (ncoordgrid[1] * index2)));
 }
 
@@ -1444,11 +1448,11 @@ auto get_inputcellvolume(const int mgi) -> double {
     case GridType::SPHERICAL3D: {
       // the radial index of a cell changes fastest. A 2D spherical model has one cell of phi from 0 to 2 pi.
       const int index_r = mgi % ncoord_model[0];
-      const int index_theta = (mgi / ncoord_model[0]) % ncoord_model[1];
+      const int index_costheta = (mgi / ncoord_model[0]) % ncoord_model[1];
       const int index_phi = mgi / (ncoord_model[0] * ncoord_model[1]);
       const double radialpart =
           (pow3(model_vel_r_edges[index_r + 1]) - pow3(model_vel_r_edges[index_r])) * pow3(globals::tmin) / 3.;
-      const double polarpart = std::cos(model_theta_edges[index_theta]) - std::cos(model_theta_edges[index_theta + 1]);
+      const double polarpart = model_costheta_edges[index_costheta + 1] - model_costheta_edges[index_costheta];
       // each cell of a mirrored model also fills its mirror cell
       const double mirrorfactor = model_mirror_z ? 2. : 1.;
       return mirrorfactor * radialpart * polarpart * (model_phi_edges[index_phi + 1] - model_phi_edges[index_phi]);
@@ -1823,14 +1827,16 @@ void setup_grid_spherical() {
   assert_always(has_spherical_angle_axes(get_modelgridtype()));
   assert_always(get_propgridtype() == get_modelgridtype());
 
-  // the propagation grid of a mirrored model has the polar cells of both halves
-  std::vector<double> prop_theta_edges = model_theta_edges;
+  // The propagation grid of a mirrored model has the polar cells of both halves. The edges of the half with z < 0
+  // are the exact opposites of the model edges, thus the two cells of a mirror pair have the same volume.
+  std::vector<double> prop_costheta_edges;
   if (model_mirror_z) {
-    for (auto i = std::ssize(model_theta_edges) - 2; i >= 0; i--) {
-      prop_theta_edges.push_back(PI - model_theta_edges[i]);
+    for (auto i = std::ssize(model_costheta_edges) - 1; i >= 1; i--) {
+      prop_costheta_edges.push_back(-model_costheta_edges[i]);
     }
   }
-  const std::array<std::span<const double>, 3> model_edges{model_vel_r_edges, prop_theta_edges, model_phi_edges};
+  prop_costheta_edges.insert(prop_costheta_edges.end(), model_costheta_edges.begin(), model_costheta_edges.end());
+  const std::array<std::span<const double>, 3> model_edges{model_vel_r_edges, prop_costheta_edges, model_phi_edges};
   for (int axis = 0; axis < 3; axis++) {
     ncoordgrid[axis] = static_cast<int>(std::ssize(model_edges[axis])) - 1;
     // the last edge of each axis is the upper bound of the grid
@@ -1839,7 +1845,7 @@ void setup_grid_spherical() {
   for (auto& radius_inner_tmin : coord_pos_min_tmin[0]) {
     radius_inner_tmin *= globals::tmin;
   }
-  coord_pos_max_of_grid_tmin = {globals::rmax, PI, 2 * PI};
+  coord_pos_max_of_grid_tmin = {globals::rmax, 1., 2 * PI};
 
   ngrid = static_cast<ptrdiff_t>(ncoordgrid[0]) * ncoordgrid[1] * ncoordgrid[2];
   assert_always(ngrid == get_npts_model() * (model_mirror_z ? 2 : 1));
@@ -1855,49 +1861,24 @@ void setup_grid_spherical() {
         first_shell_outer_radius, 1e4 * cellbound_tolerance(0.));
   }
 
-  // the cosine and the sine at an edge on an axis or in the equatorial plane are exact numbers
-  const auto set_cos_sin_of_edges = [](const std::span<const double> angles, std::vector<double>& cos_of_edges,
-                                       std::vector<double>& sin_of_edges) {
-    cos_of_edges.resize(angles.size());
-    sin_of_edges.resize(angles.size());
-    for (auto i = 0Z; i < std::ssize(angles); i++) {
-      cos_of_edges[i] = std::cos(angles[i]);
-      sin_of_edges[i] = std::sin(angles[i]);
-    }
-    cos_of_edges.front() = 1.;
-    sin_of_edges.front() = 0.;
-    sin_of_edges.back() = 0.;
-  };
-  set_cos_sin_of_edges(prop_theta_edges, theta_edge_cos, theta_edge_sin);
-  theta_edge_cos.back() = -1.;
-  for (auto i = 0Z; i < std::ssize(prop_theta_edges); i++) {
-    if (prop_theta_edges[i] == PI / 2) {
-      theta_edge_cos[i] = 0.;
-      theta_edge_sin[i] = 1.;
-    }
+  theta_edge_cos = prop_costheta_edges;
+  theta_edge_sin.resize(theta_edge_cos.size());
+  for (auto i = 0Z; i < std::ssize(theta_edge_cos); i++) {
+    // this form of sqrt(1 - cos^2) keeps its precision for an edge near the z axis
+    theta_edge_sin[i] = std::sqrt((1. - theta_edge_cos[i]) * (1. + theta_edge_cos[i]));
   }
-  if (model_mirror_z) {
-    // the edges of the mirror half have the exact opposite cosines, thus the two cells of a mirror pair have the
-    // same volume
-    const auto num_half_edges = std::ssize(model_theta_edges);
-    for (auto i = num_half_edges; i < std::ssize(prop_theta_edges); i++) {
-      const auto mirrorindex = (2 * (num_half_edges - 1)) - i;
-      theta_edge_cos[i] = -theta_edge_cos[mirrorindex];
-      theta_edge_sin[i] = theta_edge_sin[mirrorindex];
-    }
+
+  phi_edge_cos.resize(model_phi_edges.size());
+  phi_edge_sin.resize(model_phi_edges.size());
+  for (auto i = 0Z; i < std::ssize(model_phi_edges); i++) {
+    phi_edge_cos[i] = std::cos(model_phi_edges[i]);
+    phi_edge_sin[i] = std::sin(model_phi_edges[i]);
   }
-  // A polar edge very near the z axis has the cosine of the axis. The cell between two edges with one cosine has no
-  // volume, and its boundary has no cone.
-  for (auto i = 1Z; i < std::ssize(theta_edge_cos); i++) {
-    if (!(theta_edge_cos[i] < theta_edge_cos[i - 1])) {
-      fatal_crash(
-          "model.txt: the polar edges {:.17g} and {:.17g} [rad] have the same cosine, thus the polar cell between "
-          "them is too thin for the precision of the numbers",
-          prop_theta_edges[i - 1], prop_theta_edges[i]);
-    }
-  }
-  set_cos_sin_of_edges(model_phi_edges, phi_edge_cos, phi_edge_sin);
+  // the first and the last azimuthal edge are the half-plane phi = 0, which has exact numbers
+  phi_edge_cos.front() = 1.;
+  phi_edge_sin.front() = 0.;
   phi_edge_cos.back() = 1.;
+  phi_edge_sin.back() = 0.;
 }
 
 // Get the discrete index of the coordinate value (where pos must be position in grid coordinate system, not
@@ -2032,23 +2013,23 @@ template <BoundaryType boundarytype>
 // [cm] to the crossing, or -1 if no such crossing lies ahead, and the polar and the azimuthal cell index after it.
 struct AngularBoundaryCrossing {
   double distance;
-  int index_theta;
+  int index_costheta;
   int index_phi;
 };
 
 // Find the first crossing of a polar or an azimuthal cell boundary on the path from pos along the unit vector dir,
-// for a packet in the cell with the given polar and azimuthal index. The cones of constant theta and the half-planes
-// of constant phi do not move with the homologous expansion, thus the result does not depend on the time.
+// for a packet in the cell with the given polar and azimuthal index. The cones of constant cos(theta) and the
+// half-planes of constant phi do not move with the homologous expansion, thus the result does not depend on the time.
 [[nodiscard]] DEVICE_FUNC auto get_first_angular_boundary_crossing(const Vec3d& pos, const Vec3d& dir,
-                                                                   const int index_theta, const int index_phi)
+                                                                   const int index_costheta, const int index_phi)
     -> AngularBoundaryCrossing {
-  const int num_theta = ncoordgrid[1];
+  const int num_costheta = ncoordgrid[1];
   const int num_phi = ncoordgrid[2];
-  AngularBoundaryCrossing first_crossing{.distance = -1., .index_theta = index_theta, .index_phi = index_phi};
-  const auto take_crossing_if_nearer = [&first_crossing](const double distance, const int index_theta_after,
+  AngularBoundaryCrossing first_crossing{.distance = -1., .index_costheta = index_costheta, .index_phi = index_phi};
+  const auto take_crossing_if_nearer = [&first_crossing](const double distance, const int index_costheta_after,
                                                          const int index_phi_after) {
     if (distance >= 0. && (first_crossing.distance < 0. || distance < first_crossing.distance)) {
-      first_crossing = {.distance = distance, .index_theta = index_theta_after, .index_phi = index_phi_after};
+      first_crossing = {.distance = distance, .index_costheta = index_costheta_after, .index_phi = index_phi_after};
     }
   };
 
@@ -2061,15 +2042,15 @@ struct AngularBoundaryCrossing {
   const double path_through_axis_tolerance = cellbound_tolerance(0.);
 
   if (vec_len(angmom) <= path_through_axis_tolerance) {
-    // The path goes through the centre, e.g. the radial path of a new packet. Its theta and phi are constant on each
-    // side of the centre, and after the centre they are the angles of dir.
-    const auto [theta_of_dir, phi_of_dir] = get_theta_phi_from_xyz(dir);
-    const int index_theta_after = get_cellindex_from_lower_edges(coord_pos_min_tmin[1], theta_of_dir);
+    // The path goes through the centre, e.g. the radial path of a new packet. Its cos(theta) and phi are constant on
+    // each side of the centre, and after the centre they are the values of dir.
+    const auto [costheta_of_dir, phi_of_dir] = get_costheta_phi_from_xyz(dir);
+    const int index_costheta_after = get_cellindex_from_lower_edges(coord_pos_min_tmin[1], costheta_of_dir);
     const int index_phi_after = get_cellindex_from_lower_edges(coord_pos_min_tmin[2], phi_of_dir);
-    if (index_theta_after != index_theta || index_phi_after != index_phi) {
+    if (index_costheta_after != index_costheta || index_phi_after != index_phi) {
       // A packet after the centre that is not in the cell of its direction changes cell at once. It is within the
       // tolerance of each boundary between the two cells, because the path stays that near to the ray of dir.
-      take_crossing_if_nearer(std::max(-dot(pos, dir), 0.), index_theta_after, index_phi_after);
+      take_crossing_if_nearer(std::max(-dot(pos, dir), 0.), index_costheta_after, index_phi_after);
     }
     return first_crossing;
   }
@@ -2084,25 +2065,26 @@ struct AngularBoundaryCrossing {
   const double rcyl_rate = (rcyl > 0.) ? ((pos[0] * dir[0]) + (pos[1] * dir[1])) / rcyl : std::sqrt(dir_xy_squared);
 
   // The polar axis is not a cell boundary, thus the first cell has no lower boundary and the last cell has no upper
-  // boundary. theta can have an extremum on the path, thus both boundaries get a test for each direction.
-  const auto take_theta_boundary_if_nearer = [&]<BoundaryType boundarytype>(const int index_theta_after) {
+  // boundary. cos(theta) can have an extremum on the path, thus both boundaries get a test for each direction.
+  const auto take_costheta_boundary_if_nearer = [&]<BoundaryType boundarytype>(const int index_costheta_after) {
     const bool is_upper = (boundarytype == BoundaryType::UPPER);
-    const int edgeindex = is_upper ? index_theta + 1 : index_theta;
-    // r * sin(theta - theta_edge): the distance of the packet from the cone, positive on the side of larger theta
-    const double distance_from_cone = (theta_edge_cos[edgeindex] * rcyl) - (theta_edge_sin[edgeindex] * pos[2]);
+    const int edgeindex = is_upper ? index_costheta + 1 : index_costheta;
+    // r * sin(theta_edge - theta): the distance of the packet from the cone, positive on the side of larger
+    // cos(theta)
+    const double distance_from_cone = (theta_edge_sin[edgeindex] * pos[2]) - (theta_edge_cos[edgeindex] * rcyl);
     const double distance_from_cone_rate =
-        (theta_edge_cos[edgeindex] * rcyl_rate) - (theta_edge_sin[edgeindex] * dir[2]);
+        (theta_edge_sin[edgeindex] * dir[2]) - (theta_edge_cos[edgeindex] * rcyl_rate);
     const bool moves_through_boundary = is_upper ? (distance_from_cone_rate > 0.) : (distance_from_cone_rate < 0.);
     const double distance = (moves_through_boundary && std::abs(distance_from_cone) <= tolerance)
                                 ? 0.
-                                : theta_cone_intersection<boundarytype>(pos, dir, theta_edge_cos[edgeindex]);
-    take_crossing_if_nearer(distance, index_theta_after, index_phi);
+                                : costheta_cone_intersection<boundarytype>(pos, dir, theta_edge_cos[edgeindex]);
+    take_crossing_if_nearer(distance, index_costheta_after, index_phi);
   };
-  if (index_theta < num_theta - 1) {
-    take_theta_boundary_if_nearer.template operator()<BoundaryType::UPPER>(index_theta + 1);
+  if (index_costheta < num_costheta - 1) {
+    take_costheta_boundary_if_nearer.template operator()<BoundaryType::UPPER>(index_costheta + 1);
   }
-  if (index_theta > 0) {
-    take_theta_boundary_if_nearer.template operator()<BoundaryType::LOWER>(index_theta - 1);
+  if (index_costheta > 0) {
+    take_costheta_boundary_if_nearer.template operator()<BoundaryType::LOWER>(index_costheta - 1);
   }
 
   // A direction along the z axis keeps phi constant. A 2D spherical grid has one cell of phi.
@@ -2112,10 +2094,11 @@ struct AngularBoundaryCrossing {
 
   if (std::abs(angmom[2]) <= path_through_axis_tolerance * std::sqrt(dir_xy_squared)) {
     // The path goes through the z axis, where phi changes by pi. After the axis, phi is the angle of dir.
-    const int index_phi_after = get_cellindex_from_lower_edges(coord_pos_min_tmin[2], get_theta_phi_from_xyz(dir)[1]);
+    const int index_phi_after =
+        get_cellindex_from_lower_edges(coord_pos_min_tmin[2], get_costheta_phi_from_xyz(dir)[1]);
     if (index_phi_after != index_phi) {
       const double distance_to_axis = -((pos[0] * dir[0]) + (pos[1] * dir[1])) / dir_xy_squared;
-      take_crossing_if_nearer(std::max(distance_to_axis, 0.), index_theta, index_phi_after);
+      take_crossing_if_nearer(std::max(distance_to_axis, 0.), index_costheta, index_phi_after);
     }
     return first_crossing;
   }
@@ -2137,7 +2120,7 @@ struct AngularBoundaryCrossing {
         (moves_through_boundary && is_near_boundary_half && std::abs(distance_from_plane) <= tolerance)
             ? 0.
             : phi_halfplane_intersection<boundarytype>(pos, dir, cos_edge, sin_edge);
-    take_crossing_if_nearer(distance, index_theta, index_phi_after);
+    take_crossing_if_nearer(distance, index_costheta, index_phi_after);
   };
   take_phi_boundary_if_nearer.template operator()<BoundaryType::UPPER>((index_phi + 1) % num_phi);
   take_phi_boundary_if_nearer.template operator()<BoundaryType::LOWER>((index_phi + num_phi - 1) % num_phi);
@@ -2198,9 +2181,7 @@ struct AngularBoundaryCrossing {
     case GridType::SPHERICAL3D: {
       // the integral of r^2 sin(theta) over the cell. A 2D spherical grid has one phi cell from 0 to 2 pi.
       const double radialpart = (pow3(get_cellcoordmax(cellindex, 0)) - pow3(get_cellcoordmin(cellindex, 0))) / 3.;
-      const int index_theta = get_cellcoordindex(cellindex, 1);
-      const double polarpart = theta_edge_cos[index_theta] - theta_edge_cos[index_theta + 1];
-      return radialpart * polarpart * propcell_width_tmin(cellindex, 2);
+      return radialpart * propcell_width_tmin(cellindex, 1) * propcell_width_tmin(cellindex, 2);
     }
   }
   fatal_crash("Unknown propagation grid type {}", static_cast<int>(get_propgridtype()));
@@ -2248,11 +2229,10 @@ struct AngularBoundaryCrossing {
       const double r_outer = get_cellcoordmax(cellindex, 0);
       const double radius = std::min(std::cbrt(std::lerp(pow3(r_outer), pow3(r_inner), rng_uniform_pos(rngstate))),
                                      std::nextafter(r_outer, r_inner));
-      const int index_theta = get_cellcoordindex(cellindex, 1);
-      // the cosine decreases with theta, thus the upper polar edge has the smaller cosine
-      const double costheta =
-          std::max(std::lerp(theta_edge_cos[index_theta], theta_edge_cos[index_theta + 1], rng_uniform_pos(rngstate)),
-                   std::nextafter(theta_edge_cos[index_theta + 1], theta_edge_cos[index_theta]));
+      const double costheta_lower = get_cellcoordmin(cellindex, 1);
+      const double costheta_upper = get_cellcoordmax(cellindex, 1);
+      const double costheta = std::min(std::lerp(costheta_upper, costheta_lower, rng_uniform_pos(rngstate)),
+                                       std::nextafter(costheta_upper, costheta_lower));
       const double sintheta = std::sqrt((1. - costheta) * (1. + costheta));
       const double phi_lower = get_cellcoordmin(cellindex, 2);
       const double phi_upper = get_cellcoordmax(cellindex, 2);
@@ -2583,7 +2563,7 @@ namespace {
 void set_spherical_model_cell_counts(const GridType spherical_model_type) {
   ncoord_model = {
       static_cast<int>(std::ssize(model_vel_r_edges)) - 1,
-      static_cast<int>(std::ssize(model_theta_edges)) - 1,
+      static_cast<int>(std::ssize(model_costheta_edges)) - 1,
       (spherical_model_type == GridType::SPHERICAL3D) ? static_cast<int>(std::ssize(model_phi_edges)) - 1 : 0,
   };
   npts_model = static_cast<ptrdiff_t>(ncoord_model[0]) * ncoord_model[1] * std::max(1, ncoord_model[2]);
@@ -2592,18 +2572,16 @@ void set_spherical_model_cell_counts(const GridType spherical_model_type) {
   }
 }
 
-// the largest difference [rad] between the last polar edge and pi, between the last azimuthal edge and 2 pi, and
-// between a polar edge and pi / 2, that the reader of model.txt replaces by the exact angle
+// The largest difference [rad] between the last azimuthal edge and 2 pi that the reader of model.txt replaces by the
+// exact angle. Each cell of cos(theta) and each cell of phi must also be wider than this number. The first polar edge
+// away from the z axis is then more than 1.4e-4 rad from the axis. Near the axis, a cosine gives the position of its
+// cone to approximately 1.1e-16 / theta of the radius, and the position tolerance of a cell boundary is 1e-12 of the
+// radius.
 constexpr double model_angle_edge_tolerance = 1e-8;
 
 // the largest difference of a cylindrical or a Cartesian cell edge from its place on a grid with cells of equal width,
 // as a fraction of vmax. The model grid of these two types has cells of equal width only
 constexpr double model_uniform_edge_tolerance = 1e-9;
-
-// The smallest angle [rad] between a polar edge and the z axis. A polar edge is a cone with the cosine of the edge,
-// and near the axis this cosine moves the cone by approximately 1.1e-16 / theta of the radius. Below this angle, the
-// movement exceeds the position tolerance of a cell boundary, which is 1e-12 of the radius.
-constexpr double model_min_polar_edge_angle_from_axis = 1e-4;
 
 // Read the header of a model.txt of format version 2, after its first line "format_version 2". Each header line is
 // a key and its values, and the keys can come in any sequence. The key columns gives the column names and ends the
@@ -2661,18 +2639,22 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
     return numbers;
   };
 
-  // An edge list increases. A list of r, rcyl, theta, or phi starts at exactly zero. An angular list ends at
-  // last_edge_exact (pi or 2 pi)
+  // An edge list increases. A list of r, rcyl, or phi starts at exactly zero, and a list of cos(theta) starts at
+  // exactly -1, or at 0 with a mirror plane. An angular list ends at last_edge_exact: a list of cos(theta) ends at
+  // exactly 1, and a list of phi ends at 2 pi within last_edge_tolerance
   const auto require_valid_edges = [](std::vector<double>& edges, const std::string_view key,
-                                      const bool first_edge_is_zero, const std::optional<double> last_edge_exact) {
+                                      const std::optional<double> first_edge_exact,
+                                      const std::optional<double> last_edge_exact,
+                                      const double last_edge_tolerance = 0.) {
     if (edges.size() < 2) {
       fatal_crash("model.txt: the key {} must have two or more values", key);
     }
-    if (first_edge_is_zero && edges.front() != 0.) {
-      fatal_crash("model.txt: the first value of {} is {:g}, but it must be 0", key, edges.front());
+    if (first_edge_exact.has_value() && edges.front() != first_edge_exact.value()) {
+      fatal_crash("model.txt: the first value of {} is {:.17g}, but it must be {:g}", key, edges.front(),
+                  first_edge_exact.value());
     }
     if (last_edge_exact.has_value()) {
-      if (!(std::abs(edges.back() - last_edge_exact.value()) <= model_angle_edge_tolerance)) {
+      if (!(std::abs(edges.back() - last_edge_exact.value()) <= last_edge_tolerance)) {
         fatal_crash("model.txt: the last value of {} is {:.17g}, but it must be {:.17g}", key, edges.back(),
                     last_edge_exact.value());
       }
@@ -2687,8 +2669,8 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
       // angular cell that is thinner than this tolerance goes through the cell with no path length.
       if (last_edge_exact.has_value() && !(edges[i] - edges[i - 1] > model_angle_edge_tolerance)) {
         fatal_crash(
-            "model.txt: the values {:.17g} and {:.17g} of {} are the edges of a cell that is too thin. Each angular "
-            "cell must be wider than {:g} [rad]",
+            "model.txt: the values {:.17g} and {:.17g} of {} are the edges of a cell that is too thin. Each cell of "
+            "cos(theta) and of phi [rad] must be wider than {:g}",
             edges[i - 1], edges[i], key, model_angle_edge_tolerance);
       }
     }
@@ -2697,7 +2679,7 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
   // the cell edges of a velocity axis [cm/s]
   const auto get_velocity_edges = [&](const std::string_view key, const bool first_edge_is_zero) {
     auto edges = get_numbers_of_key(key);
-    require_valid_edges(edges, key, first_edge_is_zero, std::nullopt);
+    require_valid_edges(edges, key, first_edge_is_zero ? std::optional<double>{0.} : std::nullopt, std::nullopt);
     for (auto& edge : edges) {
       edge *= 1.e5;  // km/s to cm/s
     }
@@ -2737,9 +2719,9 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
       CoordinatesSpec{"cylindrical2d", GridType::CYLINDRICAL2D, {"vel_rcyl_edges_kmps", "vel_z_edges_kmps", ""}},
       CoordinatesSpec{
           "cartesian3d", GridType::CARTESIAN3D, {"vel_x_edges_kmps", "vel_y_edges_kmps", "vel_z_edges_kmps"}},
-      CoordinatesSpec{"spherical2d", GridType::SPHERICAL2D, {"vel_r_edges_kmps", "theta_edges_radians", ""}},
+      CoordinatesSpec{"spherical2d", GridType::SPHERICAL2D, {"vel_r_edges_kmps", "costheta_edges", ""}},
       CoordinatesSpec{
-          "spherical3d", GridType::SPHERICAL3D, {"vel_r_edges_kmps", "theta_edges_radians", "phi_edges_radians"}},
+          "spherical3d", GridType::SPHERICAL3D, {"vel_r_edges_kmps", "costheta_edges", "phi_edges_radians"}},
   };
   std::optional<GridType> named_model_type;
   std::vector<std::string_view> edge_keys_of_model;
@@ -2789,8 +2771,8 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
   }
 
   constexpr std::array<std::string_view, 7> edge_keys{
-      "vel_r_edges_kmps", "theta_edges_radians", "phi_edges_radians", "vel_rcyl_edges_kmps",
-      "vel_x_edges_kmps", "vel_y_edges_kmps",    "vel_z_edges_kmps",
+      "vel_r_edges_kmps", "costheta_edges",   "phi_edges_radians", "vel_rcyl_edges_kmps",
+      "vel_x_edges_kmps", "vel_y_edges_kmps", "vel_z_edges_kmps",
   };
   for (const auto& keyline : keylines) {
     const std::string_view key = keyline.first;
@@ -2856,32 +2838,13 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
       model_vel_r_edges = get_velocity_edges("vel_r_edges_kmps", true);
       globals::vmax = model_vel_r_edges.back();
 
-      model_theta_edges = get_numbers_of_key("theta_edges_radians");
-      for (auto& theta_edge : model_theta_edges) {
-        // the plane z = 0 is a cell boundary with an exact cosine of zero
-        if (std::abs(theta_edge - (PI / 2)) <= model_angle_edge_tolerance) {
-          theta_edge = PI / 2;
-        }
-      }
-      // this check comes after the change to pi / 2, because two edges that become equal there make a cell with no
-      // volume
-      // with a mirror plane, the polar axis of the file ends at the plane z = 0
-      require_valid_edges(model_theta_edges, "theta_edges_radians", true, model_mirror_z ? PI / 2 : PI);
-      for (const double theta_edge : model_theta_edges) {
-        if (theta_edge > 0. && theta_edge < PI &&
-            std::min(theta_edge, PI - theta_edge) < model_min_polar_edge_angle_from_axis) {
-          fatal_crash(
-              "model.txt: the polar edge {:.17g} [rad] is less than {:g} rad from the z axis. sn3d takes a polar edge "
-              "as "
-              "a cone with the cosine of the edge, and the cosine of such an edge does not give its angle to the "
-              "position tolerance of a cell boundary",
-              theta_edge, model_min_polar_edge_angle_from_axis);
-        }
-      }
+      // the polar axis of a model with a mirror plane starts at the plane z = 0
+      model_costheta_edges = get_numbers_of_key("costheta_edges");
+      require_valid_edges(model_costheta_edges, "costheta_edges", model_mirror_z ? 0. : -1., 1.);
 
       if (detected_model_type == GridType::SPHERICAL3D) {
         model_phi_edges = get_numbers_of_key("phi_edges_radians");
-        require_valid_edges(model_phi_edges, "phi_edges_radians", true, 2 * PI);
+        require_valid_edges(model_phi_edges, "phi_edges_radians", 0., 2 * PI, model_angle_edge_tolerance);
       } else {
         model_phi_edges = {0., 2 * PI};
       }
@@ -3624,12 +3587,12 @@ void init_grid() {
 auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totmassnuclide[decay::get_nucindex(z, a)]; }
 
 void setup_spherical_grid_from_edges(const GridType spherical_grid_type, const std::span<const double> vel_r_edges,
-                                     const std::span<const double> theta_edges,
+                                     const std::span<const double> costheta_edges,
                                      const std::span<const double> phi_edges) {
   assert_always(has_spherical_angle_axes(spherical_grid_type));
   model_type = spherical_grid_type;
   model_vel_r_edges.assign(vel_r_edges.begin(), vel_r_edges.end());
-  model_theta_edges.assign(theta_edges.begin(), theta_edges.end());
+  model_costheta_edges.assign(costheta_edges.begin(), costheta_edges.end());
   if (spherical_grid_type == GridType::SPHERICAL3D) {
     model_phi_edges.assign(phi_edges.begin(), phi_edges.end());
   } else {
@@ -3652,11 +3615,11 @@ void setup_spherical_grid_from_edges(const GridType spherical_grid_type, const s
       return -99;
     }
     const double trat = time / globals::tmin;
-    const auto [theta, phi] = get_theta_phi_from_xyz(pos);
+    const auto [costheta, phi] = get_costheta_phi_from_xyz(pos);
     const int index_r = get_cellindex_from_lower_edges(coord_pos_min_tmin[0], radius / trat);
-    const int index_theta = get_cellindex_from_lower_edges(coord_pos_min_tmin[1], theta);
+    const int index_costheta = get_cellindex_from_lower_edges(coord_pos_min_tmin[1], costheta);
     const int index_phi = get_cellindex_from_lower_edges(coord_pos_min_tmin[2], phi);
-    const int cellindex = index_r + (ncoordgrid[0] * (index_theta + (ncoordgrid[1] * index_phi)));
+    const int cellindex = index_r + (ncoordgrid[0] * (index_costheta + (ncoordgrid[1] * index_phi)));
 
     // the division by trat can round the radius to the other side of a shell boundary
     const double radius_inner = get_cellcoordmin(cellindex, 0) * trat;
@@ -3845,14 +3808,16 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     // the only coordinate is the radius from the origin
     take_radial_shell_boundary_if_nearer();
   } else if (has_spherical_angle_axes(prop_gridtype)) {
-    // coordinate 0 is the radius, coordinate 1 is the polar angle theta, and coordinate 2 is the azimuthal angle phi
+    // coordinate 0 is the radius, coordinate 1 is cos(theta) of the polar angle, and coordinate 2 is the azimuthal
+    // angle phi
     take_radial_shell_boundary_if_nearer();
 
     const auto angular_crossing = get_first_angular_boundary_crossing(pos, dir, cellcoordidx[1], cellcoordidx[2]);
     if ((angular_crossing.distance >= 0.) && (angular_crossing.distance < distance)) {
       distance = angular_crossing.distance;
-      next_cellindex = cellcoordidx[0] +
-                       (ncoordgrid[0] * (angular_crossing.index_theta + (ncoordgrid[1] * angular_crossing.index_phi)));
+      next_cellindex =
+          cellcoordidx[0] +
+          (ncoordgrid[0] * (angular_crossing.index_costheta + (ncoordgrid[1] * angular_crossing.index_phi)));
     }
   } else if (prop_gridtype == GridType::CYLINDRICAL2D) {
     // coordinate 0 is cylindrical radius (distance from z=0 in x-y plane), coord 1 is z
