@@ -334,7 +334,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
   bool extra_range_sweep_used = false;
   // an element fell back to LTE after the last Spencer-Fano solve
   bool lte_fallback_started_after_spencerfano = false;
-  // the last pass is NLTE_TE_NNE_MAXITER, or one more after a fallback in that pass (see the end of the loop)
+  // the last pass is NLTE_TE_NNE_MAXITER, or a later pass after a fallback in the last pass (see the end of the loop)
   int last_nlte_iter = NLTE_TE_NNE_MAXITER;
 
   // the ion populations and the NLTE solution ranges of the previous iteration, for the charge
@@ -644,9 +644,12 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
         }
       }
     }
-    if (nlte_iter == NLTE_TE_NNE_MAXITER && excitation_list_has_lte_fallback_element) {
-      // the packets of the next propagation read the excitation list, so one more pass removes the element from it
-      last_nlte_iter = NLTE_TE_NNE_MAXITER + 1;
+    // The packets of the next propagation read the excitation list, so one more pass removes the element from it. An
+    // element can change between the NLTE solution and the fallback in each pass, so the number of elements limits the
+    // extra passes.
+    if (nlte_iter == last_nlte_iter && excitation_list_has_lte_fallback_element &&
+        last_nlte_iter < NLTE_TE_NNE_MAXITER + get_nelements()) {
+      last_nlte_iter++;
       printlnlog(
           "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: an element fell back to LTE after the "
           "Spencer-Fano solve of the last pass. The solver makes one more pass.",

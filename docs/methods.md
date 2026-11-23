@@ -192,12 +192,13 @@ non-thermal electrons until T_e and the electron density change by less than a t
 [NLTE_TE_NNE_USE_ANDERSON_ACCEL](options.md#nlte_te_nne_use_anderson_accel) or
 [ENABLE_CHARGE_TRANSFER_REACTIONS](options.md#enable_charge_transfer_reactions), the iteration also tests the change of
 the populations of the significant ions. With the acceleration, it also needs an estimate of the remaining error below
-the tolerance. The iteration also stops
-after [NLTE_TE_NNE_MAXITER](options.md#nlte_te_nne_maxiter) + 1 passes. With
+the tolerance.
+
+The iteration also stops after [NLTE_TE_NNE_MAXITER](options.md#nlte_te_nne_maxiter) + 1 passes. With
 [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), the cell makes one more pass when an
 element falls back to {term}`LTE` in the last pass. That pass removes the element from the stored list of non-thermal
-excitations. The cell then keeps the last solution, and the log of the rank has a message with the text
-`failed to converge`.
+excitations. The cell makes at most one extra pass for each element. The cell then keeps the last solution, and the log
+of the rank has a message with the text `failed to converge`.
 
 From the timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep), the
 equations of the ion populations have a time term. The ion populations are then not in a statistical equilibrium,

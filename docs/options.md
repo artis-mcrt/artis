@@ -473,7 +473,7 @@ nltephotospheric
 
 `int NLTE_TE_NNE_MAXITER`
 
-The largest iteration number of the NLTE/Te/Spencer-Fano loop of a cell. The first pass is iteration 0, so a cell makes at most NLTE_TE_NNE_MAXITER + 1 passes. With NT_SPENCERFANO and [COLLISIONAL_HEATING_FROM_LEVELPOPS](#collisional_heating_from_levelpops), a cell makes one more pass when an element falls back to LTE in the last pass. That pass removes the element from the excitation list of the Spencer-Fano solution.
+The largest iteration number of the NLTE/Te/Spencer-Fano loop of a cell. The first pass is iteration 0, so a cell makes at most NLTE_TE_NNE_MAXITER + 1 passes. With NT_SPENCERFANO and [COLLISIONAL_HEATING_FROM_LEVELPOPS](#collisional_heating_from_levelpops), a cell makes one more pass when an element falls back to LTE in the last pass. That pass removes the element from the excitation list of the Spencer-Fano solution. The cell makes at most one extra pass for each element.
 
 **Every preset:** `30`
 
