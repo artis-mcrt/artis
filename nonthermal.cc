@@ -727,7 +727,8 @@ void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
 }
 
 // The exclusive row limit of the Auger electron source term of a shell: the rows [0, limit) lie
-// below the mean Auger electron energy and receive the source. The limit is 0 for a shell that
+// below the mean Auger electron energy and receive the source, with the weight of
+// get_auger_source_row_weight(). The limit is 0 for a shell that
 // injects nothing, and SFPTS when the Auger energy is above the top of the grid, because every row
 // is then below it. calculate_ionisation_channels_of_ion() subtracts the recycled Auger energy from the
 // ionisation fraction only when this limit is positive, so the two sites must use this same function.
@@ -743,6 +744,38 @@ void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
   }
   return (en_inject_ev > SF_EMAX) ? SFPTS : get_energyindex_ev_gteq(en_inject_ev);
 }
+
+// The weight of the Auger electron source term in the matrix row rowindex, for an electron that appears at the
+// energy en_inject_ev. The row energy is E = engrid(rowindex). The source term of a row is the integral of a delta
+// function at en_inject_ev over [E, SF_EMAX], which is 1 for each row below en_inject_ev. The sum of the rows times
+// DELTA_E is the energy that the solution degrades, as it is for the rectangle sums of calculate_frac_heating(). Full
+// weight for each row below en_inject_ev gives the electron the energy of the next grid point above en_inject_ev, so
+// the fractions of the deposition energy then sum to more than 1. The last row below en_inject_ev thus gets the
+// part of DELTA_E that en_inject_ev covers. The sum of the weights times DELTA_E is then en_inject_ev - SF_EMIN.
+[[nodiscard]] constexpr auto get_auger_source_row_weight(const double en_inject_ev, const int rowindex) -> double {
+  return std::clamp((en_inject_ev - engrid(rowindex)) / DELTA_E, 0., 1.);
+}
+
+// the source rows of an Auger electron hold its energy above SF_EMIN, for an energy between two grid points, on a
+// grid point, in the lowest grid interval, and above the top of the grid
+static_assert([] {
+  constexpr auto energy_of_source_rows_ev = [](const double en_inject_ev) {
+    double weight_sum = 0.;
+    for (int i = 0; i < SFPTS; i++) {
+      weight_sum += get_auger_source_row_weight(en_inject_ev, i);
+    }
+    return weight_sum * DELTA_E;
+  };
+  constexpr auto is_close = [](const double a, const double b) {
+    return (a - b) < 1e-9 * DELTA_E && (b - a) < 1e-9 * DELTA_E;
+  };
+  return is_close(energy_of_source_rows_ev(SF_EMIN + (9.3 * DELTA_E)), 9.3 * DELTA_E) &&
+         is_close(energy_of_source_rows_ev(engrid(7)), 7. * DELTA_E) &&
+         is_close(energy_of_source_rows_ev(SF_EMIN + (0.4 * DELTA_E)), 0.4 * DELTA_E) &&
+         is_close(energy_of_source_rows_ev(2. * SF_EMAX), SFPTS * DELTA_E) &&
+         get_auger_source_row_weight(SF_EMIN + (9.3 * DELTA_E), 8) == 1. &&
+         get_auger_source_row_weight(SF_EMIN + (9.3 * DELTA_E), 10) == 0.;
+}());
 
 // interpolate the y flux values to get the value at a given energy
 // y has units of particles / cm2 / s / eV
@@ -1983,7 +2016,9 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
       }
 
       // the Auger-electron source term of equation 8 of Shingles et al. (2020), which injects the shell's
-      // mean Auger electron energy as a delta function (or spread below it, see below).
+      // mean Auger electron energy as a delta function (or spread below it, see below). The last row below the
+      // energy of the electron has a partial weight (see get_auger_source_row_weight()), so the source rows hold
+      // the energy that calculate_ionisation_channels_of_ion() subtracts from the ionisation fraction.
       // shells with no Auger data have en_auger_ev == 0 (and prob_num_auger[0] == 1, which would make the
       // energy boost factor below infinite) and inject no Auger electrons
       const int augerstopindex = get_auger_rowstopindex(collionrow);
@@ -1998,14 +2033,13 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
           if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
             const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
             for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-              if (en < (en_auger_ev * en_boost / a)) {
-                sfmatrixuppertri[rowoffset + j] -= nnion * xs * collionrow.prob_num_auger[a] * a * DELTA_E;
-              }
+              sfmatrixuppertri[rowoffset + j] -= nnion * xs * collionrow.prob_num_auger[a] * a * DELTA_E *
+                                                 get_auger_source_row_weight(en_auger_ev * en_boost / a, i);
             }
           } else {
             // inject a single electron per ionisation carrying the mean total Auger energy
             assert_always(en < en_auger_ev);
-            sfmatrixuppertri[rowoffset + j] -= nnion * xs * DELTA_E;
+            sfmatrixuppertri[rowoffset + j] -= nnion * xs * DELTA_E * get_auger_source_row_weight(en_auger_ev, i);
           }
         }
       }
