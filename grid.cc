@@ -1757,18 +1757,19 @@ void setup_grid_cartesian_3d() {
 // The readers of model.txt check the radial edges as velocities. Two edges that differ in the last bits can give
 // radii at tmin that are equal or nearly equal. A packet at a boundary is in the position tolerance of that boundary
 // (see cellbound_tolerance). In a shell that is not wider than this tolerance, the packet is at once at the next
-// boundary, thus the shell gets no path length and no estimators. A grid of radial shells gets this check after the
-// multiplication by tmin.
-void require_increasing_shell_radii_at_tmin() {
-  for (int n_r = 0; n_r < ncoordgrid[0]; n_r++) {
-    const double radius_outer_tmin = (n_r < ncoordgrid[0] - 1) ? coord_pos_min_tmin[0][n_r + 1] : globals::rmax;
+// boundary, thus the shell gets no path length and no estimators. A model with such a shell is not correct on each
+// propagation grid, thus each spherical model gets this check after the read, also on the 3D Cartesian grid.
+void require_increasing_shell_radii_at_tmin(const std::span<const double> vel_r_edges) {
+  for (ptrdiff_t n_r = 0; n_r < std::ssize(vel_r_edges) - 1; n_r++) {
+    const double radius_inner_tmin = vel_r_edges[n_r] * globals::tmin;
+    const double radius_outer_tmin = vel_r_edges[n_r + 1] * globals::tmin;
     const double tolerance = cellbound_tolerance(radius_outer_tmin);
-    if (!(radius_outer_tmin - coord_pos_min_tmin[0][n_r] > tolerance)) {
+    if (!(radius_outer_tmin - radius_inner_tmin > tolerance)) {
       fatal_crash(
-          "model.txt: the radial shell {} of the grid has the inner radius {:.17g} [cm] and the outer radius {:.17g} "
+          "model.txt: the radial shell {} of the model has the inner radius {:.17g} [cm] and the outer radius {:.17g} "
           "[cm] at tmin. Each shell must be wider than the position tolerance of a cell boundary, which is {:g} [cm] "
           "at this radius",
-          n_r, coord_pos_min_tmin[0][n_r], radius_outer_tmin, tolerance);
+          n_r, radius_inner_tmin, radius_outer_tmin, tolerance);
     }
   }
 }
@@ -1788,7 +1789,6 @@ void setup_grid_spherical_1d() {
     coord_pos_min_tmin[0][cellindex] = v_inner * globals::tmin;
   }
   coord_pos_max_of_grid_tmin = {globals::rmax, globals::rmax, globals::rmax};
-  require_increasing_shell_radii_at_tmin();
 }
 
 void setup_grid_cylindrical_2d() {
@@ -1840,7 +1840,6 @@ void setup_grid_spherical() {
     radius_inner_tmin *= globals::tmin;
   }
   coord_pos_max_of_grid_tmin = {globals::rmax, PI, 2 * PI};
-  require_increasing_shell_radii_at_tmin();
 
   ngrid = static_cast<ptrdiff_t>(ncoordgrid[0]) * ncoordgrid[1] * ncoordgrid[2];
   assert_always(ngrid == get_npts_model() * (model_mirror_z ? 2 : 1));
@@ -3337,6 +3336,13 @@ void read_ejecta_model() {
   }
   printlnlog("tmin {:g} [s] = {:.2f} [d]", globals::tmin, globals::tmin / DAY);
   printlnlog("rmax {:g} [cm] (at t=tmin)", globals::rmax);
+  if (get_modelgridtype() == GridType::SPHERICAL1D) {
+    std::vector<double> vel_r_edges{0.};
+    vel_r_edges.insert(vel_r_edges.end(), vout_model.begin(), vout_model.end());
+    require_increasing_shell_radii_at_tmin(vel_r_edges);
+  } else if (has_spherical_angle_axes(get_modelgridtype())) {
+    require_increasing_shell_radii_at_tmin(model_vel_r_edges);
+  }
 
   calc_modelinit_totmassnuclides();
 
@@ -3642,6 +3648,7 @@ void setup_spherical_grid_from_edges(const GridType spherical_grid_type, const s
   set_spherical_model_cell_counts(spherical_grid_type);
   globals::vmax = model_vel_r_edges.back();
   globals::rmax = globals::vmax * globals::tmin;
+  require_increasing_shell_radii_at_tmin(model_vel_r_edges);
   setup_grid_spherical();
 }
 
