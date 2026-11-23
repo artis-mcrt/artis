@@ -3118,6 +3118,9 @@ void read_ejecta_model() {
           fatal_crash("model.txt cell {} has vel_r_max_kmps {:g}, but it must be larger than {:g} of the cell before",
                       mgi, vout_kmps, vout_model[mgi - 1] / 1.e5);
         }
+        if (mgi == 0 && !(vout_model[0] > 0.)) {
+          fatal_crash("model.txt cell 0 has vel_r_max_kmps {:g}, but it must be above 0", vout_kmps);
+        }
         rho_tmodel = (log_rho > -90) ? pow(10., log_rho) : 0.;
       } else if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
         // columns: cell number, r midpoint, z midpoint, density

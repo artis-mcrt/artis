@@ -21,6 +21,7 @@
 #include <limits>
 #include <numbers>
 #include <optional>
+#include <ostream>
 #include <print>
 #include <span>
 #include <sstream>
@@ -2181,6 +2182,33 @@ void test_zstd_output_stream() {
   std::filesystem::remove(zstfilename);
 }
 
+// A per-rank estimator file has an empty header. Its first flush must write a frame, so that the file is a valid
+// zstd file also when the job stops before the first text. A later empty flush adds no frame.
+void test_zstd_output_empty_first_flush() {
+  std::println("zstd output file with an empty first flush...");
+  const std::string filename = "unittests_zstd_empty_flush.txt";
+  const auto zstfilename = output_filepath(filename);
+  {
+    auto outfile = open_output_file(filename);
+    outfile << "" << std::flush;
+    const auto size_after_first_flush = std::filesystem::file_size(zstfilename);
+    check(size_after_first_flush > 0, "the first empty flush writes a frame");
+    {
+      auto infile = istream_required(filename);
+      const auto readback = std::string(std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>());
+      check(readback.empty(), "the file of the open writer reads back as an empty text");
+    }
+    outfile << std::flush;
+    check(std::filesystem::file_size(zstfilename) == size_after_first_flush, "a second empty flush adds no frame");
+    outfile << "timestep 0 modelgridindex 0\n" << std::flush;
+    outfile.close();
+  }
+  auto infile = istream_required(filename);
+  const auto readback = std::string(std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>());
+  check(readback == "timestep 0 modelgridindex 0\n", "the text after the empty frame reads back");
+  std::filesystem::remove(zstfilename);
+}
+
 // The combined estimator file starts with one empty zstd frame, and then holds one frame from each rank with
 // text, one frame after the other. The file must read back as the texts of the frames in their order.
 void test_zstd_frame_sequence() {
@@ -2257,6 +2285,7 @@ auto main() -> int {
 #ifdef USE_ZSTD
   test_zstd_input_stream();
   test_zstd_output_stream();
+  test_zstd_output_empty_first_flush();
   test_zstd_frame_sequence();
 #endif
 
