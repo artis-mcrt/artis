@@ -22,7 +22,7 @@ exist.
 | [Ye.txt](#yetxt) | with `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, if `model.txt` has no `Ye` column | the electron fraction of each cell |
 | [recombrates.txt](#recombratestxt) | no | the recombination rate coefficients for the calibration |
 | [autoion.txt](#autoiontxt) | no | the autoionisation rates |
-| [gamma_*.txt](#the-gamma-ray-line-files) | for seven nuclides | the gamma-ray lines of each nuclide, which come with the source in `artis/data` |
+| [gamma_*.txt](#the-gamma-ray-line-files) | for nine nuclides | the gamma-ray lines of each nuclide, which come with the source in `artis/data` |
 
 In the layouts of this page, `<name>` is a value that you supply. Where this page says that a file can have comment
 lines, `sn3d` ignores each blank line and each line whose first character that is not a space is `#`.
