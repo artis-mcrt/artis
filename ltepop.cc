@@ -299,7 +299,13 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
 
   constexpr double nne_min = 0.;
   const auto f_nne_min = f_nne(nne_min);
-  const auto f_nne_max = f_nne(nne_max);
+  auto f_nne_max = f_nne(nne_max);
+  // Nearly pure hydrogen with an atomic mass below MH can have more electrons than rho / MH. The bound is then the
+  // total electron density. The factor covers the rounding of the float nnetot.
+  if (f_nne_min * f_nne_max > 0.) {
+    nne_max = std::max(nne_max, static_cast<double>(grid::get_nnetot(nonemptymgi)) * (1. + 1e-6));
+    f_nne_max = f_nne(nne_max);
+  }
   assert_always(f_nne_min * f_nne_max <= 0.);  // there should be a root in the interval
 
   constexpr double fractional_accuracy = 1e-3;
