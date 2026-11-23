@@ -786,21 +786,24 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
       const double A_a = autoiontransition.autoion_A;
       const int target_ion = autoiontransition.upperionindex;
       const int target_level = autoiontransition.upperlevelindex;
-      assert_always(target_ion <= max_ion_used);  // the target ion must be included in the NLTE matrix
+      // An ion above the matrix has a negligible population. The autoionisation then goes to the ground level of the
+      // uppermost ion of the matrix, as the non-thermal ionisation does, and no capture comes from the ion.
+      const bool target_ion_in_matrix = target_ion <= max_ion_used;
 
       const double epsilon_trans = epsilon_level - epsilon(element, target_ion, target_level);
 
       double R = A_a * s_renorm[level];
 
       const int upper_index = level_index;
-      const int lower_index = get_nlte_vector_index(element, target_ion, target_level, first_ion_used);
+      const int lower_index = target_ion_in_matrix
+                                  ? get_nlte_vector_index(element, target_ion, target_level, first_ion_used)
+                                  : get_nlte_vector_index(element, max_ion_used, 0, first_ion_used);
 
       rate_matrices.autoion[(upper_index * nlte_dimension) + upper_index] -= R;
       rate_matrices.autoion[(lower_index * nlte_dimension) + upper_index] += R;
-      if ((R < 0)) {
-        printlnlog("  [warning] cell {} ts {}: negative autoionisation rate from Z={} ionstage {} level {} to level {}",
-                   nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, ion),
-                   level, target_level);
+
+      if (!target_ion_in_matrix) {
+        continue;
       }
 
       // capture (which is an excitation process, and the first part of di-electronic recomb).
@@ -811,11 +814,6 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
 
       rate_matrices.autoion[(lower_index * nlte_dimension) + lower_index] -= R;
       rate_matrices.autoion[(upper_index * nlte_dimension) + lower_index] += R;
-      if ((R < 0)) {
-        printlnlog("  [warning] cell {} ts {}: negative capture rate to Z={} ionstage {} level {} from level {}",
-                   nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, ion),
-                   level, target_level);
-      }
     }
   }
 }
@@ -1705,13 +1703,12 @@ auto get_nlte_solution_range(const int nonemptymgi, const int element) -> std::p
 // generator is stored transposed in the NLTE rate matrix layout, i.e. rate_matrix[(to * n) + from] with n =
 // vec_x.size(). The off-diagonal rates must be finite (the caller checks this) and non-negative. Only sums, products,
 // and divisions of the rates are used and the diagonal is never read, so there is no subtractive cancellation and
-// assembly rounding in the column sums cannot affect the result. Small negative autoionisation off-diagonals (warned
-// about during assembly) only weaken that guarantee locally; any resulting invalid populations are policed by the
-// caller. rate_matrix is overwritten. On success, returns std::nullopt and fills vec_x with the stationary distribution
-// normalised to a sum of one. On failure, returns the index of a state whose departure rate into the remaining
-// chain is zero (a reducible matrix) or not finite, and leaves vec_x untouched. An infinite rate that reaches an
-// inflow sum in the back-substitution gives a non-finite population, which the caller's validity check rejects.
-// Defined with external linkage (declared in nltepop.h) so that unittests.cc can exercise it.
+// assembly rounding in the column sums cannot affect the result. rate_matrix is overwritten. On success, returns
+// std::nullopt and fills vec_x with the stationary distribution normalised to a sum of one. On failure, returns the
+// index of a state whose departure rate into the remaining chain is zero (a reducible matrix) or not finite, and leaves
+// vec_x untouched. An infinite rate that reaches an inflow sum in the back-substitution gives a non-finite population,
+// which the caller's validity check rejects. Defined with external linkage (declared in nltepop.h) so that unittests.cc
+// can exercise it.
 auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double> vec_x)
     -> std::optional<std::ptrdiff_t> {
   const auto n = std::ssize(vec_x);

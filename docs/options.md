@@ -912,7 +912,9 @@ The frequency limits of the UVOIR spectra and of the blackbody sampling of a k-p
 
 `bool DIPOLE`
 
-Sample the electron scattering direction of a real packet from the dipole phase function of Thomson scattering, 1 + cos^2(theta) for unpolarised light. False gives isotropic scattering. The option does not change a line scattering or a k-packet emission. Both functions give a mean cos(theta) of zero, so the transport and the spectra and light curves averaged over all directions agree within the Monte Carlo noise. The option changes the polarisation, and the spectra for each viewing angle of an aspherical model with much electron scattering. A virtual packet and the new Stokes parameters of [POL_ON](#pol_on) use the dipole function, so [VPKT_ON](#vpkt_on) and [POL_ON](#pol_on) need this option.
+Sample the electron scattering direction of a real packet from the dipole phase function of Thomson scattering, 1 + cos^2(theta) for unpolarised light. The sampling uses the rejection method of Code & Whitney (1995), ApJ, 441, 400-407, doi:10.1086/175363. False gives isotropic scattering.
+
+The option does not change a line scattering or a k-packet emission. Both functions give a mean cos(theta) of zero, so the transport and the spectra and light curves averaged over all directions agree within the Monte Carlo noise. The option changes the polarisation, and the spectra for each viewing angle of an aspherical model with much electron scattering. A virtual packet and the new Stokes parameters of [POL_ON](#pol_on) use the dipole function, so [VPKT_ON](#vpkt_on) and [POL_ON](#pol_on) need this option.
 
 **Preset values:** classic `true`, kilonova_lte `false`, nltenebular `false`, nltephotospheric `false`
 
@@ -948,7 +950,9 @@ Select how sn3d samples the frequency of a free-bound photon. The distribution i
 
 `std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY`
 
-Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted with the true absorption opacity. That opacity is the sum of P times the binned opacity, the free-free opacity, and the bound-free opacity of each continuum times 1 - nu_edge / nu. The code therefore computes the binned opacities also without [RPKT_USE_BINNED_OPACITIES](#rpkt_use_binned_opacities). A thick cell samples a plain Planck function. The thermal balance has no term for this line thermalisation, so a nonzero P needs LTE timesteps only: sn3d stops if num_lte_timesteps of input.txt is below the number of timesteps. No value keeps the macroatom.
+Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted with the true absorption opacity. That opacity is the sum of P times the binned opacity, the free-free opacity, and the bound-free opacity of each continuum times 1 - nu_edge / nu. The code therefore computes the binned opacities also without [RPKT_USE_BINNED_OPACITIES](#rpkt_use_binned_opacities). A thick cell samples a plain Planck function.
+
+The thermal balance has no term for this line thermalisation, so a nonzero P needs LTE timesteps only: sn3d stops if num_lte_timesteps of input.txt is below the number of timesteps. No value keeps the macroatom.
 
 **Every preset:** no value
 

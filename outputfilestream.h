@@ -93,8 +93,9 @@ class ZstdOutputBuffer final : public std::streambuf {
     return traits_type::not_eof(ch);
   }
 
+  // the first flush also writes an empty frame, so that a file stays valid when the job stops before its first text
   auto sync() -> int override {
-    if (!end_frame(false)) {
+    if (!end_frame(!wrote_frame)) {
       return -1;
     }
     compressedfile.flush();
