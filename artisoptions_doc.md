@@ -421,12 +421,14 @@ constexpr double NU_MIN_R;
 constexpr double NU_MAX_R;
 
 // Sample the electron scattering direction of a real packet from the dipole phase function of Thomson scattering,
-// 1 + cos^2(theta) for unpolarised light. False gives isotropic scattering. The option does not change a line
-// scattering or a k-packet emission. Both functions give a mean cos(theta) of zero, so the transport and the
-// spectra and light curves averaged over all directions agree within the Monte Carlo noise. The option changes the
-// polarisation, and the spectra for each viewing angle of an aspherical model with much electron scattering. A
-// virtual packet and the new Stokes parameters of POL_ON use the dipole function, so VPKT_ON and POL_ON need this
-// option.
+// 1 + cos^2(theta) for unpolarised light. The sampling uses the rejection method of Code & Whitney (1995), ApJ,
+// 441, 400-407, doi:10.1086/175363. False gives isotropic scattering.
+//
+// The option does not change a line scattering or a k-packet emission. Both functions give a mean cos(theta) of zero,
+// so the transport and the spectra and light curves averaged over all directions agree within the Monte Carlo noise.
+// The option changes the polarisation, and the spectra for each viewing angle of an aspherical model with much electron
+// scattering. A virtual packet and the new Stokes parameters of POL_ON use the dipole function, so VPKT_ON and POL_ON
+// need this option.
 constexpr bool DIPOLE;
 
 // Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out. This needs DIPOLE.
@@ -453,6 +455,7 @@ constexpr bool FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL;
 // with the true absorption opacity. That opacity is the sum of P times the binned opacity, the free-free
 // opacity, and the bound-free opacity of each continuum times 1 - nu_edge / nu. The code therefore computes the
 // binned opacities also without RPKT_USE_BINNED_OPACITIES. A thick cell samples a plain Planck function.
+//
 // The thermal balance has no term for this line thermalisation, so a nonzero P needs LTE timesteps only: sn3d
 // stops if num_lte_timesteps of input.txt is below the number of timesteps.
 // No value keeps the macroatom.

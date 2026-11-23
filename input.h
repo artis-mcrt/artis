@@ -262,7 +262,7 @@ template <bool ALLOW_NAN = false, typename T>
       // a syntactically valid number outside the range of T. Stream extraction stored zero for underflow (even
       // below double range, such as 1e-400) but rejected overflow, so use strtod, which returns zero for
       // underflow, to distinguish the two (the token views a null-terminated getline buffer, and strtod stops
-      // at the whitespace or end of line that terminates the token)
+      // at the whitespace, '#', or end of line that terminates the token)
       char* parseend{};
       const double dvalue = std::strtod(tokenfirst, &parseend);
       if (parseend == tokenlast && std::fabs(dvalue) <= std::numeric_limits<T>::max()) {
