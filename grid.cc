@@ -2730,16 +2730,24 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
   };
 
   const auto coordinates = get_text_of_key("coordinates");
-  using CoordinatesName = std::pair<std::string_view, GridType>;
-  constexpr std::array<CoordinatesName, 5> coordinates_names{
-      CoordinatesName{"spherical1d", GridType::SPHERICAL1D}, CoordinatesName{"cylindrical2d", GridType::CYLINDRICAL2D},
-      CoordinatesName{"cartesian3d", GridType::CARTESIAN3D}, CoordinatesName{"spherical2d", GridType::SPHERICAL2D},
-      CoordinatesName{"spherical3d", GridType::SPHERICAL3D},
+  // the name of each coordinate type, with the keys of its edge lists in the sequence of its axes
+  using CoordinatesSpec = std::tuple<std::string_view, GridType, std::array<std::string_view, 3>>;
+  constexpr std::array<CoordinatesSpec, 5> coordinates_specs{
+      CoordinatesSpec{"spherical1d", GridType::SPHERICAL1D, {"vel_r_edges_kmps", "", ""}},
+      CoordinatesSpec{"cylindrical2d", GridType::CYLINDRICAL2D, {"vel_rcyl_edges_kmps", "vel_z_edges_kmps", ""}},
+      CoordinatesSpec{
+          "cartesian3d", GridType::CARTESIAN3D, {"vel_x_edges_kmps", "vel_y_edges_kmps", "vel_z_edges_kmps"}},
+      CoordinatesSpec{"spherical2d", GridType::SPHERICAL2D, {"vel_r_edges_kmps", "theta_edges_radians", ""}},
+      CoordinatesSpec{
+          "spherical3d", GridType::SPHERICAL3D, {"vel_r_edges_kmps", "theta_edges_radians", "phi_edges_radians"}},
   };
   std::optional<GridType> named_model_type;
-  for (const auto& [name, gridtype] : coordinates_names) {
+  std::vector<std::string_view> edge_keys_of_model;
+  for (const auto& [name, gridtype, edge_keys_of_type] : coordinates_specs) {
     if (name == coordinates) {
       named_model_type = gridtype;
+      std::ranges::copy_if(edge_keys_of_type, std::back_inserter(edge_keys_of_model),
+                           [](const std::string_view key) { return !key.empty(); });
     }
   }
   if (!named_model_type.has_value()) {
@@ -2784,24 +2792,6 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
       "vel_r_edges_kmps", "theta_edges_radians", "phi_edges_radians", "vel_rcyl_edges_kmps",
       "vel_x_edges_kmps", "vel_y_edges_kmps",    "vel_z_edges_kmps",
   };
-  std::vector<std::string_view> edge_keys_of_model;
-  switch (detected_model_type) {
-    case GridType::SPHERICAL1D:
-      edge_keys_of_model = {"vel_r_edges_kmps"};
-      break;
-    case GridType::CYLINDRICAL2D:
-      edge_keys_of_model = {"vel_rcyl_edges_kmps", "vel_z_edges_kmps"};
-      break;
-    case GridType::CARTESIAN3D:
-      edge_keys_of_model = {"vel_x_edges_kmps", "vel_y_edges_kmps", "vel_z_edges_kmps"};
-      break;
-    case GridType::SPHERICAL2D:
-      edge_keys_of_model = {"vel_r_edges_kmps", "theta_edges_radians"};
-      break;
-    case GridType::SPHERICAL3D:
-      edge_keys_of_model = {"vel_r_edges_kmps", "theta_edges_radians", "phi_edges_radians"};
-      break;
-  }
   for (const auto& keyline : keylines) {
     const std::string_view key = keyline.first;
     if (key == "coordinates" || key == "cells_per_axis" || key == "mirror_plane" || key == "t_model_init_days" ||

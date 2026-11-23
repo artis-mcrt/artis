@@ -283,11 +283,38 @@ case $step in
             fi
             echo "formatcheck $1 and $2: the same masses"
         }
-        modelmirror="$checkmodels/cylindrical2d_mirror_model.txt"
+        # The mirrored model holds the cells with z >= 0 of the 2D model, which has 5 x 10 cells. The key
+        # cell_line_count is optional, thus the models from awk have no such key
+        modelmirror="$checkroot/cylindrical2d_mirror.txt"
+        awk '/^cells_per_axis/ { print "cells_per_axis 5 5"; print "mirror_plane z=0"; next }
+            /^vel_z_edges_kmps/ { printf "vel_z_edges_kmps"; for (i = NF - 5; i <= NF; i++) printf " %s", $i; print ""; next }
+            /^cell_line_count/ || (/^[0-9]/ && $1 < 25) { next }
+            /^[0-9]/ { $1 -= 25 }
+            { print }' "$model2d" > "$modelmirror"
+        # the twin has each cell of the mirrored model also at its mirror position, in the sequence of the cell ids
+        modeltwin="$checkroot/cylindrical2d_mirrortwin.txt"
+        {
+            awk '/^cells_per_axis/ { print "cells_per_axis 5 10"; next }
+                /^mirror_plane/ || /^[0-9]/ { next }
+                /^vel_z_edges_kmps/ { printf "vel_z_edges_kmps"; for (i = NF; i > 2; i--) printf " -%s", $i; for (i = 2; i <= NF; i++) printf " %s", $i; print ""; next }
+                { print }' "$modelmirror"
+            awk '/^[0-9]/ { id = $1; $1 = (id % 5) + 5 * (4 - int(id / 5)); print; $1 = (id % 5) + 5 * (5 + int(id / 5)); print }' \
+                "$modelmirror" | sort -n
+        } > "$modeltwin"
         run_formatcheck_case cylindrical2d_mirror "$modelmirror" complete "model.txt has mirror symmetry in the plane z = 0"
-        run_formatcheck_case cylindrical2d_mirrortwin "$checkmodels/cylindrical2d_mirrortwin_model.txt" complete
+        run_formatcheck_case cylindrical2d_mirrortwin "$modeltwin" complete
         require_same_masses cylindrical2d_mirror cylindrical2d_mirrortwin
-        run_formatcheck_case spherical2d_mirror "$checkmodels/spherical2d_mirror_model.txt" complete
+        # each of the 5 shells of the 1D model in two polar cells from the z axis to the plane z = 0
+        modelspherical2dmirror="$checkroot/spherical2d_mirror.txt"
+        {
+            awk '/^coordinates/ { print "coordinates spherical2d"; next }
+                /^cells_per_axis/ { print "cells_per_axis 5 2"; print "mirror_plane z=0"; next }
+                /^vel_r_edges_kmps/ { print; print "theta_edges_radians 0.0 0.7853981633974483 1.5707963267948966"; next }
+                /^cell_line_count/ { next }
+                { print }' "$model1d"
+            awk '/^[0-9]/ { $1 += 5; print }' "$model1d"
+        } > "$modelspherical2dmirror"
+        run_formatcheck_case spherical2d_mirror "$modelspherical2dmirror" complete
         require_same_masses spherical2d_mirror spherical1d_nofegroup
         sed 's/^mirror_plane z=0$/mirror_plane z=1/' "$modelmirror" > "$checkroot/mirrorvalue.txt"
         run_formatcheck_case mirrorvalue "$checkroot/mirrorvalue.txt" "the key mirror_plane must have the value z=0"
@@ -295,7 +322,7 @@ case $step in
         awk '/^cell_line_count/ { print "mirror_plane z=0" } { print }' "$model1d" > "$checkroot/mirror1d.txt"
         run_formatcheck_case mirror1d "$checkroot/mirror1d.txt" "a spherical1d model takes no key mirror_plane"
         # a polar edge near the z axis
-        sed 's/^theta_edges_radians 0.0 /theta_edges_radians 0.0 5e-05 /' "$checkmodels/spherical2d_mirror_model.txt" \
+        sed 's/^theta_edges_radians 0.0 /theta_edges_radians 0.0 5e-05 /' "$modelspherical2dmirror" \
             > "$checkroot/polaredgeataxis.txt"
         run_formatcheck_case polaredgeataxis "$checkroot/polaredgeataxis.txt" "is less than 0.0001 rad from the z axis"
         # the z axis of a mirrored cylindrical model starts at the plane z = 0
