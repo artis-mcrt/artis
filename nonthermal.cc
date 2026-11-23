@@ -154,10 +154,14 @@ constexpr auto sourcevec(const int index) {
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
 // This is arbitrary and the solution will be scaled to match the actual energy deposition rate density.
+// rhsvec[i] includes the source of point i itself, so the matrix carries each source electron of point s through the
+// rows 0 to s. The sum of these rows times DELTA_E, plus the energy SF_EMIN that the electron takes below the grid,
+// is engrid(s) + DELTA_E. With engrid(s) alone, each fraction of the deposition energy is too large by
+// DELTA_E / E_init_ev, which is 2.5e-4 on a grid of 4096 points to 16 keV.
 constexpr double E_init_ev = [] {
   double integral = 0.;
   for (int s = 0; s < SFPTS; s++) {
-    integral += sourcevec(s) * DELTA_E * engrid(s);
+    integral += sourcevec(s) * DELTA_E * (engrid(s) + DELTA_E);
   }
   return integral;
 }();
@@ -167,8 +171,8 @@ constexpr double E_init_ev = [] {
 // row energy E = engrid(i)).
 // rhsvec[i] discretises it as a left-endpoint rectangle sum that includes point i itself. This matches
 // the convention used for the integrals over y(E') on the left-hand side, where
-// sfmatrix_apply_excitation() and sfmatrix_add_ionisation() both sum from j = i with weight DELTA_E, and
-// the convention used for E_init_ev above.
+// sfmatrix_apply_excitation() and sfmatrix_add_ionisation() both sum from j = i with weight DELTA_E. E_init_ev above
+// counts the energy that these rows give to each source electron.
 constexpr auto rhsvec = [] {
   std::array<double, SFPTS> _rhsvec{};
   double source_integral_to_SF_EMAX = 0.;
