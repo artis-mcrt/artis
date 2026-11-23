@@ -299,7 +299,13 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
 
   constexpr double nne_min = 0.;
   const auto f_nne_min = f_nne(nne_min);
-  const auto f_nne_max = f_nne(nne_max);
+  auto f_nne_max = f_nne(nne_max);
+  // Nearly pure hydrogen with an atomic mass below MH can have more electrons than rho / MH. The bound is then the
+  // total electron density. The factor covers the rounding of the float nnetot.
+  if (f_nne_min * f_nne_max > 0.) {
+    nne_max = std::max(nne_max, static_cast<double>(grid::get_nnetot(nonemptymgi)) * (1. + 1e-6));
+    f_nne_max = f_nne(nne_max);
+  }
   assert_always(f_nne_min * f_nne_max <= 0.);  // there should be a root in the interval
 
   constexpr double fractional_accuracy = 1e-3;
@@ -492,10 +498,8 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
 auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
   const bool force_saha = globals::lte_iteration || grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK;
 
-  // upper bound on nne: one free electron per hydrogen mass, or all electrons free. The second bound is larger only
-  // for nearly pure hydrogen with an atomic mass below MH. The factor covers the rounding of the float nnetot.
-  const double nne_max =
-      std::max(grid::get_rho(nonemptymgi) / MH, static_cast<double>(grid::get_nnetot(nonemptymgi)) * (1. + 1e-6));
+  // upper bound on nne: at most one free electron per nucleon, i.e. fully ionised hydrogen
+  const double nne_max = grid::get_rho(nonemptymgi) / MH;
 
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {

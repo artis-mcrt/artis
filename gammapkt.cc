@@ -515,9 +515,9 @@ void compton_scatter(Packet& pkt) {
 
     const double sigma_cmf_iron_group = 25.7e-24 * pow(hnu_over_100kev, -3.0);
 
-    // Now need to multiply by the particle number density. The composition is approximated as a mix of just
-    // two species: an iron-group one with mass fraction ffegrp, taken as Z = 28 and A = 56, and silicon (Z = 14,
-    // A = 28) for the remainder.
+    // Now need to multiply by the particle number density. The code approximates the composition as a mix of two
+    // species: an iron-group species (Z = 28, A = 56) with mass fraction ffegrp, and silicon (Z = 14, A = 28) for
+    // the remainder.
 
     const double chi_cmf_si = sigma_cmf_si * (rho / AMU / 28);
 
@@ -612,8 +612,8 @@ static_assert((get_sigma_pair_prod_factor(1.499999 * MEV / H) - get_sigma_pair_p
 
   const double sigma_cmf_iron_group = sigma_factor * 784.e-27;
 
-  // multiply by the particle number density. As in get_chi_photo_electric_cmf(), the composition is
-  // approximated as an iron-group species (Z = 28, A = 56) with mass fraction ffegrp plus silicon (Z = 14, A = 28).
+  // multiply by the particle number density. As in get_chi_photo_electric_cmf(), the code approximates the
+  // composition as an iron-group species (Z = 28, A = 56) with mass fraction ffegrp plus silicon (Z = 14, A = 28).
 
   const double chi_cmf_si = sigma_cmf_si * (rho / AMU / 28);
 

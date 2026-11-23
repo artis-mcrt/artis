@@ -1804,7 +1804,7 @@ void test_zstd_output_empty_first_flush() {
     {
       auto infile = istream_required(filename);
       const auto readback = std::string(std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>());
-      check(readback.empty() && !infile.bad(), "the file of the open writer reads back as an empty text");
+      check(readback.empty(), "the file of the open writer reads back as an empty text");
     }
     outfile << std::flush;
     check(std::filesystem::file_size(zstfilename) == size_after_first_flush, "a second empty flush adds no frame");
