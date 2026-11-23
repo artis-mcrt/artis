@@ -489,8 +489,12 @@ void read_auger_data() {
           // update the statistical-weight averaged values
           collionrow.en_auger_ev = static_cast<float>((oldweight * collionrow.en_auger_ev) + (newweight * en_auger_ev));
 
+          // Some rows of the table have probabilities that sum to between 0.9999 and 1.0005. The matrix gives each
+          // ionisation one unit of probability, so the code divides by the sum. The ionisation fraction of the shell
+          // otherwise has a factor that the matrix does not have.
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-            collionrow.prob_num_auger[a] = (oldweight * collionrow.prob_num_auger[a]) + (newweight * prob_num_auger[a]);
+            collionrow.prob_num_auger[a] =
+                (oldweight * collionrow.prob_num_auger[a]) + (newweight * (prob_num_auger[a] / prob_sum));
           }
           const double prob_sum_final = std::ranges::fold_left(collionrow.prob_num_auger, 0.0, std::plus<>());
           assert_always(fabs(prob_sum_final - 1.0) < 0.001);
@@ -700,13 +704,6 @@ void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
   check_auger_probabilities(nonemptymgi);
 }
 
-// Find the highest energy point <= energy_ev
-[[nodiscard]] constexpr auto get_energyindex_ev_lteq(const double energy_ev) -> int {
-  const auto index = static_cast<int>(get_linearbinindex(energy_ev, SF_EMIN, DELTA_E));
-
-  return std::clamp(index, 0, SFPTS - 1);
-}
-
 // Find the lowest energy point >= energy_ev
 [[nodiscard]] constexpr auto get_energyindex_ev_gteq(const double energy_ev) -> int {
   const int index = std::ceil((energy_ev - SF_EMIN) / DELTA_E);
@@ -733,19 +730,26 @@ void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
   return (en_inject_ev > SF_EMAX) ? SFPTS : get_energyindex_ev_gteq(en_inject_ev);
 }
 
-// The weight of the Auger electron source term in the matrix row rowindex, for an electron that appears at the
+// The row weight of the Auger electron source term in the matrix row rowindex, for an electron that appears at the
 // energy en_inject_ev. The row energy is E = engrid(rowindex). The source term of a row is the integral of a delta
 // function at en_inject_ev over [E, SF_EMAX], which is 1 for each row below en_inject_ev. The sum of the rows times
-// DELTA_E is the energy that the solution degrades, as it is for the rectangle sums of calculate_frac_heating(). Full
-// weight for each row below en_inject_ev gives the electron the energy of the next grid point above en_inject_ev, so
-// the fractions of the deposition energy then sum to more than 1. The last row below en_inject_ev thus gets the
-// part of DELTA_E that en_inject_ev covers. The sum of the weights times DELTA_E is then en_inject_ev - SF_EMIN.
+// DELTA_E is the energy that the solution degrades, as it is for the rectangle sums of calculate_frac_heating().
+//
+// A row weight of 1 for each row below en_inject_ev gives the electron the energy of the next grid point above
+// en_inject_ev. The fractions of the deposition energy then sum to more than 1. The last row below en_inject_ev
+// thus gets the part of DELTA_E that en_inject_ev covers. The sum of the row weights times DELTA_E is then
+// en_inject_ev - SF_EMIN, for an en_inject_ev at or below SF_EMAX + DELTA_E. Above that energy, each row has the row
+// weight 1.
 [[nodiscard]] constexpr auto get_auger_source_row_weight(const double en_inject_ev, const int rowindex) -> double {
   return std::clamp((en_inject_ev - engrid(rowindex)) / DELTA_E, 0., 1.);
 }
 
-// The source rows of an Auger electron hold its energy above SF_EMIN. The check has four energies: between two grid
-// points, on a grid point, in the lowest grid interval, and above the top of the grid.
+// The source rows of an Auger electron hold its energy above SF_EMIN, up to the top of the grid. The check has four
+// energies:
+// - between two grid points;
+// - on a grid point;
+// - in the lowest grid interval;
+// - above the top of the grid, where each row has the row weight 1.
 static_assert([] {
   constexpr auto energy_of_source_rows_ev = [](const double en_inject_ev) {
     double weight_sum = 0.;
@@ -906,9 +910,10 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
 // three terms below are the loss-function integral over the solved grid, the boundary term SF_EMIN * y(SF_EMIN) *
 // L(SF_EMIN) for the electrons flowing through the bottom of the grid, and the energy of the electrons that first
 // appear below SF_EMIN (N(E) of equation 11 of Kozma & Fransson 1992).
-// The third term comes from en_below_emin_ev_per_y, which the matrix setup fills from the same weights as the matrix
-// (see sfmatrix_add_ionisation() and add_excitation_energy_below_emin()). The three terms and the ionisation and
-// excitation fractions then sum to the deposition energy to rounding, on each energy grid.
+// The third term comes from en_below_emin_ev_per_y, which the matrix setup fills from the same row weights as the
+// matrix (see sfmatrix_add_ionisation() and add_excitation_energy_below_emin()). The three terms and the ionisation
+// and excitation fractions of the ions in the matrix then sum to the deposition energy to rounding, on each energy
+// grid.
 auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPTS>& yfunc,
                             std::span<const double> en_below_emin_ev_per_y) -> float {
   // frac_heating multiplied by E_init, which will be divided out at the end
@@ -1192,7 +1197,8 @@ auto nt_ionisation_ratecoeff_sf(const int nonemptymgi, const int element, const 
 // evaluate: the excitation threshold must not be above the top of the energy grid (the cross section
 // would be zero at every grid point, and the clamped start index would wrongly give a nonzero cross
 // section at the top grid point), and there must be either a tabulated collision strength or, for
-// permitted lines, an oscillator strength for the van Regemorter approximation
+// permitted lines, an oscillator strength for the approximation of van Regemorter (1962), ApJ, 136, 906-915,
+// doi:10.1086/147445
 auto has_xs_excitation(const int alltransindex, const double epsilon_trans_ev) -> bool {
   return (epsilon_trans_ev <= SF_EMAX) &&
          (globals::alltrans.coll_str[alltransindex] >= 0 || !globals::alltrans.forbidden[alltransindex]);
@@ -1224,10 +1230,10 @@ void xs_excitation_for_each(const int alltransindex, const double statweight_low
   const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
   // permitted E1 electric dipole transitions
 
-  // Mewe (1972), A&A, 20, 215-221, bibcode 1972A&A....20..215M, equation 5 fits g(U) = A + B/U + C/U^2 +
-  // D*ln(U); keep the A and D ln(U) terms, with the D = sqrt(3)/(2 pi) that Mewe recommends for all optically
-  // allowed transitions rounded to 0.28 (Shingles et al. 2020, section 2.5, where this pair is described as the
-  // formula's "first two terms")
+  // Mewe (1972), A&A, 20, 215-221, bibcode 1972A&A....20..215M, equation 5 fits g(U) = A + B/U + C/U^2 + D*ln(U).
+  // The code keeps the A and D ln(U) terms. Mewe recommends D = sqrt(3)/(2 pi) for all optically allowed
+  // transitions, and the code rounds it to 0.28. Section 2.5 of Shingles et al. (2020) calls this pair the
+  // "first two terms" of the formula.
   constexpr double mewe_A = 0.15;
   constexpr double mewe_D = 0.28;
 
@@ -1618,8 +1624,10 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   nt_solution[nonemptymgi].frac_heating =
       static_cast<float>(std::clamp(1. - frac_excitation_of_stored_list - frac_ionisation_total, 0., 1.));
 
-  // the matrix and the analysis use the same weights, so frac_sum differs from 1 only by the rounding of the float
-  // frac_heating. A larger difference shows that a term counts some energy two times or not at all.
+  // The matrix and the analysis use the same row weights. frac_sum thus differs from 1 by the rounding of the float
+  // frac_heating (about 3e-8), and by the fractions of the ions below MIN_ION_OVER_NNTOT. The analysis above counts
+  // these ions, but the matrix does not include them, and each one adds at most about 1e-8. A larger difference
+  // shows that a term counts some energy two times or not at all.
   if (!ftol<1e-5>(frac_sum, 1.0)) {
     printlnlog("[warning] frac_sum is {:g}, but should be 1.0", frac_sum);
     printlnlog(
@@ -1731,18 +1739,21 @@ void sfmatrix_apply_excitation(std::span<double> sfmatrixuppertri,
   }
 }
 
-// Add the energy below SF_EMIN of the electrons that excite a transition, for each unit of y at each grid energy.
-// An electron at engrid(j) has the weight 1 in each matrix row from 0 to j. With the boundary term of
+// This function adds the energy below SF_EMIN of the electrons that excite a transition, for each unit of y at each
+// grid energy. An electron at engrid(j) has the row weight 1 in each row from 0 to j. With the boundary term of
 // calculate_frac_heating(), these rows hold the energy (j + 1) * DELTA_E + SF_EMIN (see E_init_ev). An excitation with
 // the band width nbinsfull takes all of these rows if j < nbinsfull, so the energy that stays after the transition
-// energy is below SF_EMIN. For j == nbinsfull, the excitation takes the endpoint weight of row 0, and the boundary
-// term loses SF_EMIN times that weight. band.interior[j] holds the rate factors times DELTA_E, and band.endpoint[j]
-// holds them times the endpoint weight in eV.
+// energy is below SF_EMIN.
+//
+// For j == nbinsfull, the excitation takes the endpoint row weight in row 0, and the boundary term loses SF_EMIN times
+// that row weight. The endpoint row weight of a transition is (epsilon_trans_ev - nbinsfull * DELTA_E) / DELTA_E.
+// The rate factors are the level population, the cross section, and DELTA_E. band.interior[j] holds the sum of the
+// rate factors, and band.endpoint[j] holds the sum of the rate factors times the endpoint row weight.
 void add_excitation_energy_below_emin(std::span<double> en_below_emin_ev_per_y,
                                       const std::map<int, ExcitationBand>& excitationbands) {
   for (const auto& [nbinsfull, band] : excitationbands) {
     for (int j = 0; j < std::min(nbinsfull, SFPTS); j++) {
-      // the transition energy times the rate factors is nbinsfull * interior[j] + endpoint[j]
+      // the transition energy times the rate factors is DELTA_E * (nbinsfull * interior[j] + endpoint[j])
       en_below_emin_ev_per_y[j] +=
           ((((j + 1 - nbinsfull) * DELTA_E) + SF_EMIN) * band.interior[j]) - (DELTA_E * band.endpoint[j]);
     }
@@ -1764,12 +1775,20 @@ void add_excitation_energy_below_emin(std::span<double> en_below_emin_ev_per_y,
 // into the shell's total cross section times the secondary-electron energy distribution of their equation 4 makes the
 // inner epsilon integrals analytic (the atan expressions below); the outer E' integrals are discretised with quadrature
 // weight DELTA_E per column.
-// Each matrix term is the mean of the inner integral over one grid interval of its lower limit: [E' - E, E' - E +
-// DELTA_E] for the first integral and [E + I, E + I + DELTA_E] for the second. This is the weight of the excitation
-// bands and of the Auger source rows. The sum of the rows of a column times DELTA_E is then the exact mean energy that
-// the primary loses, less the mean energy of the secondary above SF_EMIN. The value of the inner integral at the row
-// energy alone gives an energy error that changes with the position of I between two grid points.
-// The function also adds the energy below SF_EMIN of the electrons of each ionisation to en_below_emin_ev_per_y.
+//
+// Each matrix term is a probability: an ionisation by a primary at E' moves an electron across an energy. The primary
+// falls below that energy (first integral), or the secondary starts above it (second integral). The code does not
+// take this probability at the row energy E alone. It takes the mean over one grid interval: the energies from
+// E - DELTA_E to E for the primary, and from E to E + DELTA_E for the secondary. In terms of epsilon, the lower limit
+// of the inner integral covers one grid interval. The interval is [E' - E, E' - E + DELTA_E] for the first integral.
+// It is [E + I, E + I + DELTA_E] for the second integral.
+//
+// An electron that ends between two grid points thus counts in the row between them in proportion to its position.
+// The excitation bands and the Auger source rows use the same row weight. The sum of the rows of a column times
+// DELTA_E is then the exact mean energy that the primary loses, less the mean energy of the secondary above SF_EMIN.
+// The probability at the row energy alone gives an energy error that changes with the position of I between two grid
+// points. The function also adds the energy below SF_EMIN of the electrons of each ionisation to
+// en_below_emin_ev_per_y.
 void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, std::span<double> en_below_emin_ev_per_y, const int Z,
                              const int ionstage, const double nnion) {
   std::array<double, SFPTS> vec_xs_ionisation{};
@@ -1783,22 +1802,28 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, std::span<doubl
 
       const int xsstartindex = get_xs_ionisation_vector(vec_xs_ionisation, collionrow);
       assert_always(xsstartindex >= 0);
-      // The clamps on the epsilon limits below keep the energy transfer physical. The max on the lower limit is
-      // load-bearing rather than defensive: without it the integration range goes unphysical and the heating,
-      // ionisation, and excitation fractions stop summing to 100%. (The min on the upper limit is inert given
-      // this loop's start index, which already guarantees endash >= ionpot_ev, but it states the bound.) The
-      // same clamping is done in the CMFGEN source code; see Li, Hillier & Dessart (2012) for the code's description.
+      // The max in atan_integral below sets the antiderivative to zero for an epsilon below I, which keeps the energy
+      // transfer physical. This max is necessary and not defensive: the lower limit (j - i) * DELTA_E of the first
+      // integral is below I in the first columns of each row. Without the max, those terms include an energy transfer
+      // below I, and the heating, ionisation, and excitation fractions do not sum to 100%. The min in epsilon_upper[j]
+      // has no effect, because the column loop starts at xsstartindex, where endash >= ionpot_ev, but it states the
+      // bound. The CMFGEN source code has the same limits; see Li, Hillier & Dessart (2012) for the description of
+      // that code.
+      //
       // The inner epsilon integral of P(E', epsilon - I) has the closed form
       //   [atan((epsilon - I) / J)] / atan((E' - I) / (2 J))
       // evaluated between the epsilon limits: J * atan((epsilon - I) / J) is the antiderivative of the
       // Lorentzian 1 / (1 + (epsilon - I)^2 / J^2) in equation 4 of Kozma & Fransson (1992), and the J cancels against
-      // equation 4's normalisation factor 1 / (J * atan((E' - I) / (2 J))).
+      // equation 4's normalisation factor 1 / (J * atan((E' - I) / (2 J))). Equation 4 adapts the shape that Opal,
+      // Peterson & Beaty (1971) fitted to their measurements. It has the exponent 2 in place of their 2.1, so that the
+      // integral has a closed form.
       // int_eps_upper[j] is the antiderivative at epsilon = (E' + I) / 2, the upper limit shared by both
       // integrals of Kozma & Fransson (1992) (the faster post-collision electron is by convention the primary, so the
       // energy transfer cannot exceed (E' + I) / 2). prefactors[j] collects the column-only factors: ion density, shell
       // cross section sigma_ic(E'), the dE' quadrature weight, and equation 4's normalisation.
-      // atan_integral(epsilon) is the integral of atan((x - I) / J) over x from I to epsilon. It gives the mean of
-      // the antiderivative over a grid interval with no quadrature. It is zero for epsilon <= I.
+      //
+      // atan_integral(epsilon) is the integral of atan(max(x - I, 0) / J) over x from 0 to epsilon. It gives the mean
+      // of the antiderivative over a grid interval with no quadrature. It is zero for epsilon <= I.
       const auto atan_integral = [ionpot_ev, J](const double epsilon) {
         const double u = std::max(epsilon - ionpot_ev, 0.) / J;
         return J * ((u * std::atan(u)) - (0.5 * std::log1p(u * u)));
@@ -1813,26 +1838,32 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, std::span<doubl
         int_eps_upper[j] = std::atan((epsilon_upper[j] - ionpot_ev) / J);
         atan_integral_upper[j] = atan_integral(epsilon_upper[j]);
         // if the ionisation threshold falls exactly on a grid point, the normalisation is atan(0) = 0
-        // there; the epsilon integration range is then empty (epsilon_upper == I == epsilon_lower), so the
+        // there; the epsilon integration range is then empty (epsilon_upper == I, and the antiderivative is zero up
+        // to I), so the
         // contribution is zero, and the guard avoids a 0/0 or x/0 that would put NaN into the matrix
         const double atan_norm = std::atan((endash - ionpot_ev) / 2 / J);
         prefactors[j] = (atan_norm > 0.) ? vec_xs_ionisation[j] * nnion * DELTA_E / atan_norm : 0.;
       }
 
-      // The mean over [lower, lower + DELTA_E] of the antiderivative for column j, where the upper limit of epsilon
-      // is inside the interval. Above the upper limit, the antiderivative keeps its value at the limit.
-      // atan_integral_lower is atan_integral(lower).
-      const auto atan_mean_across_upper = [&](const int j, const double lower, const double atan_integral_lower) {
-        return (atan_integral_upper[j] + (int_eps_upper[j] * (lower + DELTA_E - epsilon_upper[j])) -
+      // The mean over [epsilon_lower, epsilon_lower + DELTA_E] of the antiderivative for column j, where the upper
+      // limit of epsilon is inside the interval. Above the upper limit, the antiderivative keeps its value at the
+      // limit. atan_integral_lower is atan_integral(epsilon_lower).
+      const auto atan_mean_across_upper = [&](const int j, const double epsilon_lower,
+                                              const double atan_integral_lower) {
+        return (atan_integral_upper[j] + (int_eps_upper[j] * (epsilon_lower + DELTA_E - epsilon_upper[j])) -
                 atan_integral_lower) /
                DELTA_E;
       };
 
-      // The lower limit of the first integral of Kozma & Fransson (1992) is epsilon = E' - E, the smallest energy loss
-      // that drops a primary at E' below the row energy E (the antiderivative is zero below I, the smallest physical
-      // energy transfer). The limit depends on the matrix indices (i, j) only through the energy difference
-      // endash - en = (j - i) * DELTA_E on this uniform grid, so the integral of the antiderivative and its mean over
-      // one grid interval can be tabulated by the column offset (j - i).
+      // The lower limit of the first integral of Kozma & Fransson (1992) is epsilon = E' - E. This is the smallest
+      // energy loss that drops a primary at E' below the row energy E. The limit depends on the matrix indices (i, j)
+      // only through the energy difference endash - en = (j - i) * DELTA_E on this uniform grid. The code thus
+      // tabulates the integral of the antiderivative, and its mean over one grid interval, by the column offset
+      // (j - i).
+      //
+      // Each mean is a difference of two atan_integral values that can be thousands of times larger than the
+      // difference. The rounding error of a matrix term is thus about 2e-12 of prefactors[j], and a term that is zero
+      // in exact arithmetic can have the wrong sign at that size. No code depends on the sign of these terms.
       std::vector<double> atan_integral_offset(SFPTS + 1, 0.);
       for (int d = 0; d <= SFPTS; d++) {
         atan_integral_offset[d] = atan_integral(d * DELTA_E);
@@ -1842,15 +1873,18 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, std::span<doubl
         atan_mean_offset[d] = (atan_integral_offset[d + 1] - atan_integral_offset[d]) / DELTA_E;
       }
 
-      // Both integrals run over endash >= en (skipping the zero-cross-section points below xsstartindex),
-      // but their supports are exactly complementary: for endash >= ionpot_ev, the first integral is
-      // nonzero iff its lower limit endash - en is below epsilon_upper, which reduces
-      // to (j - 2i) * DELTA_E < SF_EMIN + ionpot_ev, and the second is nonzero iff
-      // epsilon_upper > en + ionpot_ev, which reduces to (j - 2i) * DELTA_E > SF_EMIN + ionpot_ev (at
-      // equality both epsilon ranges are empty). The column loop splits at that crossover.
-      // The interval of the lower limit is all below epsilon_upper iff (j - 2i + 2) * DELTA_E <= SF_EMIN + ionpot_ev
-      // for the first integral, and iff (j - 2i - 2) * DELTA_E >= SF_EMIN + ionpot_ev for the second. The columns
-      // between these limits have epsilon_upper inside the interval.
+      // Both integrals run over endash >= en. They skip the points below xsstartindex, where the cross section is
+      // zero. The supports of the two integrals are exactly complementary. For endash >= ionpot_ev:
+      // - the first integral is nonzero if and only if its lower limit endash - en is below epsilon_upper, which
+      //   reduces to (j - 2i) * DELTA_E < SF_EMIN + ionpot_ev;
+      // - the second integral is nonzero if and only if epsilon_upper > en + ionpot_ev, which reduces to
+      //   (j - 2i) * DELTA_E > SF_EMIN + ionpot_ev.
+      // At equality, both epsilon ranges are empty. The column loop splits at that crossover.
+      //
+      // For the first integral, the interval of the lower limit is all below epsilon_upper if and only if
+      // (j - 2i + 2) * DELTA_E <= SF_EMIN + ionpot_ev. For the second integral, this is true if and only if
+      // (j - 2i - 2) * DELTA_E >= SF_EMIN + ionpot_ev. The columns between these limits have epsilon_upper inside the
+      // interval.
       const int kcross = static_cast<int>(std::ceil((SF_EMIN + ionpot_ev) / DELTA_E));
       const int kfloor = static_cast<int>(std::floor((SF_EMIN + ionpot_ev) / DELTA_E));
 
@@ -1889,54 +1923,67 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, std::span<doubl
 
       // The energy below SF_EMIN of the two electrons of an ionisation in column j, from the matrix terms above.
       // The rows hold the energy of the secondary above SF_EMIN, and the boundary term of calculate_frac_heating()
-      // adds SF_EMIN times the term of the secondary in row 0. The rest of the energy of the secondary is
-      // min(E_secondary, SF_EMIN) less SF_EMIN times that term.
-      // The primary has the weight 1 in each row from 0 to j before the ionisation (see E_init_ev), and it keeps
-      // the weight 1 less its loss term in each row. For a primary that ends at E_f below SF_EMIN, the rows and the
-      // boundary term keep (1 - w) * (DELTA_E + SF_EMIN), where w is its loss term in row 0. The rest of
-      // E_f + DELTA_E is also energy below SF_EMIN.
+      // adds SF_EMIN times the row weight of the secondary in row 0. The rest of the energy of the secondary is
+      // min(E_secondary, SF_EMIN) less SF_EMIN times that row weight.
+      //
+      // The primary has the row weight 1 in each row from 0 to j before the ionisation (see E_init_ev). In each row,
+      // the ionisation takes the row weight of the loss from it. For a primary that ends at E_f below SF_EMIN, the
+      // rows and the boundary term keep (1 - w) * (DELTA_E + SF_EMIN). Here w is the row weight of the loss in row 0.
+      // The rest of E_f + DELTA_E is also energy below SF_EMIN. Only a primary with E' below I + 2 * SF_EMIN can end
+      // below SF_EMIN, so the terms of the primary are zero for most columns.
+      const double epsilon_secondary_at_emin = SF_EMIN + ionpot_ev;
+      const double atan_integral_secondary_at_emin = atan_integral(epsilon_secondary_at_emin);
+      const double atan_integral_secondary_at_emin_plus_delta_e = atan_integral(epsilon_secondary_at_emin + DELTA_E);
       for (int j = xsstartindex; j < SFPTS; j++) {
         const double atan_norm = int_eps_upper[j];
         if (prefactors[j] <= 0. || atan_norm <= 0.) {
           continue;
         }
-        // the integral of the antiderivative, which keeps its value above the upper limit of epsilon
-        const auto atan_integral_capped = [&](const double epsilon) {
-          return atan_integral(std::min(epsilon, epsilon_upper[j])) +
-                 (int_eps_upper[j] * std::max(epsilon - epsilon_upper[j], 0.));
+        // The integral of the antiderivative up to epsilon for column j. Above the upper limit of epsilon, the
+        // antiderivative keeps its value at the limit. atan_integral_epsilon is atan_integral(epsilon).
+        const auto cap_atan_integral = [&](const double epsilon, const double atan_integral_epsilon) {
+          return (epsilon <= epsilon_upper[j])
+                     ? atan_integral_epsilon
+                     : atan_integral_upper[j] + (int_eps_upper[j] * (epsilon - epsilon_upper[j]));
         };
-        const double secondary_lower = SF_EMIN + ionpot_ev;
-        const double en_secondary_below_emin = SF_EMIN - (atan_integral_capped(secondary_lower) / atan_norm);
-        const double secondary_term_row0 =
-            1. - ((atan_integral_capped(secondary_lower + DELTA_E) - atan_integral_capped(secondary_lower)) /
-                  (DELTA_E * atan_norm));
+        const double atan_integral_capped_secondary_at_emin =
+            cap_atan_integral(epsilon_secondary_at_emin, atan_integral_secondary_at_emin);
+        const double en_secondary_below_emin = SF_EMIN - (atan_integral_capped_secondary_at_emin / atan_norm);
+        const double secondary_weight_row0 =
+            1. -
+            ((cap_atan_integral(epsilon_secondary_at_emin + DELTA_E, atan_integral_secondary_at_emin_plus_delta_e) -
+              atan_integral_capped_secondary_at_emin) /
+             (DELTA_E * atan_norm));
 
-        // the energy loss that moves the primary to SF_EMIN
-        const double primary_lower = j * DELTA_E;
-        const double primary_loss_term_row0 =
-            1. - ((atan_integral_capped(primary_lower + DELTA_E) - atan_integral_capped(primary_lower)) /
-                  (DELTA_E * atan_norm));
+        const double epsilon_primary_at_emin = j * DELTA_E;
+        const bool primary_can_end_below_emin = epsilon_primary_at_emin < epsilon_upper[j];
+        const double primary_loss_weight_row0 =
+            primary_can_end_below_emin
+                ? 1. - ((cap_atan_integral(epsilon_primary_at_emin + DELTA_E, atan_integral_offset[j + 1]) -
+                         atan_integral_offset[j]) /
+                        (DELTA_E * atan_norm))
+                : 0.;
         // the mean of SF_EMIN - E_f over the primaries that end below SF_EMIN
-        const double primary_loss_end = engrid(j) + DELTA_E;
         const double en_primary_depth_below_emin =
-            (primary_loss_end - primary_lower) -
-            ((atan_integral_capped(primary_loss_end) - atan_integral_capped(primary_lower)) / atan_norm);
+            primary_can_end_below_emin ? (epsilon_upper[j] - epsilon_primary_at_emin) -
+                                             ((atan_integral_upper[j] - atan_integral_offset[j]) / atan_norm)
+                                       : 0.;
 
-        const double en_below_emin_ev = en_secondary_below_emin - (SF_EMIN * secondary_term_row0) +
-                                        ((DELTA_E + SF_EMIN) * primary_loss_term_row0) - en_primary_depth_below_emin;
+        const double en_below_emin_ev = en_secondary_below_emin - (SF_EMIN * secondary_weight_row0) +
+                                        ((DELTA_E + SF_EMIN) * primary_loss_weight_row0) - en_primary_depth_below_emin;
         en_below_emin_ev_per_y[j] += prefactors[j] * atan_norm * en_below_emin_ev;
       }
 
       // the Auger-electron source term of equation 8 of Shingles et al. (2020), which injects the shell's
       // mean Auger electron energy as a delta function (or spread below it, see below). The last row below the
-      // energy of the electron has a partial weight (see get_auger_source_row_weight()), so the source rows hold
-      // the energy that calculate_ionisation_channels_of_ion() subtracts from the ionisation fraction.
+      // energy of the electron has a partial row weight (see get_auger_source_row_weight()). The source rows thus
+      // hold the part above SF_EMIN of the energy that calculate_ionisation_channels_of_ion() subtracts from the
+      // ionisation fraction.
       // shells with no Auger data have en_auger_ev == 0 (and prob_num_auger[0] == 1, which would make the
       // energy boost factor below infinite) and inject no Auger electrons
       const int augerstopindex = get_auger_rowstopindex(collionrow);
       for (int i = 0; i < augerstopindex; i++) {
         const int rowoffset = uppertriangular(i, 0);
-        const double en = engrid(i);
         const int jstart = std::max(i, xsstartindex);
         for (int j = jstart; j < SFPTS; j++) {
           // the Auger electron source is an integral of the ionisation rate over E', so each column
@@ -1949,15 +1996,15 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, std::span<doubl
                                                  get_auger_source_row_weight(en_auger_ev * en_boost / a, i);
             }
           } else {
-            // inject a single electron per ionisation carrying the mean total Auger energy
-            assert_always(en < en_auger_ev);
+            // inject a single electron per ionisation carrying the mean total Auger energy. The row weight is zero
+            // for a row at or above that energy, so a row limit that rounding puts one row too high adds nothing.
             sfmatrixuppertri[rowoffset + j] -= nnion * xs * DELTA_E * get_auger_source_row_weight(en_auger_ev, i);
           }
         }
       }
 
       // The source rows of an Auger electron hold its energy above SF_EMIN, and the boundary term of
-      // calculate_frac_heating() adds SF_EMIN times its weight in row 0. The rest of its energy is below SF_EMIN.
+      // calculate_frac_heating() adds SF_EMIN times its row weight in row 0. The rest of its energy is below SF_EMIN.
       if (augerstopindex > 0) {
         const auto get_en_below_emin_ev = [](const double en_inject_ev) {
           return std::min(en_inject_ev, SF_EMIN) - (SF_EMIN * get_auger_source_row_weight(en_inject_ev, 0));
