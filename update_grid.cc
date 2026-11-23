@@ -612,8 +612,13 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
       // without the charge transfer option, the ion population test always passes. A change of the
       // solved ion range is not a test of its own: a change that moves no population is a change of
       // the equations only, and the ion population test measures every change that it makes.
+      // The excitation list of the Spencer-Fano solution of this pass can hold an element that fell back to LTE in
+      // the element solves of this pass. The next pass then solves the Spencer-Fano equation again.
+      const bool excitation_list_has_lte_fallback_element = NT_SCHEME == NonThermalScheme::NT_SPENCERFANO &&
+                                                            COLLISIONAL_HEATING_FROM_LEVELPOPS &&
+                                                            lte_fallback_started_after_spencerfano;
       if (fracdiff_nne <= NLTE_TE_NNE_RELTOL && fracdiff_T_e <= NLTE_TE_NNE_RELTOL &&
-          fracdiff_nnion <= NLTE_TE_NNE_RELTOL) {
+          fracdiff_nnion <= NLTE_TE_NNE_RELTOL && !excitation_list_has_lte_fallback_element) {
         // The charge transfer rates of an element read the solved ion range of a partner element
         // from the last solve of that partner (see sum_reaction_list() in chargetransfer.cc). The
         // elements solve in order, so a pass that changed the range of a later element gave the
@@ -643,16 +648,6 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
           "Keeping solution from last iteration",
           mgi, nts, nlte_iter);
     }
-  }
-
-  // The excitation list of the last Spencer-Fano solution can hold an element that fell back to LTE after that
-  // solve, and the packets of the next propagation read this list. The new solution changes the heating fractions,
-  // so T_e and the heating and cooling rates follow it, as at the start of a pass.
-  if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO && COLLISIONAL_HEATING_FROM_LEVELPOPS &&
-      lte_fallback_started_after_spencerfano) {
-    nonthermal::solve_spencerfano(nonemptymgi, nts, NLTE_TE_NNE_MAXITER + 1);
-    call_T_e_finder(nonemptymgi, globals::timesteps[nts].mid, heatingcoolingrates, bfheatingcoeffs);
-    calculate_ion_heating_cooling_rates(nonemptymgi, heatingcoolingrates, bfheatingcoeffs);
   }
 
   if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
