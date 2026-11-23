@@ -449,14 +449,18 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   printlnlog("");
 }
 
-void nltepop_reset_element(const int nonemptymgi, const int element) {
+// The NLTE level populations of an element hold this marker after a fallback to LTE, and -1 before the first solve.
+// Both markers are negative, so each reader of a population treats them alike.
+constexpr double nltepop_marker_after_lte_fallback = -2.;
+
+void nltepop_reset_element(const int nonemptymgi, const int element, const double marker = -1.) {
   grid::set_elements_lowermost_ion(nonemptymgi, element, 0);
   for (int ion = 0; ion < get_nions(element); ion++) {
     const auto nlte_start = get_allnltelevelsindexstart(element, ion);
     const auto nlte_count = get_nlevels_excited_nlte(element, ion) + (ion_has_superlevel(element, ion) ? 1 : 0);
     std::ranges::fill(nltepops_allcells.span().subspan(
                           (static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) + nlte_start, nlte_count),
-                      -1.);
+                      marker);
   }
 }
 
@@ -782,21 +786,24 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
       const double A_a = autoiontransition.autoion_A;
       const int target_ion = autoiontransition.upperionindex;
       const int target_level = autoiontransition.upperlevelindex;
-      assert_always(target_ion <= max_ion_used);  // the target ion must be included in the NLTE matrix
+      // An ion above the matrix has a negligible population. The autoionisation then goes to the ground level of the
+      // uppermost ion of the matrix, as the non-thermal ionisation does, and no capture comes from the ion.
+      const bool target_ion_in_matrix = target_ion <= max_ion_used;
 
       const double epsilon_trans = epsilon_level - epsilon(element, target_ion, target_level);
 
       double R = A_a * s_renorm[level];
 
       const int upper_index = level_index;
-      const int lower_index = get_nlte_vector_index(element, target_ion, target_level, first_ion_used);
+      const int lower_index = target_ion_in_matrix
+                                  ? get_nlte_vector_index(element, target_ion, target_level, first_ion_used)
+                                  : get_nlte_vector_index(element, max_ion_used, 0, first_ion_used);
 
       rate_matrices.autoion[(upper_index * nlte_dimension) + upper_index] -= R;
       rate_matrices.autoion[(lower_index * nlte_dimension) + upper_index] += R;
-      if ((R < 0)) {
-        printlnlog("  [warning] cell {} ts {}: negative autoionisation rate from Z={} ionstage {} level {} to level {}",
-                   nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, ion),
-                   level, target_level);
+
+      if (!target_ion_in_matrix) {
+        continue;
       }
 
       // capture (which is an excitation process, and the first part of di-electronic recomb).
@@ -807,11 +814,6 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
 
       rate_matrices.autoion[(lower_index * nlte_dimension) + lower_index] -= R;
       rate_matrices.autoion[(upper_index * nlte_dimension) + lower_index] += R;
-      if ((R < 0)) {
-        printlnlog("  [warning] cell {} ts {}: negative capture rate to Z={} ionstage {} level {} from level {}",
-                   nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, ion),
-                   level, target_level);
-      }
     }
   }
 }
@@ -887,7 +889,7 @@ void set_nlte_superlevelpop_over_rho_over_slpartfunc(const int nonemptymgi, cons
 
 void set_element_pops_lte(const int nonemptymgi, const int element) {
   // set NLTE level pops as invalid so that Boltzmann pops will be used instead
-  nltepop_reset_element(nonemptymgi, element);
+  nltepop_reset_element(nonemptymgi, element, nltepop_marker_after_lte_fallback);
   calculate_cellpartfuncts(nonemptymgi, element);
   printlnlog("  [warning] cell {} ts {}: NLTEPOP setting element Z={} level pops to LTE", nltelog.modelgridindex,
              nltelog.timestep, get_atomicnumber(element));
@@ -1659,8 +1661,8 @@ void nltepop_reset_cell(const int nonemptymgi) {
 }
 
 // Report whether the cell holds an NLTE matrix solution for the element. nltepop_reset_element()
-// writes the -1 marker into the NLTE level populations before the first solve and after a fallback
-// to LTE.
+// writes a negative marker into the NLTE level populations before the first solve and after a
+// fallback to LTE.
 auto elem_has_nlte_solution(const int nonemptymgi, const int element) -> bool {
   if (!elem_has_nlte_levels(element)) {
     // an element without NLTE levels holds no solution. The loop below also gives false, because each
@@ -1671,6 +1673,16 @@ auto elem_has_nlte_solution(const int nonemptymgi, const int element) -> bool {
     // an ion with a superlevel also has an excited NLTE level (see setup_nlte_levels())
     if (get_nlevels_excited_nlte(element, ion) > 0) {
       return get_nlte_levelpop_over_rho(nonemptymgi, element, ion, 1) >= 0.;
+    }
+  }
+  return false;
+}
+
+// Report whether the last NLTE matrix solve of the element in the cell fell back to LTE populations
+auto elem_nlte_solve_fell_back_to_lte(const int nonemptymgi, const int element) -> bool {
+  for (int ion = 0; ion < get_nions(element); ion++) {
+    if (get_nlevels_excited_nlte(element, ion) > 0) {
+      return get_nlte_levelpop_over_rho(nonemptymgi, element, ion, 1) == nltepop_marker_after_lte_fallback;
     }
   }
   return false;
@@ -1691,13 +1703,12 @@ auto get_nlte_solution_range(const int nonemptymgi, const int element) -> std::p
 // generator is stored transposed in the NLTE rate matrix layout, i.e. rate_matrix[(to * n) + from] with n =
 // vec_x.size(). The off-diagonal rates must be finite (the caller checks this) and non-negative. Only sums, products,
 // and divisions of the rates are used and the diagonal is never read, so there is no subtractive cancellation and
-// assembly rounding in the column sums cannot affect the result. Small negative autoionisation off-diagonals (warned
-// about during assembly) only weaken that guarantee locally; any resulting invalid populations are policed by the
-// caller. rate_matrix is overwritten. On success, returns std::nullopt and fills vec_x with the stationary distribution
-// normalised to a sum of one. On failure, returns the index of a state whose departure rate into the remaining
-// chain is zero (a reducible matrix) or not finite, and leaves vec_x untouched. An infinite rate that reaches an
-// inflow sum in the back-substitution gives a non-finite population, which the caller's validity check rejects.
-// Defined with external linkage (declared in nltepop.h) so that unittests.cc can exercise it.
+// assembly rounding in the column sums cannot affect the result. rate_matrix is overwritten. On success, returns
+// std::nullopt and fills vec_x with the stationary distribution normalised to a sum of one. On failure, returns the
+// index of a state whose departure rate into the remaining chain is zero (a reducible matrix) or not finite, and leaves
+// vec_x untouched. An infinite rate that reaches an inflow sum in the back-substitution gives a non-finite population,
+// which the caller's validity check rejects. Defined with external linkage (declared in nltepop.h) so that unittests.cc
+// can exercise it.
 auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double> vec_x)
     -> std::optional<std::ptrdiff_t> {
   const auto n = std::ssize(vec_x);
@@ -1973,7 +1984,7 @@ auto nltepop_scale_ion_pops(const int nonemptymgi, const int element, const std:
     return false;
   }
   if (!elem_has_nlte_solution(nonemptymgi, element)) {
-    // the level populations hold the -1 marker of nltepop_reset_element(), which no factor may touch
+    // the level populations hold a negative marker of nltepop_reset_element(), which no factor may touch
     return false;
   }
 

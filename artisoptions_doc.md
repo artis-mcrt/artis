@@ -136,7 +136,9 @@ constexpr bool LTEPOP_EXCITATION_USE_TJ;
 constexpr bool FORCE_SAHA_ION_BALANCE(int element_z);
 
 // The largest iteration number of the NLTE/Te/Spencer-Fano loop of a cell. The first pass is iteration 0, so a
-// cell makes at most NLTE_TE_NNE_MAXITER + 1 passes.
+// cell makes at most NLTE_TE_NNE_MAXITER + 1 passes. With NT_SPENCERFANO and COLLISIONAL_HEATING_FROM_LEVELPOPS, a
+// cell makes one more pass when an element falls back to LTE in the last pass. That pass removes the element from the
+// excitation list of the Spencer-Fano solution. The cell makes at most one extra pass for each element.
 constexpr int NLTE_TE_NNE_MAXITER;
 
 // Anderson acceleration (Anderson 1965, Journal of the ACM, 12, 547-560, doi:10.1145/321296.321305) of the
@@ -255,8 +257,9 @@ constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
 // Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator.
 // The estimator also holds the collisional recombination heating. The sum does not.
 // The level populations of an element without NLTE levels do not follow a non-thermal excitation, so the sum would
-// lose the heat of its collisional de-excitation. With this option, the non-thermal excitation energy of such an
-// element therefore goes to the heating, and its packets become k-packets.
+// lose the heat of its collisional de-excitation. The same applies in a cell where the last NLTE solve of an
+// element fell back to LTE. With this option, the non-thermal excitation energy of such an element therefore goes
+// to the heating, and its packets become k-packets.
 constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
 
 // The bound-free cooling coefficient of each (level, target) continuum is per population of the target level of
@@ -438,12 +441,14 @@ constexpr double NU_MIN_R;
 constexpr double NU_MAX_R;
 
 // Sample the electron scattering direction of a real packet from the dipole phase function of Thomson scattering,
-// 1 + cos^2(theta) for unpolarised light. False gives isotropic scattering. The option does not change a line
-// scattering or a k-packet emission. Both functions give a mean cos(theta) of zero, so the transport and the
-// spectra and light curves averaged over all directions agree within the Monte Carlo noise. The option changes the
-// polarisation, and the spectra for each viewing angle of an aspherical model with much electron scattering. A
-// virtual packet and the new Stokes parameters of POL_ON use the dipole function, so VPKT_ON and POL_ON need this
-// option.
+// 1 + cos^2(theta) for unpolarised light. The sampling uses the rejection method of Code & Whitney (1995), ApJ,
+// 441, 400-407, doi:10.1086/175363. False gives isotropic scattering.
+//
+// The option does not change a line scattering or a k-packet emission. Both functions give a mean cos(theta) of zero,
+// so the transport and the spectra and light curves averaged over all directions agree within the Monte Carlo noise.
+// The option changes the polarisation, and the spectra for each viewing angle of an aspherical model with much electron
+// scattering. A virtual packet and the new Stokes parameters of POL_ON use the dipole function, so VPKT_ON and POL_ON
+// need this option.
 constexpr bool DIPOLE;
 
 // Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out. This needs DIPOLE.
@@ -470,6 +475,7 @@ constexpr bool FREEBOUND_NU_ANALYTIC_EMISSIVITY_INTEGRAL;
 // with the true absorption opacity. That opacity is the sum of P times the binned opacity, the free-free
 // opacity, and the bound-free opacity of each continuum times 1 - nu_edge / nu. The code therefore computes the
 // binned opacities also without RPKT_USE_BINNED_OPACITIES. A thick cell samples a plain Planck function.
+//
 // The thermal balance has no term for this line thermalisation, so a nonzero P needs LTE timesteps only: sn3d
 // stops if num_lte_timesteps of input.txt is below the number of timesteps.
 // No value keeps the macroatom.
