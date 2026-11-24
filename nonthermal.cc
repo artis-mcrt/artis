@@ -2302,8 +2302,10 @@ auto calculate_en_below_emin_from_N_e(const int nonemptymgi, const std::array<do
 // difference above that limit. An error of 0.1% in the term of the primary electrons gives such a difference in some
 // solutions with SF_EMIN at 5 eV. With SF_EMIN at 0.1 eV, almost no primary electron ends below SF_EMIN.
 //
-// The check does not test the part of the Auger electrons. That part uses the same formula as the matrix setup, and
-// no test of the suite has an Auger electron in the lowest grid interval or below it.
+// The part of the Auger electrons uses the same formula as the matrix setup, and it is small in the tests. In
+// nebular_1d_3dgrid, one shell of Ni III has a mean Auger energy of 3.1 eV, which is in the lowest grid interval.
+// That part is at most 0.4% of the term there. An error of 0.1% in it gives a difference above the limit in 7 of 19
+// solutions with SF_EMIN at 0.1 eV, and in no solution with SF_EMIN at 5 eV.
 void check_en_below_emin(const int nonemptymgi, const std::array<double, SFPTS>& yfunc,
                          std::span<const double> en_below_emin_ev_per_y) {
   double en_below_emin_from_matrix = 0.;
