@@ -972,7 +972,7 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
 // electron in row 0. The lowest grid interval is from SF_EMIN to SF_EMIN + DELTA_E. An electron that appears at an
 // energy E in that interval has only a part of the row weight of row 0. That part is (E - SF_EMIN) / DELTA_E. Row 0
 // and the second term then hold only that part of DELTA_E + SF_EMIN, and the vector holds the rest of E. The energy
-// in the vector for one electron at E is (see get_en_below_emin_of_electron_ev()):
+// in the vector for one electron at E is:
 //
 //   E                                           for E < SF_EMIN
 //   SF_EMIN * (1 - (E - SF_EMIN) / DELTA_E)     for E from SF_EMIN to SF_EMIN + DELTA_E
@@ -983,8 +983,8 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
 // interval give about 40 times the energy of the electrons below SF_EMIN. The term is then at most 6e-4 of the
 // deposition energy in the first job of the test nebular_1d_3dgrid.
 //
-// With TESTMODE, check_en_below_emin() calculates the third term a second time and compares the two results. It uses
-// the terms of N(E) with a numerical quadrature over the energy transfer.
+// The code has no check of the vector against N(E). In a test for this change, a numerical quadrature of the terms of
+// N(E) times that energy gave the same third term to 3e-9. That test was the first job of nebular_1d_3dgrid.
 auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPTS>& yfunc,
                             std::span<const double> en_below_emin_ev_per_y) -> float {
   // frac_heating multiplied by E_init, which will be divided out at the end
@@ -2119,212 +2119,6 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, std::span<doubl
   }
 }
 
-// The energy [eV] of one electron that the rows of the matrix do not hold, for an electron that appears at the energy
-// en_ev. calculate_frac_heating() counts this energy as heating in its third term.
-//
-// An electron below SF_EMIN is in no row, so the result is all of its energy. An electron in the lowest grid interval
-// has a row weight in row 0 in proportion to its position in the interval. Row 0 and the boundary term of
-// calculate_frac_heating() then hold DELTA_E + SF_EMIN times that row weight. The result is the rest of the energy,
-// which decreases from SF_EMIN to zero across the interval. It is zero for an electron above the lowest grid interval.
-[[nodiscard]] constexpr auto get_en_below_emin_of_electron_ev(const double en_ev) -> double {
-  const double row_weight_row0 = std::clamp((en_ev - SF_EMIN) / DELTA_E, 0., 1.);
-  return std::min(en_ev, SF_EMIN) - (SF_EMIN * row_weight_row0);
-}
-
-// The third term of the heating fraction from N(E) of equation 11 of Kozma & Fransson (1992), for the check of
-// TESTMODE in check_en_below_emin(). The result is the integral of N(E) times the energy that the rows do not hold of
-// an electron at E (see get_en_below_emin_of_electron_ev()). It has the units of the sum of y times
-// en_below_emin_ev_per_y. For a DELTA_E much smaller than SF_EMIN, it is the integral of E N(E) dE from zero to
-// SF_EMIN.
-//
-// The function has one part for each term of equation 11, in the discretisation of the matrix:
-// - excitation: an electron of column j that excites a transition appears at its energy less epsilon_trans;
-// - primary: an electron of column j that ionises a shell with the energy transfer epsilon appears at its energy less
-//   epsilon;
-// - secondary: the electron that the ionisation ejects appears at epsilon - I.
-// The Auger electrons of Shingles et al. (2020, MNRAS, 492, 2029-2043, doi:10.1093/mnras/stz3412) are a fourth part,
-// which equation 11 does not have.
-//
-// The function integrates over the energy transfer with Simpson's rule. It does not use the closed forms, the row
-// weights, or the excitation bands of the matrix setup, so it is a second calculation of en_below_emin_ev_per_y. It
-// uses the same y, the same cross section of each column, and the same energies of the electrons as the matrix:
-// - the matrix counts the electron of column j at the energy engrid(j) + DELTA_E (see E_init_ev);
-// - the secondary-electron distribution of column j is for the primary energy engrid(j).
-// Thus the function does not test these two conventions. The frac_sum check of analyse_sf_solution() tests them.
-auto calculate_en_below_emin_from_N_e(const int nonemptymgi, const std::array<double, SFPTS>& yfunc) -> double {
-  // Simpson's rule on a smooth part of an integrand. Each call has its limits at the kinks of the integrand.
-  constexpr int nintervals = 64;
-  const auto integrate = [](const double lower, const double upper, const auto& integrand) {
-    if (upper <= lower) {
-      return 0.;
-    }
-    const double h = (upper - lower) / nintervals;
-    double sum = integrand(lower) + integrand(upper);
-    for (int k = 1; k < nintervals; k++) {
-      sum += ((k % 2 == 1) ? 4. : 2.) * integrand(lower + (k * h));
-    }
-    return sum * h / 3.;
-  };
-
-  double en_below_emin = 0.;
-  const double nnion_tot = get_nnion_tot(nonemptymgi);
-  std::array<double, SFPTS> vec_xs_ionisation{};
-
-  // the same ions, levels, transitions, and shells as the matrix setup in solve_spencerfano()
-  for (int element = 0; element < get_nelements(); element++) {
-    const int Z = get_atomicnumber(element);
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      const double nnion = get_nnion(nonemptymgi, element, ion);
-      if (nnion < MIN_ION_OVER_NNTOT * nnion_tot) {
-        continue;
-      }
-
-      // The excitation term of equation 11: the sum over the transitions of n y(E + epsilon_trans) sigma(E +
-      // epsilon_trans).
-      const int nlevels = std::min(NTEXCITATION_MAXNLEVELS_LOWER, get_nlevels(element, ion));
-      for (int lower = 0; lower < nlevels; lower++) {
-        const auto uniquelevelindex = get_uniquelevelindex(element, ion, lower);
-        const double statweight_lower = stat_weight(uniquelevelindex);
-        const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, lower);
-        const double epsilon_lower = epsilon(uniquelevelindex);
-        const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
-        const int nuptrans = get_nuptrans(uniquelevelindex);
-        for (int t = 0; t < nuptrans; t++) {
-          const int alltransindex = alltrans_startup + t;
-          const int upper = globals::alltrans.targetlevelindex[alltransindex];
-          if (upper >= NTEXCITATION_MAXNLEVELS_UPPER) {
-            continue;
-          }
-          const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
-          const double epsilon_trans_ev = epsilon_trans / EV;
-          if (epsilon_trans_ev < SF_EMIN || !has_xs_excitation(alltransindex, epsilon_trans_ev)) {
-            continue;
-          }
-          xs_excitation_for_each(alltransindex, statweight_lower, epsilon_trans, [&](const int j, const double xs) {
-            const double en_after_ev = engrid(j) + DELTA_E - epsilon_trans_ev;
-            en_below_emin += nnlevel * yfunc[j] * xs * DELTA_E * get_en_below_emin_of_electron_ev(en_after_ev);
-          });
-        }
-      }
-
-      // the top ion has no ionisation in the matrix
-      if (ion >= nions - 1) {
-        continue;
-      }
-      const int ionstage = get_ionstage(element, ion);
-      for (const auto& collionrow : colliondata) {
-        if (collionrow.Z != Z || collionrow.ionstage != ionstage) {
-          continue;
-        }
-        const double ionpot_ev = collionrow.ionpot_ev;
-        const double J = get_J(Z, ionstage, ionpot_ev);
-        const int xsstartindex = get_xs_ionisation_vector(vec_xs_ionisation, collionrow);
-
-        // Equation 4 of Kozma & Fransson (1992) for the energy e_s of the secondary electron. The result does not
-        // include the factor 1 / atan((E' - I) / (2 J)), which depends on the primary energy E'.
-        const auto lorentzian = [J](const double e_s) { return 1. / (J * (1. + pow2(e_s / J))); };
-
-        // The secondary term of equation 11 is an integral over E' from 2E + I to SF_EMAX. The integrand is y(E')
-        // sigma(E') P(E', E). It is for a secondary electron that appears at E. In terms of the column, the secondary
-        // of a primary at E' has an energy from zero to (E' - I) / 2. The integrand has kinks at SF_EMIN and at
-        // SF_EMIN + DELTA_E.
-        const auto secondary_integrand = [&](const double e_s) {
-          return get_en_below_emin_of_electron_ev(e_s) * lorentzian(e_s);
-        };
-        const auto integrate_secondary = [&](const double e_s_max) {
-          return integrate(0., std::min(SF_EMIN, e_s_max), secondary_integrand) +
-                 integrate(SF_EMIN, std::min(SF_EMIN + DELTA_E, e_s_max), secondary_integrand);
-        };
-        const double integral_secondary_all = integrate_secondary(SF_EMIN + DELTA_E);
-
-        // the ionisations of the shell for each unit of time and volume
-        double ionisation_rate = 0.;
-        for (int j = xsstartindex; j < SFPTS; j++) {
-          const double endash = engrid(j);
-          const double e_s_max = (endash - ionpot_ev) / 2.;
-          const double atan_norm = std::atan(e_s_max / J);
-          const double ionisation_rate_column = nnion * yfunc[j] * vec_xs_ionisation[j] * DELTA_E;
-          if (vec_xs_ionisation[j] <= 0. || atan_norm <= 0.) {
-            continue;
-          }
-          ionisation_rate += ionisation_rate_column;
-
-          const double integral_secondary =
-              (e_s_max >= SF_EMIN + DELTA_E) ? integral_secondary_all : integrate_secondary(e_s_max);
-
-          // The primary term of equation 11 is an integral over epsilon. The integrand is y(E + epsilon) sigma(E +
-          // epsilon) P(E + epsilon, epsilon - I). It is for a primary electron that appears at E = E' - epsilon. The
-          // matrix counts the electron of column j at engrid(j) + DELTA_E, so the primary appears at E' - I - e_s +
-          // DELTA_E in that count. The integrand is zero for a primary that ends above SF_EMIN. It has a kink where
-          // the count energy is SF_EMIN.
-          double integral_primary = 0.;
-          const double e_s_primary_at_emin = endash - ionpot_ev - SF_EMIN;
-          if (e_s_primary_at_emin < e_s_max) {
-            const auto primary_integrand = [&](const double e_s) {
-              return get_en_below_emin_of_electron_ev(endash - ionpot_ev - e_s + DELTA_E) * lorentzian(e_s);
-            };
-            const double e_s_lower = std::max(0., e_s_primary_at_emin);
-            const double e_s_kink = std::clamp(e_s_primary_at_emin + DELTA_E, e_s_lower, e_s_max);
-            integral_primary =
-                integrate(e_s_lower, e_s_kink, primary_integrand) + integrate(e_s_kink, e_s_max, primary_integrand);
-          }
-
-          en_below_emin += ionisation_rate_column * (integral_secondary + integral_primary) / atan_norm;
-        }
-
-        // the Auger electrons of each ionisation of the shell, at the energies of the source term in
-        // sfmatrix_add_ionisation()
-        if (get_auger_rowstopindex(collionrow) > 0) {
-          double en_auger_below_emin_ev = 0.;
-          if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
-            const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
-            for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-              en_auger_below_emin_ev += collionrow.prob_num_auger[a] * a *
-                                        get_en_below_emin_of_electron_ev(collionrow.en_auger_ev * en_boost / a);
-            }
-          } else {
-            en_auger_below_emin_ev = get_en_below_emin_of_electron_ev(collionrow.en_auger_ev);
-          }
-          en_below_emin += ionisation_rate * en_auger_below_emin_ev;
-        }
-      }
-    }
-  }
-  return en_below_emin;
-}
-
-// The check of TESTMODE for the third term of the heating fraction. The matrix setup fills en_below_emin_ev_per_y
-// from closed forms of the row weights. This function compares the sum of y times that vector with the result of
-// calculate_en_below_emin_from_N_e(). That result is the direct integral of N(E) of equation 11 of Kozma & Fransson
-// (1992). In the test nebular_1d_3dgrid, the two values agree to 4e-9. This is true with SF_EMIN at 0.1 eV and at
-// 5 eV. The limit of the check is 1e-6.
-//
-// In that test, an error of 0.1% in the term of the secondary electrons gives a difference above that limit. The
-// same is true for the term of the excitations. For the term of the primary electrons, it is true in some solutions
-// with SF_EMIN at 5 eV. With SF_EMIN at 0.1 eV, almost no primary electron ends below SF_EMIN.
-//
-// The part of the Auger electrons uses the same formula as the matrix setup, and it is small in the tests. In
-// nebular_1d_3dgrid, one shell of Ni III has a mean Auger energy of 3.1 eV. That energy is in the lowest grid
-// interval, and that part is at most 0.4% of the term there. With SF_EMIN at 0.1 eV, an error of 0.1% in it gives a
-// difference above the limit in 7 of 19 solutions. With SF_EMIN at 5 eV, no solution shows such an error.
-void check_en_below_emin(const int nonemptymgi, const std::array<double, SFPTS>& yfunc,
-                         std::span<const double> en_below_emin_ev_per_y) {
-  double en_below_emin_from_matrix = 0.;
-  for (int j = 0; j < SFPTS; j++) {
-    en_below_emin_from_matrix += yfunc[j] * en_below_emin_ev_per_y[j];
-  }
-  const double en_below_emin_from_N_e = calculate_en_below_emin_from_N_e(nonemptymgi, yfunc);
-  const double difference = std::abs(en_below_emin_from_matrix - en_below_emin_from_N_e);
-  if (difference > 1e-6 * std::abs(en_below_emin_from_N_e)) {
-    fatal_crash(
-        "cell {} ts {}: the energy below SF_EMIN from the matrix terms is {:g} eV, but the integral of N(E) gives "
-        "{:g} eV. The values are for the unscaled solution with a deposition of {:g} eV.",
-        grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, en_below_emin_from_matrix, en_below_emin_from_N_e,
-        E_init_ev);
-  }
-}
-
 // solve the Spencer-Fano matrix equation and return the y vector (samples of the Spencer-Fano solution function).
 // Multiply y by energy interval [eV] to get non-thermal electron number flux. y(E) * dE is the flux of electrons with
 // energy in the range (E, E + dE) in units of particles/cm2/s. y has units of particles/cm2/s/eV
@@ -2869,9 +2663,6 @@ auto solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   add_excitation_energy_below_emin(en_below_emin_ev_per_y, excitationbands);
 
   const auto yfunc = sfmatrix_solve(sfmatrixuppertri);
-  if constexpr (TESTMODE) {
-    check_en_below_emin(nonemptymgi, yfunc, en_below_emin_ev_per_y);
-  }
   constexpr bool verbose = false;
   analyse_sf_solution(nonemptymgi, timestep, yfunc, en_below_emin_ev_per_y, verbose);
   return true;
