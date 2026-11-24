@@ -28,10 +28,10 @@ description.
 
 | Option | Description | Preset values |
 | --- | --- | --- |
-| [GRID_TYPE_OVERRIDE](#grid_type_override) | Set GridType::CARTESIAN3D to map a 1D or a 2D model onto a 3D Cartesian grid. | every preset: no value |
-| [CUBOID_NCOORDGRID_X](#cuboid_ncoordgrid_x) | The size of the 3D Cartesian grid for a 1D or a 2D model. | classic `100`, kilonova_lte `50`, nltenebular `50`, nltephotospheric `50` |
-| [CUBOID_NCOORDGRID_Y](#cuboid_ncoordgrid_y) | The size of the 3D Cartesian grid for a 1D or a 2D model. | classic `100`, kilonova_lte `50`, nltenebular `50`, nltephotospheric `50` |
-| [CUBOID_NCOORDGRID_Z](#cuboid_ncoordgrid_z) | The size of the 3D Cartesian grid for a 1D or a 2D model. | classic `100`, kilonova_lte `50`, nltenebular `50`, nltephotospheric `50` |
+| [GRID_TYPE_OVERRIDE](#grid_type_override) | Set GridType::CARTESIAN3D to map a 1D, a 2D, or a 3D spherical model onto a 3D Cartesian grid. | every preset: no value |
+| [CUBOID_NCOORDGRID_X](#cuboid_ncoordgrid_x) | The size of the 3D Cartesian grid for a 1D, a 2D, or a 3D spherical model. | classic `100`, kilonova_lte `50`, nltenebular `50`, nltephotospheric `50` |
+| [CUBOID_NCOORDGRID_Y](#cuboid_ncoordgrid_y) | The size of the 3D Cartesian grid for a 1D, a 2D, or a 3D spherical model. | classic `100`, kilonova_lte `50`, nltenebular `50`, nltephotospheric `50` |
+| [CUBOID_NCOORDGRID_Z](#cuboid_ncoordgrid_z) | The size of the 3D Cartesian grid for a 1D, a 2D, or a 3D spherical model. | classic `100`, kilonova_lte `50`, nltenebular `50`, nltephotospheric `50` |
 | [FORCE_SPHERICAL_ESCAPE_SURFACE](#force_spherical_escape_surface) | On a 2D cylindrical or a 3D Cartesian grid, empty every propagation cell with a centre outside the sphere of radius vmax * tmin. | every preset: `false` |
 | [USE_CALCULATED_MEANATOMICWEIGHT](#use_calculated_meanatomicweight) | Convert a mass fraction to a number density with the mean atomic mass of the nuclear composition of the cell, including the stable component, instead of the mass in compositiondata.txt. | classic `false`, kilonova_lte `true`, nltenebular `false`, nltephotospheric `false` |
 | [USE_MICROCLUMPING](#use_microclumping) | Multiply these rates by the clumping factor of the cell. | every preset: `false` |
@@ -217,7 +217,7 @@ The time of the change between the two schemes in days. The hybrid schemes need 
 
 `std::optional<GridType> GRID_TYPE_OVERRIDE`
 
-Set GridType::CARTESIAN3D to map a 1D or a 2D model onto a 3D Cartesian grid. No value keeps the grid type of model.txt. GridType::SPHERICAL1D and GridType::CYLINDRICAL2D are valid only when they equal the grid type of model.txt. Any other combination stops the run.
+Set GridType::CARTESIAN3D to map a 1D, a 2D, or a 3D spherical model onto a 3D Cartesian grid. No value keeps the grid type of model.txt. Each other grid type (GridType::SPHERICAL1D, GridType::CYLINDRICAL2D, GridType::SPHERICAL2D, and GridType::SPHERICAL3D) is valid only when it equals the grid type of model.txt. Any other combination stops the run.
 
 **Every preset:** no value
 
@@ -225,7 +225,7 @@ Set GridType::CARTESIAN3D to map a 1D or a 2D model onto a 3D Cartesian grid. No
 
 `int CUBOID_NCOORDGRID_X`
 
-The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets the size, and the code ignores these values. The three values must be equal and positive, because the code assumes cubic cells.
+The size of the 3D Cartesian grid for a 1D, a 2D, or a 3D spherical model. A 3D Cartesian model.txt sets the size, and the code ignores these values. The three values must be equal and positive, because the code assumes cubic cells.
 
 **Preset values:** classic `100`, kilonova_lte `50`, nltenebular `50`, nltephotospheric `50`
 
@@ -233,7 +233,7 @@ The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets th
 
 `int CUBOID_NCOORDGRID_Y`
 
-The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets the size, and the code ignores these values. The three values must be equal and positive, because the code assumes cubic cells.
+The size of the 3D Cartesian grid for a 1D, a 2D, or a 3D spherical model. A 3D Cartesian model.txt sets the size, and the code ignores these values. The three values must be equal and positive, because the code assumes cubic cells.
 
 **Preset values:** classic `100`, kilonova_lte `50`, nltenebular `50`, nltephotospheric `50`
 
@@ -241,7 +241,7 @@ The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets th
 
 `int CUBOID_NCOORDGRID_Z`
 
-The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets the size, and the code ignores these values. The three values must be equal and positive, because the code assumes cubic cells.
+The size of the 3D Cartesian grid for a 1D, a 2D, or a 3D spherical model. A 3D Cartesian model.txt sets the size, and the code ignores these values. The three values must be equal and positive, because the code assumes cubic cells.
 
 **Preset values:** classic `100`, kilonova_lte `50`, nltenebular `50`, nltephotospheric `50`
 
@@ -249,7 +249,7 @@ The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets th
 
 `bool FORCE_SPHERICAL_ESCAPE_SURFACE`
 
-On a 2D cylindrical or a 3D Cartesian grid, empty every propagation cell with a centre outside the sphere of radius vmax * tmin. A packet that enters a cell with an inner corner outside the sphere escapes at once.
+On a 2D cylindrical or a 3D Cartesian grid, empty every propagation cell with a centre outside the sphere of radius vmax * tmin. A packet that enters a cell with an inner corner outside the sphere escapes at once. A spherical grid of each type ends at that sphere, thus the option has no effect on it.
 
 **Every preset:** `false`
 

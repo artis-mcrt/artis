@@ -33,7 +33,12 @@ these steps:
    no other build at that time. The script then moves your `artisoptions.h` back. The `sn3d` and `exspec` symlinks of
    the repository folder then point at the build of the test.
 3. It checks the input with `sn3d -c` (see [Running sn3d](running.md)). Then it starts a new simulation and compares
-   the checksums of the output files with `tests/kilonova_1d_inputfiles/results_md5_job0.txt`.
+   the checksums of the output files with `tests/kilonova_1d_inputfiles/results_md5_job0.txt`. For the test
+   `classicmode_3d_formatversion2`, the step `formatcheck` comes between the two. It runs `sn3d -c` on the small 1D
+   and 2D models of format version 2 in the folder `formatcheck_models` of the input files. It also runs `sn3d -c`
+   on damaged copies of them. `sn3d` must read each model and must stop with the correct message for each damaged
+   copy. Two models have mirror symmetry in the plane z = 0, and each must give the masses of a model without the
+   mirror: the full twin of the cylindrical model, and the 1D model with the shells of the spherical model.
 4. It checks the input and the {term}`restart files <restart file>` with `sn3d -c`, and it resumes the simulation from the restart files. It
    then removes the restart files and runs `exspec`.
 5. It compares the checksums of the output files with `results_md5_final.txt`.
@@ -54,8 +59,8 @@ Each test uses one preset and a reduced atomic dataset from a release of this re
 
 | Tests | Preset | Archive | Elements |
 | --- | --- | --- | --- |
-| `classicmode_1d_3dgrid`, `classicmode_3d` | `classic` | `atomicdata_classic.tar.xz` | the classic dataset, with cross-sections in the v1 format |
-| `kilonova_1d`, `kilonova_2d*` | `kilonova_lte` | `atomicdata_feconi.tar.xz` | Fe, Co, Ni |
+| `classicmode_1d_3dgrid`, `classicmode_3d*` | `classic` | `atomicdata_classic.tar.xz` | the classic dataset, with cross-sections in the v1 format |
+| `kilonova_1d`, `kilonova_2d*`, `kilonova_3dspherical*` | `kilonova_lte` | `atomicdata_feconi.tar.xz` | Fe, Co, Ni |
 | `nebular_1d_3dgrid*` | `nltenebular` | `atomicdata_feconi.tar.xz` | Fe, Co, Ni |
 | `nltephotospheric_dynamic_ion_range_1d_1dgrid` | `nltephotospheric` | `atomicdata_hefeconi_fe_i_to_vii.tar.xz` | He, Fe, Co, Ni, with Fe I to Fe VII |
 | `kilonova_1d_timedepnlte` | `kilonova_nlte` | `atomicdata_sryzrlace.tar.zst` | Sr, Y, Zr, La, Ce |
