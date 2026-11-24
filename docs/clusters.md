@@ -79,8 +79,8 @@ make
 cd ..
 ```
 
-Then make sure that the model folder holds a full set of input files: `model.txt`, `abundances.txt`, an atomic
-database (see [Atomic and model data](data.md)), and `input.txt`. The `input.txt` of the template holds the values of
+Then make sure that the model folder holds a full set of input files: `model.txt`, `abundances.txt` (only for a
+`model.txt` of format version 1), an atomic database (see [Atomic and model data](data.md)), and `input.txt`. The `input.txt` of the template holds the values of
 a test model. Set the lines with the labels 1 to 3, 18, and 19 for your model: the {term}`timesteps <timestep>`, the times, and the {term}`LTE` and grey
 timesteps (see [Input files](inputfiles.md)).
 

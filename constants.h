@@ -91,6 +91,11 @@ enum class GridType {
   SPHERICAL1D,  // 1D radial shells (non-uniform dr)
   CYLINDRICAL2D,  // 2D cylindrical grid with uniform dz, drcyl
   CARTESIAN3D,  // 3D Cartesian cubic grid with uniform dx=dy=dz
+  // 2D spherical grid of the radius r and the polar angle theta from the +z axis, with rotational symmetry around
+  // the z axis. model.txt gives the edges of the cells on each axis, thus the cell widths can be different.
+  SPHERICAL2D,
+  // 3D spherical grid of r, theta, and the azimuthal angle phi = atan2(y, x). model.txt gives the cell edges.
+  SPHERICAL3D,
 };
 
 // constant for van-Regemorter approximation.
