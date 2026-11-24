@@ -165,14 +165,15 @@ Ctrl+C to stop following it.
 
 ## 7. Follow the run
 
-The log of rank 0 gives the progress after each timestep:
+The log of rank 0 gives the progress after each timestep. In the examples below, `<count>` stands for the number
+of warnings from all ranks in this job so far.
 
 ```sh
 grep "is complete" output_0-0.txt | tail -n 1
 ```
 
 ```text
-timestep 23 is complete (24 of 50 timesteps of the model) after 0.00 hours. If each timestep takes this time, the remaining 26 requested timesteps take 0.01 hours. The logs of all ranks have 0 warnings from this job.
+timestep 23 is complete (24 of 50 timesteps of the model) after 0.00 hours. If each timestep takes this time, the remaining 26 requested timesteps take 0.01 hours. The logs of all ranks have <count> warnings from this job.
 ```
 
 The `mem_usage` lines give the memory of the packets and of each large array:
@@ -192,7 +193,7 @@ The last lines of the log give the end state and the cost of the job:
 
 ```text
 No need for restart
-The logs of all ranks have 0 warnings from this job.
+The logs of all ranks have <count> warnings from this job.
 sn3d finished (job: pktprop ts 0 to ts 49 grid-preprop, 0.021 wallclock hours * 4 processes * 1 threads = 0.083 core hours)
 ```
 
@@ -210,8 +211,8 @@ The command gives one row for each check. For this run, one row has a warning:
 "temperature limits" warning "... over all 50 time steps, 66.7% of the values of Te are at a limit ..."
 ```
 
-A cell with an electron temperature T_e at `MINTEMP` or at `MAXTEMP` has no thermal balance, so that T_e is not
-physical. Plot T_e of the first cell against the timestep:
+This check counts cells with T_e at `MINTEMP` or `MAXTEMP`. Use the temperatures and the log to
+[check the thermal balance](troubleshooting.md#warnings-of-the-temperature-limits). Plot T_e of the first cell against the timestep.
 
 ```sh
 artistools plotestimators Te -x timestep --cell 0 .

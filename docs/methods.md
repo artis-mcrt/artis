@@ -269,13 +269,15 @@ With [THERMAL_ENERGY_INPUT_FROM_FILES](options.md#thermal_energy_input_from_file
 releases before `t_mid` replaces both energies. A release at the time `t` keeps the fraction `t / t_mid` of its
 energy.
 
-For each other cell, the code solves this equation for the electron temperature. One grid update changes T_e by a
-maximum factor of two:
+For each other cell, the code solves the following equation for the electron temperature T_e.
 
 $$
 H_\mathrm{bf} + H_\mathrm{ff} + H_\mathrm{coll} + H_\mathrm{dep} =
 C_\mathrm{ff} + C_\mathrm{fb} + C_\mathrm{coll} + C_\mathrm{ad} + C_\mathrm{time}
 $$
+
+One grid update can include several iterations of the temperature and population calculation. In each iteration,
+the temperature solver limits its result to between half and twice the value of T_e at the start of that iteration.
 
 The heating rates $H$ are the bound-free heating, the free-free heating, the collisional de-excitation, and the
 non-thermal heating. The non-thermal heating is:

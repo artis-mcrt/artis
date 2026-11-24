@@ -68,14 +68,14 @@ the ARTIS format. An archive that artisatomic made holds an `atomic_data_logs` f
 
 ## The model of the ejecta
 
-A run needs two model files, and some runs need more:
+All models need `model.txt` for the grid, the density of each cell, and the nuclide mass fractions.
 
-- `model.txt`: the grid, the density of each cell, and the nuclear composition;
-- `abundances.txt`: the elemental mass fractions of each cell. A model with a `model.txt` of format version 2 has no
-  such file, because that `model.txt` gives them;
-- `Ye.txt`: the electron fraction of a kilonova model. A model with a `model.txt` of format version 2 has no such
-  file, because the column `Ye` of that `model.txt` gives it;
-- `recombrates.txt`: the tabulated recombination rates, e.g. for the nebular test.
+- Format version 1 requires `abundances.txt` for the element mass fractions. If the opacity needs the electron fraction,
+  supply a `Ye` column in `model.txt` or a `Ye.txt` file.
+- [Format version 2](inputfiles.md#format-version-2) gives the element mass fractions in `model.txt`. Supply the
+  `Ye` column there if the opacity needs the electron fraction. `sn3d` stops if it finds `abundances.txt` or `Ye.txt`.
+
+Some runs also use `recombrates.txt` for the recombination rate coefficients, e.g. the nebular test.
 
 artistools also writes `gridcontributions.txt` for a kilonova model, but `sn3d` does not read that file.
 

@@ -13,7 +13,7 @@ exist.
 | --- | --- | --- |
 | [input.txt](#inputtxt) | yes, or `input-newrun.txt` | the run-time parameters |
 | [model.txt](#modeltxt) | yes | the grid, the densities, and the nuclide mass fractions |
-| [abundances.txt](#abundancestxt) | yes | the element mass fractions of each cell |
+| [abundances.txt](#abundancestxt) | required for format version 1 only | the element mass fractions of each cell |
 | [compositiondata.txt](#compositiondatatxt) | yes | the elements, the ion stages, and the level counts of the run |
 | [adata.txt](#adatatxt) | yes | the energy levels of each ion |
 | [transitiondata.txt](#transitiondatatxt) | yes | the lines of each ion |
@@ -25,6 +25,8 @@ exist.
 | [recombrates.txt](#recombratestxt) | no | the recombination rate coefficients for the calibration |
 | [autoion.txt](#autoiontxt) | no | the autoionisation rates |
 | [gamma_*.txt](#the-gamma-ray-line-files) | for nine nuclides | the gamma-ray lines of each nuclide, which come with the source in `artis/data` |
+
+`sn3d` stops if it finds `abundances.txt` or `Ye.txt` with a model of [format version 2](#format-version-2).
 
 In the layouts of this page, `<name>` is a value that you supply. Where this page says that a file can have comment
 lines, `sn3d` ignores each blank line and each line whose first character that is not a space is `#`.
