@@ -2088,7 +2088,7 @@ struct AngularBoundaryCrossing {
 
   // The polar axis is not a cell boundary, thus the first cell has no lower boundary and the last cell has no upper
   // boundary. cos(theta) can have an extremum on the path, thus both boundaries get a test for each direction.
-  const auto take_costheta_boundary_if_nearer = [&](const BoundaryType boundarytype, const int index_costheta_after) {
+  const auto take_costheta_boundary_if_nearer = [&]<BoundaryType boundarytype>(const int index_costheta_after) {
     const bool is_upper = (boundarytype == BoundaryType::UPPER);
     const int edgeindex = is_upper ? index_costheta + 1 : index_costheta;
     // r * sin(theta_edge - theta): the distance of the packet from the cone, positive on the side of larger
@@ -2097,17 +2097,16 @@ struct AngularBoundaryCrossing {
     const double distance_from_cone_rate =
         (theta_edge_sin[edgeindex] * dir[2]) - (theta_edge_cos[edgeindex] * rcyl_rate);
     const bool moves_through_boundary = is_upper ? (distance_from_cone_rate > 0.) : (distance_from_cone_rate < 0.);
-    const bool is_at_boundary = moves_through_boundary && std::abs(distance_from_cone) <= tolerance;
-    const double distance_to_cone =
-        is_upper ? costheta_cone_intersection<BoundaryType::UPPER>(pos, dir, theta_edge_cos[edgeindex])
-                 : costheta_cone_intersection<BoundaryType::LOWER>(pos, dir, theta_edge_cos[edgeindex]);
-    take_crossing_if_nearer(is_at_boundary ? 0. : distance_to_cone, index_costheta_after, index_phi);
+    const double distance = (moves_through_boundary && std::abs(distance_from_cone) <= tolerance)
+                                ? 0.
+                                : costheta_cone_intersection<boundarytype>(pos, dir, theta_edge_cos[edgeindex]);
+    take_crossing_if_nearer(distance, index_costheta_after, index_phi);
   };
   if (index_costheta < num_costheta - 1) {
-    take_costheta_boundary_if_nearer(BoundaryType::UPPER, index_costheta + 1);
+    take_costheta_boundary_if_nearer.template operator()<BoundaryType::UPPER>(index_costheta + 1);
   }
   if (index_costheta > 0) {
-    take_costheta_boundary_if_nearer(BoundaryType::LOWER, index_costheta - 1);
+    take_costheta_boundary_if_nearer.template operator()<BoundaryType::LOWER>(index_costheta - 1);
   }
 
   // A direction along the z axis keeps phi constant. A 2D spherical grid has one cell of phi.
@@ -2127,7 +2126,7 @@ struct AngularBoundaryCrossing {
   }
 
   // phi is periodic: the half-plane phi = 2 pi of the last cell is the half-plane phi = 0 of the first cell
-  const auto take_phi_boundary_if_nearer = [&](const BoundaryType boundarytype, const int index_phi_after) {
+  const auto take_phi_boundary_if_nearer = [&]<BoundaryType boundarytype>(const int index_phi_after) {
     const bool is_upper = (boundarytype == BoundaryType::UPPER);
     const int edgeindex = is_upper ? index_phi + 1 : index_phi;
     const double cos_edge = phi_edge_cos[edgeindex];
@@ -2139,15 +2138,14 @@ struct AngularBoundaryCrossing {
                                                  : (angmom[2] < 0. && distance_from_plane_rate < 0.);
     // the other half of the plane has phi = phi_edge + pi
     const bool is_near_boundary_half = ((cos_edge * pos[0]) + (sin_edge * pos[1])) > 0.;
-    const bool is_at_boundary =
-        moves_through_boundary && is_near_boundary_half && std::abs(distance_from_plane) <= tolerance;
-    const double distance_to_halfplane =
-        is_upper ? phi_halfplane_intersection<BoundaryType::UPPER>(pos, dir, cos_edge, sin_edge)
-                 : phi_halfplane_intersection<BoundaryType::LOWER>(pos, dir, cos_edge, sin_edge);
-    take_crossing_if_nearer(is_at_boundary ? 0. : distance_to_halfplane, index_costheta, index_phi_after);
+    const double distance =
+        (moves_through_boundary && is_near_boundary_half && std::abs(distance_from_plane) <= tolerance)
+            ? 0.
+            : phi_halfplane_intersection<boundarytype>(pos, dir, cos_edge, sin_edge);
+    take_crossing_if_nearer(distance, index_costheta, index_phi_after);
   };
-  take_phi_boundary_if_nearer(BoundaryType::UPPER, (index_phi + 1) % num_phi);
-  take_phi_boundary_if_nearer(BoundaryType::LOWER, (index_phi + num_phi - 1) % num_phi);
+  take_phi_boundary_if_nearer.template operator()<BoundaryType::UPPER>((index_phi + 1) % num_phi);
+  take_phi_boundary_if_nearer.template operator()<BoundaryType::LOWER>((index_phi + num_phi - 1) % num_phi);
 
   return first_crossing;
 }
