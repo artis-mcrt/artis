@@ -3236,8 +3236,18 @@ void read_ejecta_model() {
         fatal_crash("model.txt cell {} has negative density {:g} [g/cm3] at t_model", mgi, rho_tmodel);
       }
 
+      // The model holds the density at tmin as a float. A larger value becomes infinity in that type, and the mass of
+      // the cell is then infinite. The density of a 3D model at t_model is already a float here.
+      const double rho_tmin = rho_tmodel * pow3(t_model / globals::tmin);
+      if (!(rho_tmin <= std::numeric_limits<float>::max())) {
+        fatal_crash(
+            "model.txt cell {} has a density that a float cannot hold: {:g} [g/cm3] at t_model, and {:g} [g/cm3] at "
+            "tmin",
+            mgi, rho_tmodel, rho_tmin);
+      }
+
       const bool keepcell = (rho_tmodel > 0);
-      set_rho_tmin(mgi, static_cast<float>(rho_tmodel * pow3(t_model / globals::tmin)));
+      set_rho_tmin(mgi, static_cast<float>(rho_tmin));
 
       read_model_radioabundances(fmodel, remainder, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
 

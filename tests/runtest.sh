@@ -267,6 +267,9 @@ case $step in
         sed -e '$s/^\([0-9]* \)[^ ]* [^ ]* /\10 -0.5 /' "$model2d" > "$checkroot/emptycellvalue.txt"
         run_formatcheck_case emptycellvalue "$checkroot/emptycellvalue.txt" \
             "has the value -0.5 in the column X_Fegroup, which is outside the limits of that column"
+        # a density above the largest value of a float
+        sed -e '$s/^\([0-9]* \)[^ ]* /\11e100 /' "$model2d" > "$checkroot/densityoverflow.txt"
+        run_formatcheck_case densityoverflow "$checkroot/densityoverflow.txt" "has a density that a float cannot hold"
         # a key cells_per_axis that does not agree with the lists of edges
         sed 's/^cells_per_axis 5 10$/cells_per_axis 5 9/' "$model2d" > "$checkroot/wrongcellsperaxis.txt"
         run_formatcheck_case wrongcellsperaxis "$checkroot/wrongcellsperaxis.txt" \
