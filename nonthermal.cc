@@ -2298,9 +2298,12 @@ auto calculate_en_below_emin_from_N_e(const int nonemptymgi, const std::array<do
 // from closed forms of the row weights. This function compares the sum of y times that vector with the direct
 // integral of N(E) of equation 11 of Kozma & Fransson (1992) (see calculate_en_below_emin_from_N_e()). In the test
 // nebular_1d_3dgrid, the two values agree to 4e-9, with SF_EMIN at 0.1 eV and at 5 eV. The limit of the check is
-// 1e-6. An error of 0.1% in the term of the secondary electrons, of the primary electrons, or of the excitations
-// gives a difference above that limit. The Auger electrons of that test are above the lowest grid interval, so their
-// term is zero there.
+// 1e-6. In that test, an error of 0.1% in the term of the secondary electrons or of the excitations gives a
+// difference above that limit. An error of 0.1% in the term of the primary electrons gives such a difference in some
+// solutions with SF_EMIN at 5 eV. With SF_EMIN at 0.1 eV, almost no primary electron ends below SF_EMIN.
+//
+// The check does not test the part of the Auger electrons. That part uses the same formula as the matrix setup, and
+// no test of the suite has an Auger electron in the lowest grid interval or below it.
 void check_en_below_emin(const int nonemptymgi, const std::array<double, SFPTS>& yfunc,
                          std::span<const double> en_below_emin_ev_per_y) {
   double en_below_emin_from_matrix = 0.;
