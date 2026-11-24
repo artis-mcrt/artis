@@ -219,7 +219,7 @@ data.
 ### A warning of the energy count of the Spencer-Fano solution
 
 - `frac_sum is ..., but should be 1.0`: the heating, ionisation, and excitation fractions of the Spencer-Fano
-  solution do not sum to 1 within a relative limit of 1e-5. The matrix and the analysis of the solution count each
+  solution do not sum to 1 within a relative limit of 1e-3. The matrix and the analysis of the solution count each
   energy loss with the same weights, so a correct solution gives a sum of 1 to rounding. This warning thus shows that
   a term of the solver counts some energy two times or not at all. The run continues. Without this warning, the code
   uses the calculated heating fraction. With this warning, the code sets the heating fraction to 1 minus the two
