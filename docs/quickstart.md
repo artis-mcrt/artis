@@ -128,13 +128,10 @@ For a production run, clone the branch `release` into the model folder in place 
 
 The atomic data of the test covers only a few elements, with few levels. [Atomic and model data](data.md) says where a larger dataset and other models come from.
 
-Now select the compile-time options and build:
+Select the kilonova preset from the model folder.
 
 ```sh
-cd artis
-ln -s artisoptions_kilonova_lte.h artisoptions.h
-make
-cd ..
+ln -s artisoptions_kilonova_lte.h artis/artisoptions.h
 ```
 
 [Option presets](presets.md) says what each {term}`preset` is for.
@@ -159,10 +156,10 @@ the first nine of twenty timesteps. Change that line to run the whole model:
 000 020                  #  2: timestep_start timestep_finish: ...
 ```
 
-Then build again and run:
+Build the code with the new packet count. Then start the simulation.
 
 ```sh
-cd artis && make && cd ..
+make -C artis
 mpirun -np 4 artis/sn3d &
 tail -F output_0-0.txt
 ```
