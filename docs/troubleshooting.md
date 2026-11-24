@@ -121,9 +121,10 @@ The `git version` and `git status` lines at the start of the log of each job giv
 
 ### The run starts again from the first timestep
 
-`input.txt` holds the timesteps of the next job. A new simulation writes the file again and keeps a copy in
-`input-newrun.txt`, and rank 0 restores `input.txt` from that copy when the file is absent. Keep `input.txt` after a
-job, because it continues the simulation.
+`sn3d` updates `input.txt` for the next job and keeps the parameters of the new simulation in `input-newrun.txt`.
+If `input.txt` is absent, both `sn3d` and `exspec` copy `input-newrun.txt` to `input.txt`.
+To resume, use the `input.txt` for the timestep of your restart files.
+A new simulation [removes previous output and restart files](outputfiles.md#a-new-simulation-removes-the-files-of-the-previous-one).
 
 ## The results
 
@@ -181,18 +182,24 @@ The run continues after each of these warnings:
 | `NLTE (Spencer-Fano/Te/pops) solver mgi ... failed to converge` | The iteration of T_e and the NLTE populations of a cell stopped at the limit [NLTE_TE_NNE_MAXITER](options.md#nlte_te_nne_maxiter) before it converged. When [NT_SCHEME](options.md#nt_scheme) is NT_SPENCERFANO, the iteration also includes the non-thermal solution. The code keeps the solution of the last iteration. |
 ### Warnings of the temperature limits
 
-The run also continues after the warnings below, but each of these warnings says that a
-temperature is at [MINTEMP](options.md#mintemp) or at [MAXTEMP](options.md#maxtemp), and not at its solution:
+The run continues after these warnings. The code limits a radiation temperature to the range from
+[MINTEMP](options.md#mintemp) to [MAXTEMP](options.md#maxtemp). For T_J the log gives
+`get_T_J_from_J: ... Clamping to MINTEMP` or `Clamping to MAXTEMP`. For T_R it gives
+`temperature estimator T_R = ... Setting T_R = T_min!` or `Setting T_R = T_max!`.
 
-- `get_T_J_from_J: ... Clamping to MINTEMP` or `Clamping to MAXTEMP`, and `temperature estimator T_R = ... Setting T_R
-  = T_min!`: a radiation temperature is outside the range of the two limits.
-- `call_T_e_finder: cooling bigger than heating at lower T_e boundary ... T_e forced to be MINTEMP`: the cell has no
-  thermal balance in the range, because the cooling is larger than the heating at both limits.
-- `call_T_e_finder: heating bigger than cooling over the whole T_e range ... T_e forced to be MAXTEMP`: the cell has no
-  thermal balance in the range, because the heating is larger than the cooling at both limits.
+For the electron temperature, the solver tests heating minus cooling at both limits. When the values have the same
+sign or either value is zero, the solver selects a limit. A solution can still lie between the limits.
 
-An electron temperature at a limit is not physical. `artistools check <model folder>` counts the cells at a limit at
-each timestep, and it gives a warning when more than 10% of the cells of a timestep are at a limit.
+- `call_T_e_finder: cooling bigger than heating at lower T_e boundary ... T_e forced to be MINTEMP` means cooling
+  exceeds heating at the upper limit. The solver selects `MINTEMP`.
+- `call_T_e_finder: heating bigger than cooling over the whole T_e range ... T_e forced to be MAXTEMP` means heating
+  equals or exceeds cooling at the upper limit. The solver selects `MAXTEMP`.
+
+The solver then limits the change in T_e for this iteration. The stored temperature can lie between the limits.
+If the solver applies damping, the `T_e damping` message gives the temperature it stores.
+
+`artistools check <model folder>` counts the cells at a limit at each timestep. It gives a warning when more than 10%
+of the cells of a timestep are at a limit.
 [Example: a nebular spectrum](example.md) shows a cell without enough cooling, because its elements have no atomic
 data.
 

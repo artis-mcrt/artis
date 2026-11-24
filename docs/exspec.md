@@ -5,16 +5,20 @@
 post-processing.
 :::
 
-`make` builds `exspec` together with `sn3d`. It combines the packet files of all {term}`ranks <rank>` into spectra and light curves,
-with the same code that `sn3d` uses, so it gives the same files for a simulation that ran to the last timestep of the
-model. `exspec` writes all timesteps of the model. It reads the packet files of `packets/`, which `sn3d`
-writes at the last requested {term}`timestep`. A simulation that stopped earlier has no packet files, and `exspec` then stops
-with an error. Two situations need `exspec`:
+`make` builds `exspec` together with `sn3d`. Both programs use the same calculation for the spectra and the light
+curves. `sn3d` uses the packet values in memory and rounds them when it writes the packet files. `exspec` reads
+the rounded values from all {term}`ranks <rank>`, so its spectra and light curves can differ from those of `sn3d`.
 
-- You need the files again with other settings, e.g. after a change of the frequency range. You then build the code
-  again and run `exspec`, and you need no new simulation.
-- The {term}`model folder` holds the packet files but no spectra, e.g. from a run of an older version of ARTIS.
-  `scripts/run-exspec-if-needed.sh` runs `exspec` when `emission.out` is absent.
+`exspec` writes all timesteps of the model. It reads the files in `packets/`, which `sn3d` writes at the last
+requested {term}`timestep`. If the simulation stops earlier, `exspec` stops because it cannot find the packet files.
+
+To change the frequency bins for the saved packets, rebuild `exspec` with the new frequency limits.
+Run `exspec` to write the spectra again. [NU_MIN_R](options.md#nu_min_r) and [NU_MAX_R](options.md#nu_max_r)
+also set the frequency limits for blackbody emission in `sn3d`. To apply new limits to thermal emission,
+rebuild `sn3d` with those limits. Start a new simulation.
+
+An older {term}`model folder` can hold packet files but no spectra. `scripts/run-exspec-if-needed.sh` runs
+`exspec` if the folder has neither `emission.out` nor `emission.out.zst`.
 
 The requested end of the timestep range limits the latest escape time of the packets. The packet files can also
 hold escapes from earlier jobs. The spectra and the observer light curve use the arrival time, which includes the
@@ -28,16 +32,24 @@ times ends earlier than the requested end.
 After a partial run, later arrival bins can also hold nonzero flux. An incomplete bin can hold nonzero flux.
 Extend the simulation to obtain the contributions of the later escapes.
 
-Run it in the model folder with any number of ranks from one up to the number of packet files:
+Run `exspec` in the model folder. Use one rank or more, up to the number of packet files.
 
 ```sh
-mpirun -np 8 artis/exspec
+mpirun -np 1 artis/exspec
 ```
 
-`exspec` reads the same `input.txt`, model, and atomic data files as `sn3d`, so it must run in the same folder. The
-`nprocs_exspec` line of `input.txt` gives the number of packet files, which is the number of `sn3d` ranks and not the
-number of `exspec` ranks. Rank 0 writes the log to `exspec.txt`, and it writes one line to the standard output at the
-start and one line at the end. `exspec` changes no input file. `artis/exspec -h` gives the help, and
+`exspec` reads the same `input.txt`, model, and atomic data files as `sn3d`.
+The `nprocs_exspec` line of `input.txt` gives the number of `sn3d` ranks that wrote the packet files.
+
+:::{warning}
+If `input.txt` is absent, `exspec` copies `input-newrun.txt` to `input.txt`. This copy holds the parameters for a new
+simulation. In this case, restore the `input.txt` for your restart files before you resume `sn3d`.
+Check that `timestep_start` matches those files and that `simulation_continued_from_saved` is 1.
+A new simulation [removes previous output and restart files](outputfiles.md#a-new-simulation-removes-the-files-of-the-previous-one).
+:::
+
+Rank 0 writes the log to `exspec.txt`. It writes one line to the standard output at the start and one at the end.
+`artis/exspec -h` gives the help.
 `artis/exspec --version` gives the git version, the preset, and the compiler of the build. An unknown option or
 argument stops `exspec` before it reads a file.
 

@@ -171,11 +171,11 @@ The log gives these values:
     grep mem_usage output_0-0.txt
     ```
 
-- The time of each timestep, and an estimate for the remaining requested timesteps from the time of the last
-  timestep:
+- The progress line estimates the time for the remaining timesteps from the time of the last timestep. This
+  excerpt shows the estimate.
 
     ```text
-    timestep 23 is complete (24 of 50 timesteps of the model) after 0.00 hours. If each timestep takes this time, the remaining 26 requested timesteps take 0.01 hours. The logs of all ranks have 0 warnings from this job.
+    timestep 23 is complete (24 of 50 timesteps of the model) after 0.00 hours. If each timestep takes this time, the remaining 26 requested timesteps take 0.01 hours.
     ```
 
 - The core hours of the job, in the last line of the log:

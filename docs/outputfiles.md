@@ -119,6 +119,8 @@ one row for each timestep of the model:
 | 2 | The luminosity of the escaped r-packets in the rest frame [L_sun]. The time of a packet is its arrival time at the observer. |
 | 3 | The luminosity of the escaped r-packets in the comoving frame [L_sun]. The time of a packet is its escape time t multiplied by sqrt(1 - (r/(c t))^2), without the light travel time. r is the distance of the escape position from the centre. |
 
+You can also [calculate the luminosity in column 2 from the packet files](#luminosity-from-the-packet-files).
+
 `gamma_light_curve.out` has the same columns for the escaped {term}`gamma packets <gamma packet>`. Only a run with `KEEP_ESCAPED_GAMMAS`
 writes it.
 
@@ -376,6 +378,20 @@ The values of `absorption_type`:
 | -10 | a pellet decay to a particle |
 | -11 | a bound-bound absorption in a binned opacity, which has no line index |
 
+#### Luminosity from the packet files
+
+Each `sn3d` rank samples the full energy of the model. To calculate the angle-averaged luminosity in the rest frame,
+use all packet files.
+
+1. Select the escaped r-packets (`type_id` 32 and `escape_type_id` 11).
+2. Calculate the arrival time as `escape_time - (posx*dirx + posy*diry + posz*dirz) / c`.
+   Here `c` is the speed of light for packet propagation (`CLIGHT_PROP`, in cm/s).
+3. Sum `e_rf` over all ranks for each arrival bin. The file `timesteps.out` gives the bin starts and widths in days.
+4. Divide each sum by the number of `sn3d` ranks and by the bin width in seconds.
+
+The result is in erg/s. The value of `nprocs_exspec` in `input.txt` gives the number of `sn3d` ranks.
+Column 2 of [the light curve](#the-light-curves) uses solar luminosities. ARTIS uses $L_\odot = 3.826 \times 10^{33}$ erg/s.
+
 ### The virtual packet files
 
 Each rank writes its own files, and each file holds only the virtual packets of that rank. The types of file have
@@ -460,8 +476,10 @@ Python has no numpy, run the script with uv, e.g. `uv run --with numpy read_spec
 
 ## A new simulation removes the files of the previous one
 
-A new simulation first removes the output files, the restart files, and the `job_from_ts*` folders of the previous
-simulation. `scripts/clean.sh` removes the same files, and also the Slurm output files and the core files.
+A new simulation removes the restart files and the `job_from_ts*` folders. At the top level of the model folder,
+`sn3d` also removes files that match `*.out` or `*.out.*`. This includes personal files such as `analysis.out.zst`.
+`sn3d` keeps files that match `slurm-*.out`. Move personal output files outside the model folder before you start a
+new simulation. `scripts/clean.sh` also removes the Slurm output files and the core files.
 
 ## Plotting and analysis
 
