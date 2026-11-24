@@ -1652,10 +1652,9 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
   // The matrix and the analysis use the same row weights. frac_sum thus differs from 1 by the rounding of the float
   // frac_heating (about 3e-8), and by the fractions of the ions below MIN_ION_OVER_NNTOT. The analysis above counts
-  // these ions, but the matrix does not include them, and each one adds at most about 1e-8. A much larger
-  // difference shows that a term counts some energy two times or not at all. The limit of the check is 1e-3,
-  // because a smaller error of the heating fraction has no important effect on the thermal balance.
-  if (!ftol<1e-3>(frac_sum, 1.0)) {
+  // these ions, but the matrix does not include them, and each one adds at most about 1e-8. A larger difference
+  // shows that a term counts some energy two times or not at all.
+  if (!ftol<1e-5>(frac_sum, 1.0)) {
     // The packets give the fraction 1 - frac_ionisation - frac_excitation_of_stored_list to k-packets, whatever the
     // stored frac_heating is. For a solution that fails the check, the thermal balance takes that same fraction, so
     // that it counts no energy two times. The clamp keeps a negative fraction out of the T_e solver.
@@ -2478,7 +2477,7 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // activates a macro-atom. The remainder becomes a k-packet (heating) below. It holds the excitation energy of
     // the transitions outside the list. analyse_sf_solution() calculates the frac_heating that the T_e solver
     // applies to the deposition rate. The k-packet probability differs from that frac_heating by frac_sum - 1. If
-    // the difference is more than 1e-3, analyse_sf_solution() stores the k-packet probability as frac_heating.
+    // the difference is more than 1e-5, analyse_sf_solution() stores the k-packet probability as frac_heating.
     zrand -= frac_ionisation;
     if (zrand < nt_solution[nonemptymgi].frac_excitation_of_stored_list) {
       for (const auto& ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
