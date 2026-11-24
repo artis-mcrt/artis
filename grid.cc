@@ -2633,10 +2633,10 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
 
   const auto get_text_of_key = [&keylines](const std::string_view key) -> std::string_view {
     const auto keyline = std::ranges::find(keylines, key, &KeyLine::first);
-    if (keyline == keylines.end()) {
-      fatal_crash("model.txt: the header has no key {}", key);
+    if (keyline != keylines.end()) {
+      return keyline->second;
     }
-    return keyline->second;
+    fatal_crash("model.txt: the header has no key {}", key);
   };
 
   const auto get_numbers_of_key = [&](const std::string_view key) {
