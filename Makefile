@@ -443,6 +443,8 @@ common_files := \
 	energyinput.cc \
 	gammapkt.cc \
 	grid.cc \
+	grid_geometry.cc \
+	grid_modelinput.cc \
 	input.cc \
 	kpkt.cc \
 	ltepop.cc \
