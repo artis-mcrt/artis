@@ -221,9 +221,10 @@ data.
 - `frac_sum is ..., but should be 1.0`: the heating, ionisation, and excitation fractions of the Spencer-Fano
   solution do not sum to 1 within a relative limit of 1e-5. The matrix and the analysis of the solution count each
   energy loss with the same weights, so a correct solution gives a sum of 1 to rounding. This warning thus shows that
-  a term of the solver counts some energy two times or not at all. The run continues. The code sets the heating
-  fraction to 1 minus the two other fractions, with the limits 0 and 1. If the two other fractions sum to more than
-  1, the heating fraction is 0 and the sum stays above 1.
+  a term of the solver counts some energy two times or not at all. The run continues. Without this warning, the code
+  uses the calculated heating fraction. With this warning, the code sets the heating fraction to 1 minus the two
+  other fractions, with the limits 0 and 1. That value is the fraction of the packets that become k-packets. If the
+  two other fractions sum to more than 1, the heating fraction is 0 and the sum stays above 1.
 
 ### Messages that stop a run
 

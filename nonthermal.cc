@@ -1518,6 +1518,9 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   }
 
   double frac_excitation_of_stored_list = 0.;
+  // The excitation energy of the transitions outside the stored list. The list has a maximum length and excludes
+  // some ions, and it is empty if nt_excitations_stored is zero.
+  double frac_excitation_outside_list = frac_excitation_total;
   if (nt_excitations_stored > 0) {
     // sort by descending frac_deposition
     std::ranges::SORT_OR_STABLE_SORT(tmp_excitation_list, std::ranges::greater{},
@@ -1591,6 +1594,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     for (const auto& ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
       frac_excitation_of_stored_list += ntexcitation.frac_deposition;
     }
+    // the sum before the scale factor below, so that the energy that the scale factor removes is not heating
+    frac_excitation_outside_list = frac_excitation_total - frac_excitation_of_stored_list;
     // A bad solution can give more than the deposition energy to ionisation and excitation. The packets then
     // reach only the fraction 1 - frac_ionisation, so each stored transition gets its part of that fraction. The
     // rate coefficients of the NLTE matrix get the same factor.
@@ -1639,24 +1644,28 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     printlnlog("  frac_sum:            {:g} (should be close to 1.0)", frac_sum);
   }
 
-  // force frac_sum to be 1.0 by adjusting frac_heating. Clamp to [0, 1] so a bad solution (where
-  // excitation + ionisation exceed 1) cannot feed a negative heating fraction into the T_e solver.
-  // The stored excitation list does not cover all of frac_excitation_total, because the list has a maximum
-  // length and excludes some ions. do_ntlepton_deposit() makes a k-packet from the energy of the transitions
-  // outside the list, so that energy is heating.
+  // The heating fraction is the result of calculate_frac_heating() plus the excitation energy of the transitions
+  // outside the stored list. do_ntlepton_deposit() makes a k-packet from that excitation energy, so the thermal
+  // balance must count it as heating.
   nt_solution[nonemptymgi].frac_heating =
-      static_cast<float>(std::clamp(1. - frac_excitation_of_stored_list - frac_ionisation_total, 0., 1.));
+      static_cast<float>(std::clamp(frac_heating_calculated + frac_excitation_outside_list, 0., 1.));
 
   // The matrix and the analysis use the same row weights. frac_sum thus differs from 1 by the rounding of the float
   // frac_heating (about 3e-8), and by the fractions of the ions below MIN_ION_OVER_NNTOT. The analysis above counts
   // these ions, but the matrix does not include them, and each one adds at most about 1e-8. A larger difference
   // shows that a term counts some energy two times or not at all.
   if (!ftol<1e-5>(frac_sum, 1.0)) {
+    // The packets give the fraction 1 - frac_ionisation - frac_excitation_of_stored_list to k-packets, whatever the
+    // stored frac_heating is. For a solution that fails the check, the thermal balance takes that same fraction, so
+    // that it counts no energy two times. The clamp keeps a negative fraction out of the T_e solver.
+    nt_solution[nonemptymgi].frac_heating =
+        static_cast<float>(std::clamp(1. - frac_excitation_of_stored_list - frac_ionisation_total, 0., 1.));
     printlnlog("[warning] frac_sum is {:g}, but should be 1.0", frac_sum);
     printlnlog(
-        "  (replacing calculated frac_heating_tot {:g} with {:g}, which is 1 - frac_ionisation - the excitation "
+        "  (replacing the calculated heating fraction {:g} with {:g}, which is 1 - frac_ionisation - the excitation "
         "fraction {:g} that the packets give to the stored list)",
-        frac_heating_calculated, nt_solution[nonemptymgi].frac_heating, frac_excitation_of_stored_list);
+        frac_heating_calculated + frac_excitation_outside_list, nt_solution[nonemptymgi].frac_heating,
+        frac_excitation_of_stored_list);
   }
 }
 
@@ -2466,8 +2475,9 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
 
     // Each transition of the stored excitation list gets its frac_deposition of the packets, and its upper level
     // activates a macro-atom. The remainder becomes a k-packet (heating) below. It holds the excitation energy of
-    // the transitions outside the list, so the k-packet probability is the frac_heating that
-    // analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
+    // the transitions outside the list. analyse_sf_solution() calculates the frac_heating that the T_e solver
+    // applies to the deposition rate. The k-packet probability differs from that frac_heating by frac_sum - 1. If
+    // the difference is more than 1e-5, analyse_sf_solution() stores the k-packet probability as frac_heating.
     zrand -= frac_ionisation;
     if (zrand < nt_solution[nonemptymgi].frac_excitation_of_stored_list) {
       for (const auto& ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
