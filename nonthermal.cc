@@ -720,12 +720,11 @@ void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
   return std::clamp(index, 0, SFPTS - 1);
 }
 
-// The exclusive row limit of the Auger electron source term of a shell: the rows [0, limit) lie
-// below the mean Auger electron energy and receive the source, with the weight of
-// get_auger_source_row_weight(). The limit is 0 for a shell that
-// injects nothing, and SFPTS when the Auger energy is above the top of the grid, because every row
-// is then below it. calculate_ionisation_channels_of_ion() subtracts the recycled Auger energy from the
-// ionisation fraction only when this limit is positive, so the two sites must use this same function.
+// The exclusive row limit of the Auger electron source term of a shell. The rows [0, limit) are below the mean Auger
+// electron energy. They get the source with the weight of get_auger_source_row_weight(). The limit is 0 for a shell
+// that injects nothing. It is SFPTS if the Auger energy is above the top of the grid, because each row is then below
+// that energy. calculate_ionisation_channels_of_ion() subtracts the recycled Auger energy from the ionisation
+// fraction only if this limit is positive. The two sites must thus use this same function.
 [[nodiscard]] constexpr auto get_auger_rowstopindex(const ShellParams& collionrow) -> int {
   if (!SF_AUGER_CONTRIBUTION_ON || collionrow.en_auger_ev <= 0.) {
     return 0;
@@ -961,19 +960,19 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
 // collisions (see sfmatrix_add_ionisation() and add_excitation_energy_below_emin()).
 //
 // This form has two advantages. First, the vector and the matrix count each collision with the same weights. The three
-// terms and the ionisation and excitation fractions of the ions in the matrix then sum to the deposition energy to
-// rounding (about 3e-8), on each energy grid. A separate quadrature of N(E) gave a sum with an error of as much as
-// 5e-3. Second, the form needs no sub-grid. SF_EMIN (0.1 eV) is much smaller than DELTA_E (3.9 eV for 4096 points),
-// so the grid of the solution cannot resolve the energies from 0 to E_0.
+// terms and the ionisation and excitation fractions of the ions in the matrix then sum to the deposition energy. The
+// difference is rounding (about 3e-8) on each energy grid. A separate quadrature of N(E) gave a sum with an error of
+// as much as 5e-3. Second, the form needs no sub-grid. SF_EMIN (0.1 eV) is much smaller than DELTA_E (3.9 eV for
+// 4096 points), so the grid of the solution cannot resolve the energies from 0 to E_0.
 //
 // The lowest grid interval
 // ------------------------
 // On the grid, the energy "below E_0" of an electron is the energy that the rows of the matrix do not hold. Row i
 // holds the energy DELTA_E of each electron at or above engrid(i) + DELTA_E. The second term adds SF_EMIN for each
-// electron in row 0. An electron that appears at an energy E in the lowest grid interval, from SF_EMIN to SF_EMIN +
-// DELTA_E, has only a part of the row weight of row 0: (E - SF_EMIN) / DELTA_E. Row 0 and the second term then hold
-// only that part of DELTA_E + SF_EMIN, and the vector holds the rest of E. The energy in the vector for one electron
-// at E is (see get_en_below_emin_of_electron_ev()):
+// electron in row 0. The lowest grid interval is from SF_EMIN to SF_EMIN + DELTA_E. An electron that appears at an
+// energy E in that interval has only a part of the row weight of row 0. That part is (E - SF_EMIN) / DELTA_E. Row 0
+// and the second term then hold only that part of DELTA_E + SF_EMIN, and the vector holds the rest of E. The energy
+// in the vector for one electron at E is (see get_en_below_emin_of_electron_ev()):
 //
 //   E                                           for E < SF_EMIN
 //   SF_EMIN * (1 - (E - SF_EMIN) / DELTA_E)     for E from SF_EMIN to SF_EMIN + DELTA_E
@@ -984,8 +983,8 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
 // interval give about 40 times the energy of the electrons below SF_EMIN. The term is then at most 6e-4 of the
 // deposition energy in the first job of the test nebular_1d_3dgrid.
 //
-// With TESTMODE, check_en_below_emin() calculates the third term a second time, from the terms of N(E) with a
-// numerical quadrature over the energy transfer, and it compares the two results.
+// With TESTMODE, check_en_below_emin() calculates the third term a second time and compares the two results. It uses
+// the terms of N(E) with a numerical quadrature over the energy transfer.
 auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPTS>& yfunc,
                             std::span<const double> en_below_emin_ev_per_y) -> float {
   // frac_heating multiplied by E_init, which will be divided out at the end
@@ -1277,10 +1276,10 @@ auto has_xs_excitation(const int alltransindex, const double epsilon_trans_ev) -
          (globals::alltrans.coll_str[alltransindex] >= 0 || !globals::alltrans.forbidden[alltransindex]);
 }
 
-// call usexs(j, xs) with the collisional excitation cross section xs [cm^2] of every column j of the Spencer-Fano
-// matrix whose middle energy engrid_mid(j) is at or above the transition threshold, without materialising a cross
-// section vector. The cross section is at engrid_mid(j). The first column can start below the threshold. The matrix
-// bands and the analysis of the solution both call this function, so they use the same columns.
+// This function calls usexs(j, xs) for each column j whose middle energy engrid_mid(j) is at or above the transition
+// threshold. xs is the collisional excitation cross section [cm^2] of the column, at engrid_mid(j). The function
+// makes no cross section vector. The first column can start below the threshold. The matrix bands and the analysis
+// of the solution both call this function, so they use the same columns.
 // The caller must have checked has_xs_excitation(). epsilon_trans is in erg
 template <typename Func>
 void xs_excitation_for_each(const int alltransindex, const double statweight_lower, const double epsilon_trans,
@@ -2222,13 +2221,14 @@ auto calculate_en_below_emin_from_N_e(const int nonemptymgi, const std::array<do
         const double J = get_J(Z, ionstage, ionpot_ev);
         const int xsstartindex = get_xs_ionisation_vector(vec_xs_ionisation, collionrow);
 
-        // Equation 4 of Kozma & Fransson (1992) for the energy e_s of the secondary electron, without the factor
-        // 1 / atan((E' - I) / (2 J)) of the primary energy E'
+        // Equation 4 of Kozma & Fransson (1992) for the energy e_s of the secondary electron. The result does not
+        // include the factor 1 / atan((E' - I) / (2 J)), which depends on the primary energy E'.
         const auto lorentzian = [J](const double e_s) { return 1. / (J * (1. + pow2(e_s / J))); };
 
-        // The secondary term of equation 11: the integral of y(E') sigma(E') P(E', E) over E' from 2E + I to SF_EMAX,
-        // for a secondary electron that appears at E. In terms of the column, the secondary of a primary at E' has an
-        // energy from zero to (E' - I) / 2. The integrand has kinks at SF_EMIN and at SF_EMIN + DELTA_E.
+        // The secondary term of equation 11 is an integral over E' from 2E + I to SF_EMAX. The integrand is y(E')
+        // sigma(E') P(E', E). It is for a secondary electron that appears at E. In terms of the column, the secondary
+        // of a primary at E' has an energy from zero to (E' - I) / 2. The integrand has kinks at SF_EMIN and at
+        // SF_EMIN + DELTA_E.
         const auto secondary_integrand = [&](const double e_s) {
           return get_en_below_emin_of_electron_ev(e_s) * lorentzian(e_s);
         };
@@ -2253,11 +2253,11 @@ auto calculate_en_below_emin_from_N_e(const int nonemptymgi, const std::array<do
           const double integral_secondary =
               (e_s_max >= SF_EMIN + DELTA_E) ? integral_secondary_all : integrate_secondary(e_s_max);
 
-          // The primary term of equation 11: the integral of y(E + epsilon) sigma(E + epsilon) P(E + epsilon,
-          // epsilon - I) over epsilon, for a primary electron that appears at E = E' - epsilon. The matrix counts
-          // the electron of column j at engrid(j) + DELTA_E, so the primary appears at E' - I - e_s + DELTA_E in that
-          // count. The integrand is zero for a primary that ends above SF_EMIN, and it has a kink where the count
-          // energy is SF_EMIN.
+          // The primary term of equation 11 is an integral over epsilon. The integrand is y(E + epsilon) sigma(E +
+          // epsilon) P(E + epsilon, epsilon - I). It is for a primary electron that appears at E = E' - epsilon. The
+          // matrix counts the electron of column j at engrid(j) + DELTA_E, so the primary appears at E' - I - e_s +
+          // DELTA_E in that count. The integrand is zero for a primary that ends above SF_EMIN. It has a kink where
+          // the count energy is SF_EMIN.
           double integral_primary = 0.;
           const double e_s_primary_at_emin = endash - ionpot_ev - SF_EMIN;
           if (e_s_primary_at_emin < e_s_max) {
@@ -2295,17 +2295,19 @@ auto calculate_en_below_emin_from_N_e(const int nonemptymgi, const std::array<do
 }
 
 // The check of TESTMODE for the third term of the heating fraction. The matrix setup fills en_below_emin_ev_per_y
-// from closed forms of the row weights. This function compares the sum of y times that vector with the direct
-// integral of N(E) of equation 11 of Kozma & Fransson (1992) (see calculate_en_below_emin_from_N_e()). In the test
-// nebular_1d_3dgrid, the two values agree to 4e-9, with SF_EMIN at 0.1 eV and at 5 eV. The limit of the check is
-// 1e-6. In that test, an error of 0.1% in the term of the secondary electrons or of the excitations gives a
-// difference above that limit. An error of 0.1% in the term of the primary electrons gives such a difference in some
-// solutions with SF_EMIN at 5 eV. With SF_EMIN at 0.1 eV, almost no primary electron ends below SF_EMIN.
+// from closed forms of the row weights. This function compares the sum of y times that vector with the result of
+// calculate_en_below_emin_from_N_e(). That result is the direct integral of N(E) of equation 11 of Kozma & Fransson
+// (1992). In the test nebular_1d_3dgrid, the two values agree to 4e-9. This is true with SF_EMIN at 0.1 eV and at
+// 5 eV. The limit of the check is 1e-6.
+//
+// In that test, an error of 0.1% in the term of the secondary electrons gives a difference above that limit. The
+// same is true for the term of the excitations. For the term of the primary electrons, it is true in some solutions
+// with SF_EMIN at 5 eV. With SF_EMIN at 0.1 eV, almost no primary electron ends below SF_EMIN.
 //
 // The part of the Auger electrons uses the same formula as the matrix setup, and it is small in the tests. In
-// nebular_1d_3dgrid, one shell of Ni III has a mean Auger energy of 3.1 eV, which is in the lowest grid interval.
-// That part is at most 0.4% of the term there. An error of 0.1% in it gives a difference above the limit in 7 of 19
-// solutions with SF_EMIN at 0.1 eV, and in no solution with SF_EMIN at 5 eV.
+// nebular_1d_3dgrid, one shell of Ni III has a mean Auger energy of 3.1 eV. That energy is in the lowest grid
+// interval, and that part is at most 0.4% of the term there. With SF_EMIN at 0.1 eV, an error of 0.1% in it gives a
+// difference above the limit in 7 of 19 solutions. With SF_EMIN at 5 eV, no solution shows such an error.
 void check_en_below_emin(const int nonemptymgi, const std::array<double, SFPTS>& yfunc,
                          std::span<const double> en_below_emin_ev_per_y) {
   double en_below_emin_from_matrix = 0.;
