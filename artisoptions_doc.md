@@ -35,19 +35,22 @@ constexpr std::optional<double> TIMESTEP_SIZE_TRANSITION_TIME_DAYS;
 
 // --- Grid and composition ---
 
-// Set GridType::CARTESIAN3D to map a 1D or a 2D model onto a 3D Cartesian grid. No value keeps the grid type of
-// model.txt. GridType::SPHERICAL1D and GridType::CYLINDRICAL2D are valid only when they equal the grid type of
-// model.txt. Any other combination stops the run.
+// Set GridType::CARTESIAN3D to map a 1D, a 2D, or a 3D spherical model onto a 3D Cartesian grid. No value keeps the
+// grid type of model.txt. Each other grid type (GridType::SPHERICAL1D, GridType::CYLINDRICAL2D,
+// GridType::SPHERICAL2D, and GridType::SPHERICAL3D) is valid only when it equals the grid type of model.txt. Any
+// other combination stops the run.
 constexpr std::optional<GridType> GRID_TYPE_OVERRIDE;
 
-// The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets the size, and the code ignores
-// these values. The three values must be equal and positive, because the code assumes cubic cells.
+// The size of the 3D Cartesian grid for a 1D, a 2D, or a 3D spherical model. A 3D Cartesian model.txt sets the
+// size, and the code ignores these values. The three values must be equal and positive, because the code assumes
+// cubic cells.
 constexpr int CUBOID_NCOORDGRID_X;
 constexpr int CUBOID_NCOORDGRID_Y;
 constexpr int CUBOID_NCOORDGRID_Z;
 
 // On a 2D cylindrical or a 3D Cartesian grid, empty every propagation cell with a centre outside the sphere of
-// radius vmax * tmin. A packet that enters a cell with an inner corner outside the sphere escapes at once.
+// radius vmax * tmin. A packet that enters a cell with an inner corner outside the sphere escapes at once. A
+// spherical grid of each type ends at that sphere, thus the option has no effect on it.
 constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE;
 
 // Convert a mass fraction to a number density with the mean atomic mass of the nuclear composition of the cell,

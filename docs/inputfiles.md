@@ -19,7 +19,7 @@ exist.
 | [transitiondata.txt](#transitiondatatxt) | yes | the lines of each ion |
 | [phixsdata_v2.txt or phixsdata.txt](#phixsdata_v2txt-and-phixsdatatxt) | one of them | the photoionisation cross-sections |
 | [vpkt.txt](#vpkttxt) | with `VPKT_ON` | the observer directions of the virtual packets |
-| [Ye.txt](#yetxt) | with `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, if `model.txt` has no `Ye` column | the electron fraction of each cell |
+| [Ye.txt](#yetxt) | with `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, if a `model.txt` of format version 1 has no `Ye` column | the electron fraction of each cell |
 | [recombrates.txt](#recombratestxt) | no | the recombination rate coefficients for the calibration |
 | [autoion.txt](#autoiontxt) | no | the autoionisation rates |
 | [gamma_*.txt](#the-gamma-ray-line-files) | for nine nuclides | the gamma-ray lines of each nuclide, which come with the source in `artis/data` |
@@ -82,10 +82,19 @@ At the start of a new simulation, `sn3d` writes `input.txt` again with a comment
 
 ## model.txt
 
-`model.txt` holds the grid, the density of each cell, and the mass fractions of the nuclides. `sn3d` finds the number
-of dimensions from the first lines of the file.
+`model.txt` holds the grid, the density of each cell, and the mass fractions of the nuclides. The file has two format
+versions:
 
-A 1D model has spherical shells:
+- Format version 1 has a header of numbers, and `sn3d` finds the coordinates of the grid from the first lines of the
+  file. Such a file holds a 1D spherical, a 2D cylindrical, or a 3D Cartesian model. This section gives its layout.
+  The element mass fractions of such a model are in `abundances.txt`.
+- [Format version 2](#format-version-2) starts with the line `format_version 2` and has a header of keys. Such a
+  file holds one of the same three types of model, or a 2D spherical or a 3D spherical model. Such a model has no
+  `abundances.txt`, because `model.txt` also gives the element mass fractions.
+
+`artistools inputmodel makeartismodel --format-version` converts a model between the two versions.
+
+A 1D model of format version 1 has spherical shells:
 
 ```text
 <number of cells>
@@ -143,7 +152,7 @@ The columns of each cell:
 | `logrho` | 1D | The base-10 logarithm of the density [g/cm^3] at `t_model`. A value of -90 or less gives an empty cell. |
 | `pos_rcyl_mid`, `pos_z_mid` | 2D | The midpoint of the cell [cm] at `t_model`. |
 | `pos_x_min`, `pos_y_min`, `pos_z_min` | 3D | The corner of the cell with the lowest coordinates [cm] at `t_model`. |
-| `rho` | 2D, 3D | The density [g/cm^3] at `t_model`. A value of zero gives an empty cell, and a negative value stops the run. |
+| `rho` | 2D, 3D | The density [g/cm^3] at `t_model`. A value of zero gives an empty cell. A negative value stops the run, and also a value that is too large for a 32-bit float. |
 | `X_Fegroup` | all | The mass fraction of the iron-group elements. The value must not be above 1.001, which permits a rounding error. `sn3d` treats a negative value as it treats a negative `X_<nuclide>` value. |
 | `X_<nuclide>` | all | The mass fraction of one nuclide at `t_model`, e.g. `X_Ni56`. The name has the element symbol and the mass number, and its case has no effect. `X_n1` is the mass fraction of the free neutrons. `sn3d` does not decay the free neutrons, thus it does not use this column, and the log names the column as ignored. Each other mass number after `n` gives nitrogen, e.g. `X_N14`. A mass number below the atomic number stops the run. Two columns that give the same nuclide also stop the run, e.g. `X_Ni56` and `X_ni56`. The value must be in the range from 0 to 1. `sn3d` sets a negative value above -1e-6 to 0, and a value below that limit stops the run. |
 | `Ye` or `cellYe` | all | The electron fraction. |
@@ -167,10 +176,157 @@ More rules for the cells:
   the column for the initial temperature and for the initial packets.
 - A column with a different name gets a warning in the log, and `sn3d` does not use it.
 
+### Format version 2
+
+A `model.txt` of format version 2 has the line `format_version 2` as its first line. Its header gives one key on each
+line, with the edges of the cells on each axis. This is a 3D spherical model:
+
+```text
+format_version 2
+coordinates spherical3d
+cells_per_axis <n_r> <n_costheta> <n_phi>
+t_model_init_days <t_model in days>
+vel_r_edges_kmps <n_r + 1 radial velocities in km/s>
+costheta_edges <n_costheta + 1 values of cos(theta) from -1 to 1>
+phi_edges_radians <n_phi + 1 azimuthal angles in radians>
+cell_line_count <number of cell lines>
+columns inputcellid rho X_Fegroup X_Ni56 X_Ni_otherstable Ye
+<one row for each cell that is not empty>
+```
+
+Only the columns `inputcellid` and `rho` are necessary. The columns can also hold `X_<element>_otherstable`, e.g.
+`X_Ni_otherstable` (see [The element mass fractions](#the-element-mass-fractions)).
+
+The key `coordinates` gives the grid, and each grid has its own keys for the edges, in the sequence of its axes:
+
+| `coordinates` | Keys of the cell edges | Grid |
+| --- | --- | --- |
+| `spherical1d` | `vel_r_edges_kmps` | Spherical shells. |
+| `cylindrical2d` | `vel_rcyl_edges_kmps`, `vel_z_edges_kmps` | Cells in the cylindrical radius and in z, with rotational symmetry around the z axis. |
+| `cartesian3d` | `vel_x_edges_kmps`, `vel_y_edges_kmps`, `vel_z_edges_kmps` | Cubes. |
+| `spherical2d` | `vel_r_edges_kmps`, `costheta_edges` | Cells in the radius r and in cos(theta) of the polar angle theta, with rotational symmetry around the z axis. |
+| `spherical3d` | `vel_r_edges_kmps`, `costheta_edges`, `phi_edges_radians` | Cells in r, in cos(theta), and in the azimuthal angle phi. |
+
+The header:
+
+- The first line of the file is `format_version 2`, with no comment line before it. A file with a different version
+  number stops the run.
+- Each header line after it holds a key and its values. A comment line can come between the header lines, and a
+  header line can end with a comment that starts with `#`.
+- The keys can come in any sequence, but the key `columns` is the last line of the header. Each key can occur one
+  time.
+- The keys `coordinates`, `t_model_init_days`, `columns`, and the edge keys of the coordinates are necessary. An edge
+  key of different coordinates stops the run, e.g. `phi_edges_radians` in a `spherical2d` model.
+- The key `cells_per_axis` is optional. It gives the number of cells on each axis, in the sequence of the axes of
+  the table above, e.g. `cells_per_axis 5 4 4` for n_r = 5, n_costheta = 4, and n_phi = 4. Each number is an integer.
+  `sn3d` stops if a number is different from the number that the list of edges of that axis gives.
+- The key `mirror_plane` is optional, and its only value is `z=0`. It gives mirror symmetry in the plane z = 0, for
+  a `cylindrical2d`, a `spherical2d`, or a `spherical3d` model. See [Mirror symmetry](#mirror-symmetry).
+- The key `cell_line_count` is optional. It gives the number of the cell lines of the file, as one integer from 1 to
+  the number of cells of the grid. `sn3d` stops if the file has a different number of cell lines. A file that lost
+  lines at its end has more empty cells and no other sign of the loss. Only this key finds such a file. Thus write
+  the key in each file.
+- `sn3d` gives a warning in the log for a key that it does not know, and it does not use that key. Thus a later
+  version of ARTIS can add a key, and an older `sn3d` still reads the file.
+- Each list of edges has one value more than the number of cells on that axis, and it must have two or more values.
+  Each value must be larger than the value before. A list of velocities must also increase after the conversion to
+  cm/s. At the start time, each radial shell must be wider than 10 cm and wider than 1e-12 of its outer radius,
+  which is the position tolerance of a cell boundary.
+- A list of r, rcyl, or phi starts at 0. The last value of the list of the first axis is `vmax`. For the
+  spherical coordinates, `vmax` must be less than the speed of light.
+- A cylindrical or a Cartesian grid has cells of equal width, because `sn3d` holds no other grid of these types. The
+  lists of x, y, and z must have equal steps from -`vmax` to `vmax`, and the list of rcyl from 0 to `vmax`. `sn3d`
+  permits a difference of 1e-9 times `vmax` for each edge. The three lists of a Cartesian grid must have the same
+  number of values. The rule of the corner velocity of format version 1 also applies.
+- The values of `costheta_edges` are the cosine of the polar angle theta. The first value must be exactly -1, which
+  is the -z axis. The last value must be exactly 1, which is the +z axis. An edge at 0 is the plane z = 0.
+- The last value of `phi_edges_radians` must be 2 pi. `sn3d` accepts a difference of 1e-8 and then uses the exact
+  value.
+- Each cell in cos(theta) must be wider than 1e-8, and each cell in phi must be wider than 1e-8 rad. A polar edge
+  is a cone with the cosine of the edge. A cell at the z axis with this minimum width has its cone 1.4e-4 rad from
+  the axis. Nearer to the axis, a cosine does not give the position of the cone to the position tolerance of a cell
+  boundary.
+- Write each edge with sufficient digits to give the same number again, i.e. a maximum of 17 significant digits.
+- theta is the angle from the +z axis. phi is the angle atan2(y, x) in the range from 0 to 2 pi. Thus
+  x = r sin(theta) cos(phi), y = r sin(theta) sin(phi), and z = r cos(theta). A cell holds its lower edge of
+  cos(theta), and the last polar cell also holds the +z axis. The centre is in the first polar cell.
+- The key `columns` gives the column names. The first two names must be `inputcellid` and `rho`. A file of format
+  version 2 has no position column, thus a column `vel_r_max_kmps`, `logrho`, or `pos_...` stops the run.
+
+The cells:
+
+- Each cell that is not empty has one line. A comment line or an empty line can come before each cell line.
+- Each cell line must have one value for each name of the key `columns`. This also applies to the line of an empty
+  cell. `sn3d` stops for a line with fewer values or with more values. It also stops for a value outside the limits
+  of its column in the line of an empty cell, e.g. a negative mass fraction, although it stores no value of that cell.
+- The cell id is the index of the cell in the grid of the edges, and the first index is 0. The index of the first
+  axis changes fastest. For example, the cell of a 3D spherical model with the indices i_r, i_costheta, and i_phi
+  has the id i_r + n_r * (i_costheta + n_costheta * i_phi). The index i_costheta counts from the -z axis. A Cartesian model has x as its first axis, and a cylindrical model
+  has rcyl.
+- The cell ids must increase through the file. A cell with no line is an empty cell. Thus the file needs a line only
+  for a cell that is not empty, and it must have one cell line or more.
+- `sn3d` calculates the number of cells as the product of the numbers of cells on the axes. `sn3d` stops if a cell id
+  is equal to or larger than this number, or if the file has more cell lines than this number.
+- A model of format version 2 has no `Ye.txt`, and `sn3d` stops if that file is present. The column `Ye` gives the
+  electron fraction.
+- The columns `rho`, `X_Fegroup`, `X_<nuclide>`, `Ye`, and `q` have the meaning of the table above. Each model of
+  format version 2 holds `rho`, and no model holds `logrho`.
+- Each column after `rho` is optional and has no fixed place. A nuclide with no column has the mass fraction 0, also
+  `X_Ni56`, `X_Co56`, `X_Fe52`, and `X_Cr48`.
+- A file with no column `X_Fegroup` gives each cell the value 0, and the log has a line for this. `sn3d` uses this
+  mass fraction for the photoelectric opacity and the pair production opacity of the gamma rays, and for the grey
+  opacity of `RPKT_GREY_TYPE = FEGROUP_APPROX`.
+
+A 1D spherical, a 2D cylindrical, or a 3D Cartesian model gives the same grid in format version 1 and in format
+version 2. The density of a 1D cell can differ in the last digits, because version 1 holds its logarithm.
+
+For a 2D spherical or a 3D spherical model without [GRID_TYPE_OVERRIDE](options.md#grid_type_override), the
+propagation grid has the cells of the model. A boundary of cos(theta) is a cone around the z axis, and a boundary of
+phi is a half of a plane through the z axis. These boundaries have constant velocity coordinates, thus they do not move
+in the homologous expansion. The cells near the centre and near the z axis are small. A packet path within 10 cm of
+the centre changes its cell there in one step. Thus `sn3d` stops if the outer radius of the first radial shell is not
+above 1e5 cm at the start time.
+
+### Mirror symmetry
+
+A `cylindrical2d`, `spherical2d`, or `spherical3d` model of format version 2 can have mirror symmetry in the plane
+z = 0. The header then has the line `mirror_plane z=0`, and the file holds the cells with z >= 0:
+
+- The list `vel_z_edges_kmps` of a cylindrical model has equal steps from 0 to `vmax`.
+- The list `costheta_edges` of a spherical model goes from exactly 0 to exactly 1.
+- `cells_per_axis` and the cell ids are of this half. The index of z of a cylindrical model and the index of
+  cos(theta) of a spherical model start at the plane z = 0.
+
+Each cell of the file is one model cell that fills its cell with z >= 0 and the mirror cell with z <= 0. Thus its
+volume and its mass are two times the values of the half cell. The propagation grid has the cells of both halves,
+and the two cells of a mirror pair have the same model cell. Thus the estimators of a model cell use the packets of
+both cells, and the output files give the model cells of the file. With
+[GRID_TYPE_OVERRIDE](options.md#grid_type_override), each Cartesian cell with z < 0 takes the model cell of its mirror
+position.
+
+A version of `sn3d` without this key gives a warning for the unknown key and stops at the edge rules above, because
+it needs a z axis from -`vmax` and a polar axis to pi. Format version 1 has no mirror symmetry.
+
+### The element mass fractions
+
+This section applies to a `model.txt` of [format version 2](#format-version-2).
+
+A model of format version 2 has no `abundances.txt`, and `sn3d` stops if that file is present. `sn3d` calculates the
+mass fraction of each element from the columns of `model.txt`:
+
+- It adds the columns `X_<nuclide>` of the isotopes of the element, e.g. `X_Ni56` and `X_Ni58`.
+- It adds the column `X_<element>_otherstable`, e.g. `X_Ni_otherstable`. This optional column holds the mass fraction
+  of the stable isotopes of the element that have no column of their own. An element can have one such column.
+
+The rules of [abundances.txt](#abundancestxt) for the sum of the element mass fractions of a cell also apply here. A
+negative value in an otherstable column has the same rule as a negative `X_<nuclide>` value. The mass fraction of an
+element in `X_<element>_otherstable` does not decay, and `sn3d` puts no decay energy into it.
+
 ## abundances.txt
 
 `abundances.txt` holds the mass fractions of the elements of each cell. These include the elements whose nuclide mass
-fractions are not in `model.txt`. The file can have comment lines.
+fractions are not in `model.txt`. The file can have comment lines. Only a model with a `model.txt` of format version
+1 has this file. A `model.txt` of [format version 2](#the-element-mass-fractions) gives the element mass fractions.
 
 The file has one row for each cell of `model.txt`, also for an empty cell, in the same sequence:
 
@@ -385,6 +541,10 @@ spectra.
 ## Ye.txt
 
 An optional file with the electron fraction of the cells. It replaces the values of the `Ye` column of `model.txt`.
+Only a model with a `model.txt` of format version 1 can have this file. `sn3d` stops if the file is present with a
+`model.txt` of [format version 2](#format-version-2), because the column `Ye` of that `model.txt` gives the electron
+fraction.
+
 Each value must be in the range from 0 to 1, and `sn3d` accepts a value up to 1.001 for the rounding. With
 `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, each cell with matter
 needs an electron fraction above 0 from this file or from that column, or the run stops. The file can have no comment lines.
