@@ -1,5 +1,8 @@
-// The model grid and the propagation grid: maps the model cells onto the propagation grid, allocates and holds the
-// state of each cell, assigns the cells to the ranks, and reads and writes the grid restart data.
+// The model grid and the propagation grid. This file:
+// - maps the model cells onto the propagation grid;
+// - allocates and holds the state of each cell;
+// - assigns the cells to the ranks;
+// - reads and writes the grid restart data.
 // grid_modelinput.cc reads the input ejecta model, and grid_geometry.cc holds the geometry of the propagation grid.
 
 #include "grid.h"
@@ -7,15 +10,12 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
-#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <format>
-#include <iostream>
 #include <optional>
 #include <print>
 #include <ranges>

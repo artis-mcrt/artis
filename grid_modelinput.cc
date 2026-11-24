@@ -1,18 +1,16 @@
-// The read of the input ejecta model: model.txt gives the densities and the mass fractions of the nuclides,
-// abundances.txt gives the mass fractions of the elements, and the optional Ye.txt gives the electron fractions.
+// The read of the input ejecta model:
+// - model.txt gives the densities and the mass fractions of the nuclides;
+// - abundances.txt gives the mass fractions of the elements;
+// - the optional Ye.txt gives the electron fractions.
 
 #include <algorithm>
 #include <array>
 #include <cassert>
-#include <cctype>
 #include <cmath>
 #include <cstddef>
-#include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <deque>
 #include <format>
-#include <iostream>
 #include <iterator>
 #include <limits>
 #include <numeric>

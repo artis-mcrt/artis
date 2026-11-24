@@ -1,24 +1,18 @@
-// The geometry of the propagation grid (1D spherical, 2D cylindrical, 3D Cartesian, 2D spherical, or 3D spherical):
-// the coordinates and the volumes of the propagation cells, and the distance of a packet to the boundary of its
-// cell.
+// The geometry of the propagation grid: the setup of each grid type, the coordinates and the volumes of the
+// propagation cells, and the distance of a packet to the boundary of its cell.
 
 #include <algorithm>
 #include <array>
 #include <cassert>
-#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
-#include <cstring>
-#include <deque>
 #include <format>
 #include <iterator>
 #include <limits>
 #include <numbers>
 #include <optional>
-#include <set>
 #include <span>
-#include <string>
 #include <string_view>
 #include <tuple>
 #include <vector>
