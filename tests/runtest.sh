@@ -263,6 +263,10 @@ case $step in
         # a cell line with text after its values
         sed -e '$s/$/ junk/' "$model2d" > "$checkroot/textaftervalues.txt"
         run_formatcheck_case textaftervalues "$checkroot/textaftervalues.txt" "after the values of the columns"
+        # a line of a cell with a density of zero that holds a negative mass fraction
+        sed -e '$s/^\([0-9]* \)[^ ]* [^ ]* /\10 -0.5 /' "$model2d" > "$checkroot/emptycellvalue.txt"
+        run_formatcheck_case emptycellvalue "$checkroot/emptycellvalue.txt" \
+            "has the value -0.5 in the column X_Fegroup, which is outside the limits of that column"
         # a key cells_per_axis that does not agree with the lists of edges
         sed 's/^cells_per_axis 5 10$/cells_per_axis 5 9/' "$model2d" > "$checkroot/wrongcellsperaxis.txt"
         run_formatcheck_case wrongcellsperaxis "$checkroot/wrongcellsperaxis.txt" \

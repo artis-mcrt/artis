@@ -1222,6 +1222,29 @@ struct ModelFileReader {
   }
 };
 
+// The limits of a value of a model.txt column, which the reader of a cell with density also applies when it stores the
+// value. A mass fraction can be below zero by the rounding of the file. A NaN is outside each limit.
+[[nodiscard]] auto is_valid_model_column_value(const std::string& colname, const bool is_tracked_nuclide,
+                                               const double value) -> bool {
+  constexpr double massfrac_min = -1e-6;
+  if (is_tracked_nuclide) {
+    return value > massfrac_min && value <= 1.;
+  }
+  if (colname == "X_Fegroup") {
+    return value > massfrac_min && value <= 1.001;
+  }
+  if (colname.starts_with("X_") && colname.ends_with(otherstable_suffix)) {
+    return value > massfrac_min;
+  }
+  if (colname == "cellYe" || colname == "Ye") {
+    return value >= 0. && value <= 1.001;
+  }
+  if (colname == "q") {
+    return value >= 0.;
+  }
+  return true;
+}
+
 void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remainder, const int mgi,
                                 const bool keepcell, const std::vector<std::string>& colnames,
                                 const std::vector<int>& nucindexlist, const bool one_line_per_cell) {
@@ -1233,8 +1256,8 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
     remainder = std::string_view{line};
   }
 
-  // A line of an empty cell of format version 2 must also have one value for each column. Thus a line that lost its
-  // end stops the run, and it does not count as a cell line for the key cell_line_count.
+  // A line of an empty cell of format version 2 must also have one valid value for each column. Thus a line that lost
+  // its end or that holds a value outside the limits stops the run. The reader stores no value of an empty cell.
   if (!keepcell && model_format_version != 2) {
     return;
   }
@@ -1247,6 +1270,12 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
       fatal_crash("model.txt cell {} has no readable value for the column {}", mgi, colnames[i]);
     }
     if (!keepcell) {
+      if (!is_valid_model_column_value(colnames[i], nucindexlist[i] >= 0, valuein)) {
+        fatal_crash(
+            "model.txt cell {} has the value {:g} in the column {}, which is outside the limits of that column. The "
+            "line of a cell with a density of zero must also hold valid values",
+            mgi, valuein, colnames[i]);
+      }
       continue;
     }
 
