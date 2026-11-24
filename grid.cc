@@ -22,6 +22,7 @@
 #include <iterator>
 #include <limits>
 #include <numbers>
+#include <numeric>
 #include <optional>
 #include <print>
 #include <ranges>
@@ -940,9 +941,9 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
     // Check the element mass fractions of one cell with density, and store those of the elements with atomic data.
     // elem_massfracs_in holds the mass fraction of each element from Z=1 upwards.
     const auto store_cell_elem_massfracs = [&](const int mgi,
-                                               const std::array<float, max_atomic_number>& elem_massfracs_in,
-                                               const double elem_massfrac_sum) {
+                                               const std::array<float, max_atomic_number>& elem_massfracs_in) {
       // a sum above one is not physical. The limit permits the rounding of the values in the file.
+      const double elem_massfrac_sum = std::accumulate(elem_massfracs_in.begin(), elem_massfracs_in.end(), 0.);
       if (elem_massfrac_sum > 1. + 1e-3) {
         fatal_crash("{}: cell {} has element mass fractions that sum to {:g}, which is more than 1", massfrac_source,
                     mgi, elem_massfrac_sum);
@@ -1018,13 +1019,11 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
           elem_massfracs_double[model_otherstable_atomic_numbers[column] - 1] +=
               model_otherstable_massfracs[(static_cast<ptrdiff_t>(mgi) * num_otherstable_columns) + column];
         }
-        double elem_massfrac_sum = 0.;
         std::array<float, max_atomic_number> elem_massfracs_in{};
         for (int elem_z_index = 0; elem_z_index < max_atomic_number; elem_z_index++) {
           elem_massfracs_in[elem_z_index] = static_cast<float>(elem_massfracs_double[elem_z_index]);
-          elem_massfrac_sum += elem_massfracs_in[elem_z_index];
         }
-        store_cell_elem_massfracs(mgi, elem_massfracs_in, elem_massfrac_sum);
+        store_cell_elem_massfracs(mgi, elem_massfracs_in);
       }
       model_otherstable_massfracs.clear();
       model_otherstable_massfracs.shrink_to_fit();
@@ -1046,7 +1045,6 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
         // the abundances.txt file specifies the elemental mass fractions for each model cell.
         // The values are true mass fractions and get no normalisation. Their sum can be below one.
         // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
-        double elem_massfrac_sum = 0.;
         std::array<float, max_atomic_number> elem_massfracs_in{};
         double abund_in = 0.;
         for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
@@ -1063,19 +1061,18 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
             abund_in = 0.;
           }
           elem_massfracs_in[elem_z_index] = static_cast<float>(abund_in);
-          elem_massfrac_sum += elem_massfracs_in[elem_z_index];
         }
 
         // parse_next_token() gives false at the end of the row and also for a token that is not a
         // number, e.g. "nan". The loop above stops on both, so a bad token would silently zero every
         // later element. Only whitespace may remain here.
-        remainder.remove_prefix(std::min(remainder.find_first_not_of(token_whitespace), remainder.size()));
+        remainder = trim_token_whitespace(remainder);
         if (!remainder.empty()) {
           fatal_crash("read_elem_abundances: cell {} has an unreadable token at '{}'", mgi, remainder);
         }
 
         if (get_rho_tmin(mgi) > 0.) {
-          store_cell_elem_massfracs(mgi, elem_massfracs_in, elem_massfrac_sum);
+          store_cell_elem_massfracs(mgi, elem_massfracs_in);
         }
       }
     }
@@ -1097,6 +1094,10 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
   MPI_Bcast_safe(ncells_emptied, 0, globals::mpi_comm_node);
   printlnlog("finished setting the element mass fractions from {}", massfrac_source);
   return {std::move(elem_massfracs_of_mgi), ncells_emptied};
+}
+
+[[nodiscard]] constexpr auto is_otherstable_column(const std::string_view colname) -> bool {
+  return colname.starts_with("X_") && colname.ends_with(otherstable_suffix);
 }
 
 void parse_model_headerline(const std::string& line, std::vector<int>& zlist, std::vector<int>& alist,
@@ -1136,7 +1137,7 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
       } else {
         required_columnindex = get_ndim(get_modelgridtype()) + 1;
       }
-    } else if (token.starts_with("X_") && token.ends_with(otherstable_suffix)) {
+    } else if (is_otherstable_column(token)) {
       if (!model_has_edge_lists) {
         fatal_crash("the model.txt header line has the column {}, but only format version 2 has such a column", token);
       }
@@ -1225,7 +1226,7 @@ struct ModelFileReader {
   if (colname == "X_Fegroup") {
     return value > massfrac_min && value <= 1.001;
   }
-  if (colname.starts_with("X_") && colname.ends_with(otherstable_suffix)) {
+  if (is_otherstable_column(colname)) {
     return value > massfrac_min;
   }
   if (colname == "cellYe" || colname == "Ye") {
@@ -1273,7 +1274,7 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
 
     if (nucindexlist[i] >= 0) {
       set_modelinitnucmassfrac(mgi, nucindexlist[i], static_cast<float>(valuein));
-    } else if (colnames[i].starts_with("X_") && colnames[i].ends_with(otherstable_suffix)) {
+    } else if (is_otherstable_column(colnames[i])) {
       // the columns have the sequence of model_otherstable_atomic_numbers
       if (valuein < 0.) {
         if (valuein <= -1e-6) {
@@ -1308,7 +1309,7 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
     fatal_crash("model.txt cell {} has more values than the header has columns", mgi);
   }
   // a cell line of format version 2 has only whitespace after its values. Text there shows a damaged line
-  remainder.remove_prefix(std::min(remainder.find_first_not_of(token_whitespace), remainder.size()));
+  remainder = trim_token_whitespace(remainder);
   if (model_format_version == 2 && !remainder.empty()) {
     fatal_crash("model.txt cell {} has the text '{}' after the values of the columns", mgi, remainder);
   }
@@ -2588,9 +2589,6 @@ void set_spherical_model_cell_counts(const GridType spherical_model_type) {
       (spherical_model_type == GridType::SPHERICAL3D) ? static_cast<int>(std::ssize(model_phi_edges)) - 1 : 0,
   };
   npts_model = static_cast<ptrdiff_t>(ncoord_model[0]) * ncoord_model[1] * std::max(1, ncoord_model[2]);
-  if (npts_model > std::numeric_limits<int>::max()) {
-    fatal_crash("model.txt: the cell edges give {} cells, which is more than the largest cell index", npts_model);
-  }
 }
 
 // The largest difference [rad] between the last azimuthal edge and 2 pi that the reader of model.txt replaces by the
@@ -2614,36 +2612,31 @@ constexpr double model_uniform_edge_tolerance = 1e-9;
 auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
   using KeyLine = std::pair<std::string, std::string>;  // a key and the text after it, without a comment
   std::vector<KeyLine> keylines;
-  const auto find_key = [&keylines](const std::string_view key) {
-    return std::ranges::find(keylines, key, &KeyLine::first);
+  const auto has_key = [&keylines](const std::string_view key) {
+    return std::ranges::contains(keylines, key, &KeyLine::first);
   };
   std::string line;
-  while (find_key("columns") == keylines.end()) {
+  while (!has_key("columns")) {
     if (!std::getline(fmodel.file, line)) {
       fatal_crash("model.txt: the header must end with the key columns, which gives the column names");
     }
     if (lineiscommentonly(line)) {
       continue;
     }
-    auto text = std::string_view{line};
-    text = text.substr(0, text.find('#'));
-    text.remove_prefix(std::min(text.find_first_not_of(token_whitespace), text.size()));
+    const auto text = trim_token_whitespace(std::string_view{line}.substr(0, line.find('#')));
     const auto key = text.substr(0, text.find_first_of(token_whitespace));
-    if (find_key(key) != keylines.end()) {
+    if (has_key(key)) {
       fatal_crash("model.txt: the header has the key {} two times", key);
     }
-    keylines.emplace_back(std::string{key}, std::string{text.substr(key.size())});
+    keylines.emplace_back(std::string{key}, std::string{trim_token_whitespace(text.substr(key.size()))});
   }
 
-  const auto get_text_of_key = [&](const std::string_view key) -> std::string_view {
-    for (const auto& [linekey, linetext] : keylines) {
-      if (linekey == key) {
-        auto text = std::string_view{linetext};
-        text.remove_prefix(std::min(text.find_first_not_of(token_whitespace), text.size()));
-        return text.substr(0, text.find_last_not_of(token_whitespace) + 1);
-      }
+  const auto get_text_of_key = [&keylines](const std::string_view key) -> std::string_view {
+    const auto keyline = std::ranges::find(keylines, key, &KeyLine::first);
+    if (keyline == keylines.end()) {
+      fatal_crash("model.txt: the header has no key {}", key);
     }
-    fatal_crash("model.txt: the header has no key {}", key);
+    return keyline->second;
   };
 
   const auto get_numbers_of_key = [&](const std::string_view key) {
@@ -2653,7 +2646,7 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
     while (parse_next_token(remainder, number)) {
       numbers.push_back(number);
     }
-    remainder.remove_prefix(std::min(remainder.find_first_not_of(token_whitespace), remainder.size()));
+    remainder = trim_token_whitespace(remainder);
     if (!remainder.empty()) {
       fatal_crash("model.txt: the key {} has an unreadable number at '{}'", key, remainder);
     }
@@ -2762,7 +2755,7 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
   const auto detected_model_type = named_model_type.value();
 
   model_mirror_z = false;
-  if (find_key("mirror_plane") != keylines.end()) {
+  if (has_key("mirror_plane")) {
     if (get_text_of_key("mirror_plane") != "z=0") {
       fatal_crash("model.txt: the key mirror_plane must have the value z=0, but it has '{}'",
                   get_text_of_key("mirror_plane"));
@@ -2879,7 +2872,7 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
 
   // An edge list that lost a value or got one more value gives a different number of cells on its axis. The key is
   // optional.
-  if (find_key("cells_per_axis") != keylines.end()) {
+  if (has_key("cells_per_axis")) {
     const auto cells_per_axis = get_numbers_of_key("cells_per_axis");
     const auto num_axes = std::ssize(edge_keys_of_model);
     std::string edge_cell_counts;
@@ -2895,7 +2888,7 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
   }
 
   model_cell_line_count.reset();
-  if (find_key("cell_line_count") != keylines.end()) {
+  if (has_key("cell_line_count")) {
     const auto counts = get_numbers_of_key("cell_line_count");
     if (counts.size() != 1 || counts[0] != std::floor(counts[0]) || counts[0] < 1 ||
         counts[0] > static_cast<double>(npts_model)) {
@@ -2908,16 +2901,12 @@ auto read_model_keyword_header(ModelFileReader& fmodel) -> GridType {
   }
 
   const auto columns = get_text_of_key("columns");
-  auto columns_remainder = columns;
-  for (const std::string_view required_column : {"inputcellid", "rho"}) {
-    columns_remainder.remove_prefix(
-        std::min(columns_remainder.find_first_not_of(token_whitespace), columns_remainder.size()));
-    const auto column = columns_remainder.substr(0, columns_remainder.find_first_of(token_whitespace));
-    if (column != required_column) {
-      fatal_crash("model.txt: the first two values of the key columns must be inputcellid and rho, but they are '{}'",
-                  columns);
-    }
-    columns_remainder.remove_prefix(column.size());
+  std::string first_column;
+  std::string second_column;
+  std::istringstream{std::string{columns}} >> first_column >> second_column;
+  if (first_column != "inputcellid" || second_column != "rho") {
+    fatal_crash("model.txt: the first two values of the key columns must be inputcellid and rho, but they are '{}'",
+                columns);
   }
   // read_model_columns() takes the column names as a header line of format version 1
   fmodel.lines_read_ahead.push_back(std::format("#{}", columns));
@@ -2943,21 +2932,14 @@ void read_ejecta_model() {
   if (!std::getline(fmodel.file, line)) {
     fatal_crash("model.txt is empty");
   }
-  std::string firstword;
-  std::string versiontext;
-  std::string textafterversion;
-  // the version line can end with a comment, and it has no other text after the version
-  std::istringstream{line.substr(0, line.find('#'))} >> firstword >> versiontext >> textafterversion;
+  // the version line can end with a comment
+  const auto firstline = trim_token_whitespace(std::string_view{line}.substr(0, line.find('#')));
+  std::string firstword{firstline.substr(0, firstline.find_first_of(token_whitespace))};
   model_format_version = (firstword == "format_version") ? 2 : 1;
   if (model_format_version == 2) {
-    if (!textafterversion.empty()) {
-      // the message gives each value after the key, without the comment
-      auto versionvalues = std::string_view{line}.substr(0, line.find('#'));
-      versionvalues.remove_prefix(versionvalues.find("format_version") + std::string_view{"format_version"}.size());
-      versionvalues.remove_prefix(std::min(versionvalues.find_first_not_of(token_whitespace), versionvalues.size()));
-      versiontext = std::string{versionvalues.substr(0, versionvalues.find_last_not_of(token_whitespace) + 1)};
-    }
-    if (versiontext != "2" || !textafterversion.empty()) {
+    // the version is the only text after the key
+    const auto versiontext = trim_token_whitespace(firstline.substr(firstword.size()));
+    if (versiontext != "2") {
       fatal_crash(
           "model.txt has the format version '{}'. This version of sn3d reads format version 2, and format version 1, "
           "which has no format_version line",
