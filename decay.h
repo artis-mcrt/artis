@@ -134,6 +134,7 @@ void init_nuclides(std::span<const int> custom_zlist, std::span<const int> custo
 [[nodiscard]] auto get_nucstring_a(const std::string& strnuc) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_num_nuclides() -> ptrdiff_t;
 [[nodiscard]] auto get_elname(int z) -> std::string;
+[[nodiscard]] auto get_atomic_number_of_elsymbol(std::string_view elsymbol) -> int;
 [[nodiscard]] auto get_nuc_z(int nucindex) -> int;
 [[nodiscard]] auto get_nuc_a(int nucindex) -> int;
 [[nodiscard]] auto get_nucindex(int z, int a) -> int;

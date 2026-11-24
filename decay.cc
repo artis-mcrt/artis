@@ -610,6 +610,19 @@ auto write_nuclides_list() {
 
 [[gnu::pure]] [[nodiscard]] auto get_num_nuclides() -> ptrdiff_t { return std::ssize(nuclides); }
 
+// Return the atomic number of an element symbol, e.g. 26 for Fe, or -1 if no element has that symbol. The case of
+// the letters has no effect.
+[[nodiscard]] auto get_atomic_number_of_elsymbol(const std::string_view elsymbol) -> int {
+  for (int z = 1; z <= Z_MAX; z++) {
+    if (std::ranges::equal(
+            elsymbol, std::string_view{elsymbols.at(z)},
+            [](const unsigned char a, const unsigned char b) { return std::tolower(a) == std::tolower(b); })) {
+      return z;
+    }
+  }
+  return -1;
+}
+
 [[nodiscard]] auto get_elname(const int z) -> std::string {
   assert_testmodeonly(z <= Z_MAX);
   return elsymbols.at(z);
@@ -752,15 +765,31 @@ void add_standard_nuclides() {
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
   nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 0.836359 * MEV;
 
-  // Fe52
+  // Fe52 decays to the 21.1 min state of Mn52, and that state decays to Cr52. The decay data of both come from the
+  // evaluation for A = 52 of Yang Dong & Huo Junde (2015), Nucl. Data Sheets, 128, 185-314,
+  // doi:10.1016/j.nds.2015.08.003. These data are the beta-plus shares, the mean positron energies, and the lines of
+  // data/gamma_fe52.txt and data/gamma_mn52.txt.
   nuclides.push_back({.z = 26, .a = 52, .meanlife = 0.497429 * DAY});
-  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
-  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 2.001543 * MEV;
+  nuclides.back().endecay_positron = 0.340 * MEV;
+  nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.5549;
+  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.5549;
+  const double fe52_q_ec = 2.001543 * MEV;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = fe52_q_ec;
+  // the beta-plus decay releases Q_EC in total: the kinetic energy Q_EC - 2 m_e c^2 and the annihilation
+  // energy 2 m_e c^2 of the positron
+  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = fe52_q_ec;
 
-  // Mn52
+  // Mn52: the 21.1 min state. Its isomeric transition (1.78%) counts as an electron capture, and the gamma-ray table
+  // holds its 377.7 keV line.
   nuclides.push_back({.z = 25, .a = 52, .meanlife = 0.0211395 * DAY});
-  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
-  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 5.085870 * MEV;
+  nuclides.back().endecay_positron = 1.1723 * MEV;
+  nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.9661;
+  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.9661;
+  const double mn52_q_ec = 5.085870 * MEV;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = mn52_q_ec;
+  // the beta-plus decay releases Q_EC in total: the kinetic energy Q_EC - 2 m_e c^2 and the annihilation
+  // energy 2 m_e c^2 of the positron
+  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = mn52_q_ec;
 }
 
 // add the electron capture and beta-plus emitters that no decay data file has. They are not standard nuclides, which

@@ -46,12 +46,17 @@ jobs:
                         classicmode_1d_3dgrid,
                         classicmode_1d_3dgrid_thermalinput,
                         classicmode_3d,
+                        classicmode_3d_formatversion2,
                         kilonova_1d,
                         kilonova_1d_timedepnlte,
                         kilonova_2d,
                         kilonova_2d_barnesthermalisation,
                         kilonova_2d_expansionopac,
                         kilonova_2d_xcomgammaphotoion,
+                        kilonova_2dspherical,
+                        kilonova_3dspherical,
+                        kilonova_3dspherical_3dgrid,
+                        kilonova_3dspherical_mirror,
                         nebular_1d_3dgrid,
                         nebular_1d_3dgrid_limitbfest,
                         nltephotospheric_dynamic_ion_range_1d_1dgrid,
@@ -141,6 +146,11 @@ jobs:
             - name: Check the input
               id: inputcheck
               run: tests/runtest.sh ${{ matrix.testname }} inputcheck
+
+            # sn3d -c reads small 1D and 2D models of format version 2, and it must stop for damaged copies of them
+            - name: Check the reader of model.txt of format version 2
+              if: matrix.testname == 'classicmode_3d_formatversion2'
+              run: tests/runtest.sh ${{ matrix.testname }} formatcheck
 
             - name: Run test job0 start
               id: run_job0

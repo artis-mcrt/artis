@@ -222,6 +222,17 @@ static_assert(count_groundterm_levels(std::array{0., 0.0254, 0.1091, 0.1652, 0.2
 // set, so that it agrees with parse_next_token about where a line ends.
 constexpr std::string_view token_whitespace = " \t\r";
 
+// Return the text without the whitespace at its two ends
+[[nodiscard]] constexpr auto trim_token_whitespace(const std::string_view text) -> std::string_view {
+  const auto first = text.find_first_not_of(token_whitespace);
+  if (first == std::string_view::npos) {
+    return {};
+  }
+  return text.substr(first, text.find_last_not_of(token_whitespace) - first + 1);
+}
+static_assert(trim_token_whitespace(" \tkey value\r") == "key value");
+static_assert(trim_token_whitespace(" \t\r").empty());
+
 // parse the next whitespace-delimited token of the line as a number and advance past it.
 // Return false if there is no token left or the token is not fully numeric.
 // Accepts the same number spellings as stream extraction: leading plus signs are allowed, magnitudes below the
