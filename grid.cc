@@ -869,34 +869,26 @@ void map_sphericalmodelto3dgrid() {
   }
 }
 
-// The mirror axis of a model with the key mirror_plane is the axis 1: z of a cylindrical model and cos(theta) of a
-// spherical model.
-constexpr int mirror_axis = 1;
-
-// Get the index on the mirror axis of the model grid for an index on that axis of the propagation grid. The model
-// grid of a mirrored model holds the half with z >= 0, and it counts its cells on the mirror axis from the plane
-// z = 0. The propagation grid counts them from the -z end.
-[[nodiscard]] auto get_model_mirror_axis_index(const int propindex) -> int {
-  const int num_half = ncoord_model[mirror_axis];
-  return (propindex >= num_half) ? propindex - num_half : num_half - 1 - propindex;
-}
-
-// Get the propagation cell with z >= 0 of a model cell of a mirrored model on its own grid type
+// Get the propagation cell with z >= 0 of a model cell of a mirrored model on its own grid type. The mirror axis is
+// the axis 1: z of a cylindrical model and cos(theta) of a spherical model.
 [[nodiscard]] auto get_upper_propcell_of_mirrored_mgi(const int mgi) -> int {
   const int index0 = mgi % ncoord_model[0];
   const int index1 = (mgi / ncoord_model[0]) % ncoord_model[1];
   const int index2 = mgi / (ncoord_model[0] * ncoord_model[1]);
   // the cells with z >= 0 are the second half of the mirror axis of the propagation grid
-  const int propindex1 = ncoord_model[mirror_axis] + index1;
+  const int propindex1 = ncoord_model[1] + index1;
   return index0 + (ncoordgrid[0] * (propindex1 + (ncoordgrid[1] * index2)));
 }
 
 // Map a mirrored model onto a propagation grid of its own type. The propagation grid has the cells of both halves,
 // and each propagation cell takes the model cell of the mirror pair.
 void map_mirroredmodeltogrid() {
+  const int num_half = ncoord_model[1];
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int index0 = get_cellcoordindex(cellindex, 0);
-    const int index1 = get_model_mirror_axis_index(get_cellcoordindex(cellindex, mirror_axis));
+    const int propindex1 = get_cellcoordindex(cellindex, 1);
+    // the model counts the cells of the mirror axis from the plane z = 0, and the propagation grid from the -z end
+    const int index1 = (propindex1 >= num_half) ? propindex1 - num_half : num_half - 1 - propindex1;
     const int index2 = (get_modelgridtype() == GridType::SPHERICAL3D) ? get_cellcoordindex(cellindex, 2) : 0;
     const int mgi = index0 + (ncoord_model[0] * (index1 + (ncoord_model[1] * index2)));
     set_propcell_modelgridindex(cellindex, (modelgrid_input[mgi].rhoinit > 0) ? mgi : -1);
