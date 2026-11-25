@@ -246,7 +246,7 @@ struct AngularBoundaryCrossing {
 
 // Find the first crossing of a polar or an azimuthal cell boundary on the path from pos along the unit vector dir,
 // for a packet in the cell with the given polar and azimuthal index. The cones of constant cos(theta) and the
-// half-planes of constant phi do not move with the homologous expansion. The time sets the shortest stop step.
+// half-planes of constant phi do not move with the homologous expansion. The time limits the length of a stop.
 [[nodiscard]] DEVICE_FUNC auto get_first_angular_boundary_crossing(const Vec3d& pos, const Vec3d& dir,
                                                                    const int index_costheta, const int index_phi,
                                                                    const double time) -> AngularBoundaryCrossing {
@@ -287,7 +287,7 @@ struct AngularBoundaryCrossing {
                                                            const double impact_parameter) {
     const double sqrt_epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
     if (distance_to_closest_approach > 0. && impact_parameter < sqrt_epsilon * distance_to_closest_approach) {
-      // A step that is much shorter than the distance can leave the packet time unchanged
+      // A step below epsilon * c * t can leave the packet time unchanged, thus the packet goes to the closest approach
       const double distance = distance_to_closest_approach > std::numeric_limits<double>::epsilon() * CLIGHT_PROP * time
                                   ? distance_to_closest_approach * (1. - sqrt_epsilon)
                                   : distance_to_closest_approach;
@@ -313,9 +313,9 @@ struct AngularBoundaryCrossing {
     // r * sin(theta_edge - theta): the distance of the packet from the cone, positive on the side of larger
     // cos(theta)
     const double distance_from_cone = (theta_edge_sin[edgeindex] * pos[2]) - (theta_edge_cos[edgeindex] * rcyl);
-    // At an extremum of cos(theta), the path moves towards the plane z = 0 after the extremum
-    const double costheta_change_sign = (costheta_rate_times_r_cubed != 0.) ? costheta_rate_times_r_cubed : -pos[2];
-    const bool moves_through_boundary = is_upper ? costheta_change_sign > 0. : costheta_change_sign < 0.;
+    // Only the sign is used. At an extremum of cos(theta), the path moves towards the plane z = 0 after the extremum.
+    const double outgoing_costheta_rate = (costheta_rate_times_r_cubed != 0.) ? costheta_rate_times_r_cubed : -pos[2];
+    const bool moves_through_boundary = is_upper ? outgoing_costheta_rate > 0. : outgoing_costheta_rate < 0.;
     // A packet at the boundary or just past it changes cell at once. On the side of the cone, the test uses the
     // quadratic of costheta_cone_intersection(), thus the two functions agree about the side of the packet.
     bool is_at_or_past_boundary = false;

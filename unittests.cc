@@ -463,7 +463,10 @@ auto path_through_spherical_grid_is_consistent(const Vec3d& pos_start, const Vec
     const double half_distance = distance / 2.;
     const double time_at_middle = time + (half_distance / CLIGHT_PROP);
     const auto pos_at_middle = get_pos_on_path(pos, dir, half_distance);
-    if (distance > 1.e3 && grid::get_cellindex_from_pos(pos_at_middle, time_at_middle) != cellindex) {
+    // A step near the rounding error of the start position has no definite cell
+    const double position_rounding = std::numeric_limits<double>::epsilon() * vec_len(pos_start) * time / time_start;
+    if (distance > 16. * position_rounding &&
+        grid::get_cellindex_from_pos(pos_at_middle, time_at_middle) != cellindex) {
       return false;
     }
     if (use_two_half_steps) {
@@ -613,7 +616,7 @@ void test_spherical_grid_boundary_distance() {
           "paths through the centre, through the z axis, along the z direction, and in the plane z = 0 change cell "
           "at the cell boundaries");
 
-    // At normal incidence, a packet 3 cm inside an angular face has 3 cm to travel before it changes cell.
+    // At normal incidence, a packet 3 cm inside an angular boundary has 3 cm to travel before it changes cell.
     bool angular_distances_agree = true;
     constexpr double distance_from_boundary = 3.;
     const double radius = 0.3 * globals::rmax;
@@ -652,7 +655,8 @@ void test_spherical_grid_boundary_distance() {
                                      pos_after_boundary, vec_scale(dir_of_phi, sense));
       }
     }
-    check(angular_distances_agree, "a packet inside an angular face travels to that face before it changes cell");
+    check(angular_distances_agree,
+          "a packet inside an angular boundary travels to that boundary before it changes cell");
   }
 }
 
@@ -706,7 +710,7 @@ void test_spherical_grid_grazing_paths() {
   const auto [distance_after_origin, cell_after_origin] =
       grid::boundary_distance(direction_from_origin, pos_at_origin, globals::tmin, outgoing_cell);
   check(distance_at_origin == 0. && outgoing_cell == 1 && distance_after_origin > 0. && cell_after_origin < 0,
-        "a packet at the origin enters the outgoing cell and travels a positive distance to the outer face");
+        "a packet at the origin enters the outgoing cell and travels a positive distance to the outer boundary");
   const std::array costheta_edges_with_cone{-1., std::sqrt(0.5), 1.};
   grid::setup_spherical_grid_from_edges(GridType::SPHERICAL2D, vel_r_edges, costheta_edges_with_cone, {});
   check(stays_in_cell_until_escape({-5., 105., 100.}, {1., 0., 0.}),
@@ -718,20 +722,20 @@ void test_spherical_grid_grazing_paths() {
   const auto [tangent_distance, cell_after_tangent] =
       grid::boundary_distance({0., 1., 0.}, {3., 0., 4.}, globals::tmin, 1);
   check(tangent_distance == 0. && cell_after_tangent == 0,
-        "a ray at its greatest polar cosine enters the cell on the equator side of the face");
+        "a ray at its greatest polar cosine enters the cell on the equator side of the boundary");
 
   const std::array phi_edges{0., PI, 2 * PI};
   const std::array full_polar_cell{-1., 1.};
   grid::setup_spherical_grid_from_edges(GridType::SPHERICAL3D, vel_r_edges, full_polar_cell, phi_edges);
   check(stays_in_cell_until_escape({-1.e12, -5., 1.e11}, {1., 0., 0.}),
         "a ray that passes 5 cm from the z axis stays on the negative y side");
-  const Vec3d pos_below_azimuthal_face{1.e12, -3., 1.e11};
-  const int cell_before_face = grid::get_cellindex_from_pos(pos_below_azimuthal_face, globals::tmin);
-  const auto [azimuthal_distance, cell_after_face] =
-      grid::boundary_distance({1., normal_component, 0.}, pos_below_azimuthal_face, globals::tmin, cell_before_face);
+  const Vec3d pos_below_azimuthal_boundary{1.e12, -3., 1.e11};
+  const int cell_before_boundary = grid::get_cellindex_from_pos(pos_below_azimuthal_boundary, globals::tmin);
+  const auto [azimuthal_distance, cell_after_boundary] = grid::boundary_distance(
+      {1., normal_component, 0.}, pos_below_azimuthal_boundary, globals::tmin, cell_before_boundary);
   check_close(azimuthal_distance, distance_to_plane, 2.e-15,
-              "a ray crosses the azimuthal face at the distance -y / dir_y");
-  check(cell_after_face == 0, "a ray that crosses the positive x half-plane enters the first azimuthal cell");
+              "a ray crosses the azimuthal boundary at the distance -y / dir_y");
+  check(cell_after_boundary == 0, "a ray that crosses the positive x half-plane enters the first azimuthal cell");
 }
 
 void test_spherical_grid_paths_near_centre_and_axis() {
@@ -744,37 +748,42 @@ void test_spherical_grid_paths_near_centre_and_axis() {
       0., PI / 4., PI / 2., 3. * PI / 4., PI, 5. * PI / 4., 3. * PI / 2., 7. * PI / 4., 2. * PI,
   };
   globals::tmin = 1.e5;
-  grid::setup_spherical_grid_from_edges(GridType::SPHERICAL3D, vel_r_edges, costheta_edges, phi_edges);
   globals::max_path_step = 1.e35;
   rngstate_type rngstate{2718};
   bool paths_are_consistent = true;
-  for (const bool use_two_half_steps : {false, true}) {
-    for (const bool passes_near_z_axis : {false, true}) {
-      for (int i = 0; i < 2000; ++i) {
-        const auto dir = get_rand_isotropic_unitvec(rngstate);
-        const double start_distance = globals::rmax * (0.2 + (0.3 * rng_uniform(rngstate)));
-        // The impact parameter is zero, or log-uniform between 1e-18 and 1e-1 of the start distance.
-        const double log10_impact_fraction = -1. - (18. * rng_uniform(rngstate));
-        const double impact_parameter =
-            (log10_impact_fraction < -18.) ? 0. : start_distance * std::pow(10., log10_impact_fraction);
-        const Vec3d point_on_centre_or_axis =
-            passes_near_z_axis ? Vec3d{0., 0., start_distance * (rng_uniform(rngstate) - 0.5)} : Vec3d{0., 0., 0.};
-        const Vec3d axis_of_offset = passes_near_z_axis ? Vec3d{0., 0., 1.} : get_rand_isotropic_unitvec(rngstate);
-        const auto offset_dir = vec_norm(cross_prod(dir, axis_of_offset));
-        Vec3d pos{};
-        for (int axis = 0; axis < 3; axis++) {
-          pos[axis] =
-              point_on_centre_or_axis[axis] + (impact_parameter * offset_dir[axis]) - (start_distance * dir[axis]);
+  for (const auto gridtype : {GridType::SPHERICAL3D, GridType::SPHERICAL2D}) {
+    const auto grid_phi_edges =
+        (gridtype == GridType::SPHERICAL3D) ? std::span<const double>{phi_edges} : std::span<const double>{};
+    grid::setup_spherical_grid_from_edges(gridtype, vel_r_edges, costheta_edges, grid_phi_edges);
+    for (const bool use_two_half_steps : {false, true}) {
+      for (const bool passes_near_z_axis : {false, true}) {
+        for (int i = 0; i < 2000; ++i) {
+          const auto dir = get_rand_isotropic_unitvec(rngstate);
+          const double start_distance = globals::rmax * (0.2 + (0.3 * rng_uniform(rngstate)));
+          // The impact parameter is zero, or log-uniform between 1e-18 and 1e-1 of the start distance.
+          const double log10_impact_fraction = -1. - (18. * rng_uniform(rngstate));
+          const double impact_parameter =
+              (log10_impact_fraction < -18.) ? 0. : start_distance * std::pow(10., log10_impact_fraction);
+          const Vec3d point_on_centre_or_axis =
+              passes_near_z_axis ? Vec3d{0., 0., start_distance * (rng_uniform(rngstate) - 0.5)} : Vec3d{0., 0., 0.};
+          const Vec3d axis_of_offset = passes_near_z_axis ? Vec3d{0., 0., 1.} : get_rand_isotropic_unitvec(rngstate);
+          const auto offset_dir = vec_norm(cross_prod(dir, axis_of_offset));
+          Vec3d pos{};
+          for (int axis = 0; axis < 3; axis++) {
+            pos[axis] =
+                point_on_centre_or_axis[axis] + (impact_parameter * offset_dir[axis]) - (start_distance * dir[axis]);
+          }
+          paths_are_consistent =
+              paths_are_consistent &&
+              path_through_spherical_grid_is_consistent(
+                  pos, dir, globals::tmin, grid::get_cellindex_from_pos(pos, globals::tmin), use_two_half_steps);
         }
-        paths_are_consistent =
-            paths_are_consistent &&
-            path_through_spherical_grid_is_consistent(
-                pos, dir, globals::tmin, grid::get_cellindex_from_pos(pos, globals::tmin), use_two_half_steps);
       }
     }
   }
   check(paths_are_consistent,
-        "paths that pass near the centre or near the z axis stay in each cell until they reach its face");
+        "paths that pass near the centre or near the z axis of a 2D or a 3D spherical grid stay in each cell until "
+        "they reach its boundary");
 }
 
 // The polar index of a spherical grid counts from the -z axis. A test of paths alone does not find a grid with the
