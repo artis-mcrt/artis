@@ -629,6 +629,15 @@ void setup_grid_spherical() {
   ngrid = static_cast<ptrdiff_t>(ncoordgrid[0]) * ncoordgrid[1] * ncoordgrid[2];
   assert_always(ngrid == get_npts_model() * (model_mirror_z ? 2 : 1));
 
+  // The crossing of a shell that is very small compared with the distance of the packet loses precision
+  const double first_shell_outer_radius = (ncoordgrid[0] > 1) ? coord_pos_min_tmin[0][1] : globals::rmax;
+  if (!(first_shell_outer_radius > 1e4 * cellbound_tolerance(0.))) {
+    fatal_crash(
+        "model.txt: the first radial shell of the spherical grid has the outer radius {:g} [cm] at tmin, but it must "
+        "be above {:g} [cm]",
+        first_shell_outer_radius, 1e4 * cellbound_tolerance(0.));
+  }
+
   theta_edge_cos = prop_costheta_edges;
   theta_edge_sin.resize(theta_edge_cos.size());
   for (auto i = 0Z; i < std::ssize(theta_edge_cos); i++) {
