@@ -87,8 +87,6 @@ A run writes these files into the model folder:
     - `gammalinelist.out`: each gamma line of each nuclide, with its energy in MeV and its number of photons for
       each decay;
     - `bflist.out`: each bound-free continuum, with its ion, its lower level, and its upper level.
-- `syn_dir.txt`: the three components of the unit vector from which the direction bins measure the polar angle. The
-  value is always `0 0 1`. Rank 0 writes the file at the start of each job, and the file stays plain in every build.
 - `artis.pid`: the process id of rank 0 and the path of the model folder. `sn3d` and `exspec` stop when this file
   names a process that still runs in the same folder, and each program removes the file at the end.
 - `gridsave_ts*.tmp` and `packets_*_ts*.tmp`: restart files that hold the state at the start of a timestep, after its

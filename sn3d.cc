@@ -857,7 +857,7 @@ void remove_previous_simulation_files() {
       R"((gridsave|packets|vspecpol|vpackets|vpkt_grid).*\.tmp|input(-newrun)?\.txt\.tmp|.*\.out(\..*)?|)"
       R"(output_[0-9]+-[0-9]+\.txt(\.zst|\.gz|\.xz)?|)"
       R"(exspec.*\.txt.*|.*\.slurm|job_from_ts[0-9]+|packets|vspecpol|vpackets|vpkt_grid|speclc_angle_res|)"
-      R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|logfiles\.tar.*|out\.txt(\.zst)?|inputcheck)"};
+      R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|syn_dir\.txt|logfiles\.tar.*|out\.txt(\.zst)?|inputcheck)"};
   std::vector<std::filesystem::path> paths_to_remove;
   std::error_code ec;
   for (const auto& entry : std::filesystem::directory_iterator(".", ec)) {
@@ -1164,13 +1164,6 @@ void read_input_and_initialise_simulation(std::span<Packet> packets) {
   ratecoefficients_init();
 
   MPI_Barrier_allranks();
-
-  // Record the chosen syn_dir (only one rank writes it, since every rank would write the same file)
-  if (globals::my_rank == 0) {
-    auto syn_file = open_uncompressed_output_file("syn_dir.txt");
-    std::print(syn_file, "{} {} {}", syn_dir[0], syn_dir[1], syn_dir[2]);
-    syn_file.close();
-  }
 
   setup_timesteps();
 
