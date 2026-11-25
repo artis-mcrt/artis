@@ -126,7 +126,6 @@ enum class BinnedOpacityLineWeight { EXPANSION, LINEBINNEDCAPPED, LINEBINNED };
 enum class NonThermalScheme { NT_OFF, NT_SPENCERFANO, NT_AXELRODAPPROX };
 
 using Vec3d = std::array<double, 3>;
-constexpr Vec3d syn_dir{0., 0., 1.};  // vector defining the theta=0 direction
 
 constexpr std::string_view outdir_resfiles{"speclc_angle_res/"};
 

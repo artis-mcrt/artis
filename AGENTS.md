@@ -649,7 +649,6 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   build:
   - `input.txt`;
   - `artis.pid`;
-  - `syn_dir.txt`;
   - the logs;
   - the restart files.
   `JobFolderOutputFile` also uses it for a combined file, e.g.
