@@ -286,8 +286,7 @@ For a 2D spherical or a 3D spherical model without [GRID_TYPE_OVERRIDE](options.
 propagation grid has the cells of the model. A boundary of cos(theta) is a cone around the z axis, and a boundary of
 phi is a half of a plane through the z axis. These boundaries have constant velocity coordinates, thus they do not move
 in the homologous expansion. A ray through the centre enters the cell of its outgoing direction. A ray that misses
-the centre crosses each angular face that it meets. A short step before a close approach can resolve these crossings.
-The outer radius of the first radial shell must exceed 1e5 cm at the start time.
+the centre crosses each angular face that it meets.
 
 ### Mirror symmetry
 

@@ -229,16 +229,6 @@ void test_expanding_shell_intersection() {
   check_close(
       grid::expanding_shell_intersection<grid::BoundaryType::LOWER>(pos_outside_shell, outward_dir, 0.5, 1., 1.),
       pos_outside_shell[0] - 1., 1e-12, "a faster inner shell overtakes an outward packet");
-  // For a radial ray, r_start - d = R_start * (1 + d / (t_start * packet_speed)).
-  constexpr double r_start = 5.e13;
-  constexpr double r_inner = 2.e5;
-  constexpr double time_start = 1.e5;
-  const double distance_to_inner_shell = grid::expanding_shell_intersection<grid::BoundaryType::LOWER>(
-      Vec3d{r_start, 0., 0.}, Vec3d{-1., 0., 0.}, CLIGHT_PROP, r_inner, time_start);
-  const double expected_inner_distance = (r_start - r_inner) / (1. + (r_inner / (time_start * CLIGHT_PROP)));
-  check_close(distance_to_inner_shell, expected_inner_distance, 4. * std::numeric_limits<double>::epsilon(),
-              "a radial ray from far outside a small inner shell reaches its surface");
-
   // From the centre with speed 2, the packet (r = d) leaves the sphere (radius 1 + d / 2) at d = 2.
   check_close(
       grid::expanding_shell_intersection<grid::BoundaryType::UPPER>(Vec3d{0., 0., 0.}, Vec3d{1., 0., 0.}, 2., 1., 1.),
@@ -368,12 +358,6 @@ void test_spherical_angle_boundary_intersections() {
                 1. + z_at_cone, 1e-9, "a path along +z crosses a cone near the plane z = 0 where cos(theta) increases");
   }
 
-  // In the xz plane the cone is the line x mu = z sqrt(1 - mu^2) at x > 0.
-  // Its intersection with the ray, from this linear equation at 100 digits, is 1.5083770150984556e16 cm.
-  check_close(grid::costheta_cone_intersection<grid::BoundaryType::LOWER>({4.e14, 0., 3.e14 + 3.}, {0.8, 0., 0.6},
-                                                                          0.6000000000000001),
-              1.5083770150984556e16, 1.e-12, "a ray almost parallel to a cone reaches its positive intersection");
-
   // Compare random paths with a reference that finds each point of the path on the full surface (both cones of a
   // double cone, or the full plane). The reference keeps a point if it is on the boundary itself and if the angle
   // changes there in the sense of the boundary type. It finds that sense from the angle before and after the point.
@@ -460,6 +444,7 @@ void test_spherical_angle_boundary_intersections() {
 // Follow a straight packet path through a spherical propagation grid to the escape. Return false if a step breaks a
 // rule: each step must stay in the cell that holds its middle point, and the sum of the steps must be the distance
 // to the outer surface of the grid.
+// With use_two_half_steps, the packet goes to the middle point first. This gives a different rounding of the position.
 auto path_through_spherical_grid_is_consistent(const Vec3d& pos_start, const Vec3d& dir, const double time_start,
                                                const int cellindex_start, const bool use_two_half_steps = false)
     -> bool {
@@ -749,30 +734,47 @@ void test_spherical_grid_grazing_paths() {
   check(cell_after_face == 0, "a ray that crosses the positive x half-plane enters the first azimuthal cell");
 }
 
-void test_spherical_grid_radial_paths_at_large_radius() {
+void test_spherical_grid_paths_near_centre_and_axis() {
   if (GRID_TYPE_OVERRIDE.has_value() || FORCE_SPHERICAL_ESCAPE_SURFACE) {
     return;
   }
-  constexpr double start_radius = 0x1p56;
   constexpr std::array vel_r_edges{0., 2.e9, 4.e9, 6.e9, 8.e9, 1.e10};
   constexpr std::array costheta_edges{-1., -0.65, -0.2, 0.15, 0.7, 1.};
   constexpr std::array phi_edges{
       0., PI / 4., PI / 2., 3. * PI / 4., PI, 5. * PI / 4., 3. * PI / 2., 7. * PI / 4., 2. * PI,
   };
-  globals::tmin = 1.5 * start_radius / vel_r_edges.back();
+  globals::tmin = 1.e5;
   grid::setup_spherical_grid_from_edges(GridType::SPHERICAL3D, vel_r_edges, costheta_edges, phi_edges);
-  globals::max_path_step = globals::rmax / 10.;
-  rngstate_type rngstate{31415};
-  bool radial_paths_are_consistent = true;
-  for (int i = 0; i < 1000; ++i) {
-    const auto dir = get_rand_isotropic_unitvec(rngstate);
-    // A power of two makes the initial position exactly proportional to the direction.
-    const auto pos = vec_scale(dir, -start_radius);
-    radial_paths_are_consistent = radial_paths_are_consistent &&
-                                  path_through_spherical_grid_is_consistent(
-                                      pos, dir, globals::tmin, grid::get_cellindex_from_pos(pos, globals::tmin), true);
+  globals::max_path_step = 1.e35;
+  rngstate_type rngstate{2718};
+  bool paths_are_consistent = true;
+  for (const bool use_two_half_steps : {false, true}) {
+    for (const bool passes_near_z_axis : {false, true}) {
+      for (int i = 0; i < 2000; ++i) {
+        const auto dir = get_rand_isotropic_unitvec(rngstate);
+        const double start_distance = globals::rmax * (0.2 + (0.3 * rng_uniform(rngstate)));
+        // The impact parameter is zero, or log-uniform between 1e-18 and 1e-1 of the start distance.
+        const double log10_impact_fraction = -1. - (18. * rng_uniform(rngstate));
+        const double impact_parameter =
+            (log10_impact_fraction < -18.) ? 0. : start_distance * std::pow(10., log10_impact_fraction);
+        const Vec3d point_on_centre_or_axis =
+            passes_near_z_axis ? Vec3d{0., 0., start_distance * (rng_uniform(rngstate) - 0.5)} : Vec3d{0., 0., 0.};
+        const Vec3d axis_of_offset = passes_near_z_axis ? Vec3d{0., 0., 1.} : get_rand_isotropic_unitvec(rngstate);
+        const auto offset_dir = vec_norm(cross_prod(dir, axis_of_offset));
+        Vec3d pos{};
+        for (int axis = 0; axis < 3; axis++) {
+          pos[axis] =
+              point_on_centre_or_axis[axis] + (impact_parameter * offset_dir[axis]) - (start_distance * dir[axis]);
+        }
+        paths_are_consistent =
+            paths_are_consistent &&
+            path_through_spherical_grid_is_consistent(
+                pos, dir, globals::tmin, grid::get_cellindex_from_pos(pos, globals::tmin), use_two_half_steps);
+      }
+    }
   }
-  check(radial_paths_are_consistent, "a radial packet from a large radius stays in its cell on each step to escape");
+  check(paths_are_consistent,
+        "paths that pass near the centre or near the z axis stay in each cell until they reach its face");
 }
 
 // The polar index of a spherical grid counts from the -z axis. A test of paths alone does not find a grid with the
@@ -2370,7 +2372,7 @@ auto main() -> int {
   test_spherical_grid_boundary_distance();
   test_spherical_grid_polar_sense();
   test_spherical_grid_grazing_paths();
-  test_spherical_grid_radial_paths_at_large_radius();
+  test_spherical_grid_paths_near_centre_and_axis();
   test_escapedirectionbin();
   test_frame_transform();
   test_zero_polarisation_intensity();

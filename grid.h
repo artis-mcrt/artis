@@ -8,7 +8,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <span>
 #include <tuple>
 
@@ -26,78 +25,6 @@ namespace grid {
 // The inner (LOWER) and the outer (UPPER) boundary of a cell along one coordinate. The grid expands homologously, so
 // each boundary moves with a speed that is proportional to its coordinate value.
 enum class BoundaryType : std::uint8_t { LOWER, UPPER };
-
-// Reassociation would remove the rounding corrections in these functions.
-#if defined(__GNUC__) && !defined(__clang__) && !defined(__NVCOMPILER)
-#pragma GCC push_options
-#pragma GCC optimize("no-fast-math", "fp-contract=off")
-#endif
-
-// The first fused multiply-add gives a * b minus the rounded product c * d.
-// The second recovers the error of that product. Parallel vectors then give zero in the cross product.
-[[nodiscard]] DEVICE_FUNC constexpr auto difference_of_products(const double a, const double b, const double c,
-                                                                const double d) -> double {
-#ifdef __clang__
-#pragma clang fp reassociate(off) contract(off)
-#endif
-
-  const double cd = c * d;
-  return std::fma(a, b, -cd) + std::fma(-c, d, cd);
-}
-
-[[nodiscard]] DEVICE_FUNC constexpr auto ray_angular_momentum(const Vec3d& pos, const Vec3d& dir) -> Vec3d {
-  return {
-      difference_of_products(pos[1], dir[2], pos[2], dir[1]),
-      difference_of_products(pos[2], dir[0], pos[0], dir[2]),
-      difference_of_products(pos[0], dir[1], pos[1], dir[0]),
-  };
-}
-
-// Recover the rounding error of a sum. The volatile temporaries preserve the two roundings with fast-math.
-[[nodiscard]] DEVICE_FUNC inline auto sum_with_roundoff(const double x, const double y) -> std::array<double, 2> {
-#ifdef __clang__
-#pragma clang fp reassociate(off) contract(off)
-#endif
-
-  const volatile double sum = x + y;
-  const bool x_is_larger = std::abs(x) >= std::abs(y);
-  const volatile double difference = (x_is_larger ? x : y) - sum;
-  return {sum, difference + (x_is_larger ? y : x)};
-}
-
-// The polar cone has the quadratic form Q(p, q) = p_z q_z - mu^2 (p . q).
-// A ray close to a generator of the cone can lose most of a coefficient of its quadratic equation.
-// In that case, recover the rounding errors of the dot product and of mu^2.
-[[nodiscard]] DEVICE_FUNC constexpr auto polar_cone_product(const Vec3d& pos, const Vec3d& dir, const double mu)
-    -> double {
-#ifdef __clang__
-#pragma clang fp reassociate(off) contract(off)
-#endif
-
-  const double mu_squared = mu * mu;
-  const double dot_value = dot(pos, dir);
-  const double zz = pos[2] * dir[2];
-  const double coefficient = zz - (mu_squared * dot_value);
-  const double scale =
-      std::abs(zz) + (mu_squared * (std::abs(pos[0] * dir[0]) + std::abs(pos[1] * dir[1]) + std::abs(zz)));
-  if (std::abs(coefficient) > std::sqrt(std::numeric_limits<double>::epsilon()) * scale) {
-    return coefficient;
-  }
-  const double xx = pos[0] * dir[0];
-  const double yy = pos[1] * dir[1];
-  const auto [xy_sum, xy_error] = sum_with_roundoff(xx, yy);
-  const auto [xyz_sum, xyz_error] = sum_with_roundoff(xy_sum, zz);
-  const double product_errors =
-      std::fma(pos[0], dir[0], -xx) + std::fma(pos[1], dir[1], -yy) + std::fma(pos[2], dir[2], -zz);
-  const double dot_error = product_errors + xy_error + xyz_error;
-  const double mu_squared_error = std::fma(mu, mu, -mu_squared);
-  return difference_of_products(pos[2], dir[2], mu_squared, xyz_sum) -
-         ((mu_squared * dot_error) + (mu_squared_error * xyz_sum));
-}
-
-#if defined(__GNUC__) && !defined(__clang__) && !defined(__NVCOMPILER)
-#pragma GCC pop_options
-#endif
 
 // Get the path length d from pos along dir to the point where a packet crosses an expanding shell. The shell is a
 // sphere around the origin for a cell boundary of a 1D grid and for the spherical escape surface. For the cylindrical
@@ -128,30 +55,7 @@ template <BoundaryType boundarytype, size_t VECDIM>
   const double b = 2 * (dot(dir, pos) - (pow2(shell_radius_at_tstart) / tstart / packet_speed));
   const double c = dot(pos, pos) - pow2(shell_radius_at_tstart);
 
-  const double b_squared = pow2(b);
-  const double four_ac = 4 * a * c;
-  double discriminant = b_squared - four_ac;
-  // Outside this interval the sum of the term magnitudes is at most three times the difference magnitude.
-  if (four_ac > 0.5 * b_squared && 0.5 * four_ac < b_squared) {
-    // D / 4 = |R dir - w pos|^2 - |pos x dir|^2, where w is the shell speed divided by the packet speed.
-    // A radial ray from far outside a small shell has a zero cross product.
-    // The expression b^2 - 4 a c can lose the whole shell radius in that case.
-    const double shell_speed_ratio = shell_radius_at_tstart / tstart / packet_speed;
-    std::array<double, VECDIM> relative_direction{};
-    for (auto axis = 0ZU; axis < VECDIM; axis++) {
-      relative_direction[axis] =
-          difference_of_products(shell_radius_at_tstart, dir[axis], shell_speed_ratio, pos[axis]);
-    }
-    const double angmom_squared = [&] {
-      if constexpr (VECDIM == 3) {
-        const auto angmom = ray_angular_momentum(pos, dir);
-        return dot(angmom, angmom);
-      } else {
-        return pow2(difference_of_products(pos[0], dir[1], pos[1], dir[0]));
-      }
-    }();
-    discriminant = 4. * (dot(relative_direction, relative_direction) - angmom_squared);
-  }
+  const double discriminant = pow2(b) - (4 * a * c);
 
   if (discriminant < 0) {
     // The path of the packet does not meet the shell. This occurs only for a packet that passes outside an inner shell.
@@ -232,16 +136,15 @@ template <BoundaryType boundarytype>
     // and on its mirror image below the plane z = 0. It is positive nearer to the z axis than the cone, and negative
     // nearer to the plane z = 0. f(d) = a * d^2 + 2 * half_b * d + c.
     const double cos_squared = pow2(cos_theta_edge);
-    const double a = polar_cone_product(dir, dir, cos_theta_edge);
-    const double half_b = polar_cone_product(pos, dir, cos_theta_edge);
-    const double c = polar_cone_product(pos, pos, cos_theta_edge);
+    const double a = pow2(dir[2]) - cos_squared;
+    const double half_b = (pos[2] * dir[2]) - (cos_squared * dot(pos, dir));
+    const double c = pow2(pos[2]) - (cos_squared * dot(pos, pos));
 
     // half_b^2 - a * c with the angular momentum L = pos x dir. This form has no difference of two almost equal
     // numbers for a cone near the plane z = 0.
-    const auto angmom = ray_angular_momentum(pos, dir);
+    const auto angmom = cross_prod(pos, dir);
     const double quarter_discriminant =
-        cos_squared * difference_of_products((1. - cos_theta_edge) * (1. + cos_theta_edge),
-                                             pow2(angmom[0]) + pow2(angmom[1]), cos_squared, pow2(angmom[2]));
+        cos_squared * (pow2(angmom[0]) + pow2(angmom[1]) - (cos_squared * dot(angmom, angmom)));
     if (quarter_discriminant <= 0.) {
       // The path does not meet the cone or touches it at one point, e.g. a radial path.
       return -1.;
@@ -268,7 +171,7 @@ template <BoundaryType boundarytype>
     return -1.;
   }
   // a root on the other side of the plane z = 0 is a crossing of the mirror image of the cone
-  if (cos_theta_edge != 0. && (std::fma(distance_to_crossing, dir[2], pos[2]) * cos_theta_edge) <= 0.) {
+  if (cos_theta_edge != 0. && ((pos[2] + (distance_to_crossing * dir[2])) * cos_theta_edge) <= 0.) {
     return -1.;
   }
   return distance_to_crossing;
@@ -288,9 +191,9 @@ template <BoundaryType boundarytype>
                                                                       const double sin_phi_edge) -> double {
   // The signed distance of the packet from the full plane is positive on the side of larger phi near the half-plane.
   // It changes at a constant rate along the path.
-  const double distance_from_plane = difference_of_products(cos_phi_edge, pos[1], sin_phi_edge, pos[0]);
-  const double distance_from_plane_rate = difference_of_products(cos_phi_edge, dir[1], sin_phi_edge, dir[0]);
-  const double angmom_z = difference_of_products(pos[0], dir[1], pos[1], dir[0]);
+  const double distance_from_plane = (cos_phi_edge * pos[1]) - (sin_phi_edge * pos[0]);
+  const double distance_from_plane_rate = (cos_phi_edge * dir[1]) - (sin_phi_edge * dir[0]);
+  const double angmom_z = (pos[0] * dir[1]) - (pos[1] * dir[0]);
 
   // A path meets the full plane one time. That point is on the half with phi = phi_edge only if the sign of the rate
   // agrees with the sense of phi. If it does not, the point is on the half with phi = phi_edge + pi.
