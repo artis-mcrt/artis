@@ -246,18 +246,14 @@ constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
 // lose the heat of its collisional de-excitation. The same applies in a cell where the last NLTE solve of an
 // element fell back to LTE. With this option, the non-thermal excitation energy of such an element therefore goes
 // to the heating, and its packets become k-packets.
-constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
-
-// With COLLISIONAL_HEATING_FROM_LEVELPOPS, give each line of an ion without NLTE levels the two-level Sobolev net
-// cooling. The Boltzmann populations at T_e otherwise make the collisional heating equal to the collisional cooling.
-// The net cooling of a line is then n_l C_lu dE P_esc - H_rad, with P_esc = beta A_ul / (beta A_ul + C_ul). The
-// heating by the radiation field is H_rad = (n_l B_lu - n_u B_ul) J_nu beta dE C_ul / (beta A_ul + C_ul), with J_nu
-// from the radiation field model of the cell. beta is the Sobolev escape probability.
 //
-// The formula is the first de-activation step of the macro atom. It follows each trial T_e and has no Monte Carlo
-// noise. It ignores the cascades through the other levels of the ion. Needs COLLISIONAL_HEATING_FROM_LEVELPOPS = true
-// and LTEPOP_EXCITATION_USE_TJ = false.
-constexpr bool COLLISIONAL_HEATING_IONS_WITHOUT_NLTE_LEVELS_SOBOLEV_ESCAPE;
+// An ion without NLTE levels has Boltzmann populations. With LTEPOP_EXCITATION_USE_TJ false they are at T_e, and the
+// sum would be equal to the collisional cooling. Each line of such an ion therefore gets the net cooling of a
+// two-level atom: n_l C_lu dE P_esc - H_rad, with P_esc = beta A_ul / (beta A_ul + C_ul). The heating by the radiation
+// field is H_rad = (n_l B_lu - n_u B_ul) J_nu beta dE C_ul / (beta A_ul + C_ul), with J_nu from the radiation field
+// model of the cell. beta is the Sobolev escape probability. The formula ignores the cascades through the other
+// levels of the ion.
+constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
 
 // The bound-free cooling coefficient of each (level, target) continuum is per population of the target level of
 // the upper ion, like the spontaneous recombination coefficient alpha_sp. True multiplies it by the population

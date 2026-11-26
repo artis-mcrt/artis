@@ -294,9 +294,9 @@ bound-free heating (see [the radiation field model](#the-radiation-field-model))
 from a Monte Carlo estimator, which also holds the collisional recombination heating.
 
 With [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), an ion without NLTE
-levels has Boltzmann populations at T_e, so the collisional heating of each line is equal to its collisional
-cooling. With [COLLISIONAL_HEATING_IONS_WITHOUT_NLTE_LEVELS_SOBOLEV_ESCAPE](options.md#collisional_heating_ions_without_nlte_levels_sobolev_escape),
-each line of such an ion gets the net cooling of a two-level atom with the Sobolev escape probability $\beta$:
+levels has Boltzmann populations. With [LTEPOP_EXCITATION_USE_TJ](options.md#ltepop_excitation_use_tj) false, they
+are at T_e, and the sum of the collisional de-excitation heating would be equal to the collisional cooling. Each line
+of such an ion therefore gets the net cooling of a two-level atom with the Sobolev escape probability $\beta$:
 
 $$
 C_\mathrm{net} = n_l C_{lu} \Delta E \, \frac{\beta A_{ul}}{\beta A_{ul} + C_{ul}}
@@ -327,7 +327,6 @@ limits has no thermal balance, and the log of its rank has a warning (see
 [Troubleshooting](troubleshooting.md#the-log)).
 
 - Options: [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops),
-  [COLLISIONAL_HEATING_IONS_WITHOUT_NLTE_LEVELS_SOBOLEV_ESCAPE](options.md#collisional_heating_ions_without_nlte_levels_sobolev_escape),
   [BFCOOLING_USELEVELPOPNOTIONPOP](options.md#bfcooling_uselevelpopnotionpop),
   [USE_ION_BFHEATING_ESTIMATORS](options.md#use_ion_bfheating_estimators), and
   [WRITE_ION_HEATING_COOLING_RATES](options.md#write_ion_heating_cooling_rates).
