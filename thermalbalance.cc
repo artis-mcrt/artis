@@ -452,10 +452,10 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
     }
 
     // The solver evaluates only points that bracket one root. After a large change from T_e_old, a sign change
-    // between T_e_old and the far limit of the T_e range proves a second root.
+    // between T_e_old and the opposite limit of the T_e range proves a second root.
     constexpr double T_e_fractional_change_for_second_root_test = 0.2;
     if (std::abs((T_e / T_e_old) - 1.) > T_e_fractional_change_for_second_root_test) {
-      // The evaluation changes the cell state that the final evaluation reads, so the state is restored after it.
+      // The evaluation changes the cell state that the final evaluation reads, so the code restores that state.
       const auto cellion_slice_start = static_cast<size_t>(get_cellionindex(nonemptymgi, 0));
       const auto ncellions = static_cast<size_t>(get_includedions());
       const auto groundlevelpops = grid::ion_groundlevelpops_allcells.subspan(cellion_slice_start, ncellions);
