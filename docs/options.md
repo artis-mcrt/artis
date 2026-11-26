@@ -73,6 +73,7 @@ description.
 | Option | Description | Preset values |
 | --- | --- | --- |
 | [COLLISIONAL_HEATING_FROM_LEVELPOPS](#collisional_heating_from_levelpops) | Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator. | classic `false`, kilonova_lte `true`, nltenebular `true`, nltephotospheric `true` |
+| [COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE](#collisional_heating_lte_ions_sobolev_escape) | With [COLLISIONAL_HEATING_FROM_LEVELPOPS](#collisional_heating_from_levelpops), give each line of an ion without NLTE levels the two-level Sobolev net cooling. | every preset: `false` |
 | [BFCOOLING_USELEVELPOPNOTIONPOP](#bfcooling_uselevelpopnotionpop) | The bound-free cooling coefficient of each (level, target) continuum is per population of the target level of the upper ion, like the spontaneous recombination coefficient alpha_sp. | classic `false`, kilonova_lte `false`, nltenebular `true`, nltephotospheric `true` |
 | [USE_ION_BFHEATING_ESTIMATORS](#use_ion_bfheating_estimators) | Store a bound-free heating estimator for each ground continuum. | classic `true`, kilonova_lte `false`, nltenebular `false`, nltephotospheric `false` |
 | [BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR](#bfheating_use_departure_ratio_and_te_not_lte_tr) | Select the stimulated recombination factor of the analytic bound-free heating. | every preset: `false` |
@@ -596,6 +597,16 @@ The reverse rates come from detailed balance. The rates enter the NLTE rate matr
 Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator. The estimator also holds the collisional recombination heating. The sum does not. The level populations of an element without NLTE levels do not follow a non-thermal excitation, so the sum would lose the heat of its collisional de-excitation. The same applies in a cell where the last NLTE solve of an element fell back to LTE. With this option, the non-thermal excitation energy of such an element therefore goes to the heating, and its packets become k-packets.
 
 **Preset values:** classic `false`, kilonova_lte `true`, nltenebular `true`, nltephotospheric `true`
+
+### COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE
+
+`bool COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE`
+
+With [COLLISIONAL_HEATING_FROM_LEVELPOPS](#collisional_heating_from_levelpops), give each line of an ion without NLTE levels the two-level Sobolev net cooling. The Boltzmann populations at T_e otherwise make the collisional heating equal to the collisional cooling. The net cooling of a line is then n_l C_lu dE P_esc - H_rad, with P_esc = beta A_ul / (beta A_ul + C_ul). The heating by the radiation field is H_rad = (n_l B_lu - n_u B_ul) J_nu beta dE C_ul / (beta A_ul + C_ul), with J_nu from the radiation field model of the cell. beta is the Sobolev escape probability.
+
+The formula is the first de-activation step of the macro atom. It follows each trial T_e and has no Monte Carlo noise. It ignores the cascades through the other levels of the ion. Needs [COLLISIONAL_HEATING_FROM_LEVELPOPS](#collisional_heating_from_levelpops) = true and [LTEPOP_EXCITATION_USE_TJ](#ltepop_excitation_use_tj) = false.
+
+**Every preset:** `false`
 
 ### BFCOOLING_USELEVELPOPNOTIONPOP
 

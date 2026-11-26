@@ -96,6 +96,8 @@ constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = false;
 
 constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS = false;
 
+constexpr bool COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE = false;
+
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 
 constexpr bool USE_ION_BFHEATING_ESTIMATORS = true;

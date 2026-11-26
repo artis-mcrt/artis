@@ -37,6 +37,13 @@
 static_assert(!BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR || !USE_LUT_PHOTOION,
               "USE_LUT_PHOTOION must be false when BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR is true");
 
+// the escape fraction replaces the zero net collisional cooling of the level populations at T_e
+static_assert(
+    !COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE || COLLISIONAL_HEATING_FROM_LEVELPOPS,
+    "COLLISIONAL_HEATING_FROM_LEVELPOPS must be true when COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE is true");
+static_assert(!COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE || !LTEPOP_EXCITATION_USE_TJ,
+              "LTEPOP_EXCITATION_USE_TJ must be false when COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE is true");
+
 namespace {
 
 // Integrand to calculate the rate coefficient for bfheating. With
@@ -57,14 +64,31 @@ auto integrand_bfheatingcoeff(const double nu, const double nu_edge, const int n
 
 // Sum the thermal heating rate from collisional de-excitations over all levels of a single ion (the energy given
 // to the thermal electron pool when bound electrons are collisionally de-excited).
+// With COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE, an ion without NLTE levels gets the two-level Sobolev result
+// instead: for each line, the share of the collisional excitations that the line does not radiate, plus the share of
+// the absorbed radiation that collisional de-excitation gives to the electrons. The Sobolev escape probability beta is
+// that of Kromer & Sim (2009), MNRAS, 398, 1809-1826, doi:10.1111/j.1365-2966.2009.15256.x, Section 3.5.2.
 auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const float T_e,
                                 const float clumpednne) -> double {
+  const bool use_sobolev_escape =
+      COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE && get_nlevels_excited_nlte(element, ion) == 0;
+  const double t_mid = globals::timesteps[globals::timestep].mid;
   double C_deexc = 0.;
   const int nlevels = get_nlevels(element, ion);
   const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+
+  // the escape probability needs the population of the lower level of each line
+  THREADLOCALONHOST std::vector<double> levelpops;
+  if (use_sobolev_escape) {
+    levelpops.resize(nlevels);
+    for (int level = 0; level < nlevels; level++) {
+      levelpops[level] = calculate_levelpop(nonemptymgi, element, ion, level);
+    }
+  }
+
   for (int level = 0; level < nlevels; level++) {
     const auto uniquelevelindex = ionuniquelevelindexstart + level;
-    const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
+    const double nnlevel = use_sobolev_escape ? levelpops[level] : calculate_levelpop(nonemptymgi, element, ion, level);
     const double epsilon_level = epsilon(uniquelevelindex);
     const double statweight = stat_weight(uniquelevelindex);
 
@@ -76,11 +100,49 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
       const int lower = globals::alltrans.targetlevelindex[alltransindex];
       const double epsilon_trans = epsilon_level - epsilon(ionuniquelevelindexstart + lower);
       const auto lower_statweight = stat_weight(ionuniquelevelindexstart + lower);
-      const double C =
-          nnlevel *
-          col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex) *
+      const double C_ul =
+          col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex);
+      if (!use_sobolev_escape) {
+        C_deexc += nnlevel * C_ul * epsilon_trans;
+        continue;
+      }
+
+      const double nnlevel_lower = levelpops[lower];
+      const double collisional_excitation =
+          nnlevel_lower *
+          col_excitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex) *
           epsilon_trans;
-      C_deexc += C;
+
+      const double A_ul = globals::alltrans.einstein_A[alltransindex];
+      const double nu_trans = epsilon_trans / H;
+      const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(nu_trans) * A_ul;
+      const double B_lu = statweight / lower_statweight * B_ul;
+      const double net_absorption_over_J = (B_lu * nnlevel_lower) - (B_ul * nnlevel);
+      const double tau_sobolev = net_absorption_over_J * HCLIGHTOVERFOURPI * t_mid;
+      // a thin line or an inverted population has the thin limit, as in rad_deexcitation_ratecoeff()
+      const double beta = (tau_sobolev > 1e-100) ? (-std::expm1(-tau_sobolev) / tau_sobolev) : 1.;
+
+      const double deexcitation_rate = (beta * A_ul) + C_ul;
+      if (deexcitation_rate <= 0.) {
+        // a line with no radiative and no collisional de-excitation gives its excitation energy back to the electrons
+        C_deexc += collisional_excitation;
+        continue;
+      }
+      const double collisional_deexcitation_probability = C_ul / deexcitation_rate;
+
+      // the collisional excitations that the line does not radiate out of the cell
+      const double collisional_return = collisional_excitation * collisional_deexcitation_probability;
+
+      // the absorbed radiation that collisional de-excitation gives to the electrons. The net absorption includes the
+      // stimulated emission, so that the net cooling of the line is zero when T_e = T_R and J_nu = B_nu(T_e).
+      const double radiative_heating = (tau_sobolev > 1e-100)
+                                           ? (net_absorption_over_J * beta * radfield::radfield(nu_trans, nonemptymgi) *
+                                              epsilon_trans * collisional_deexcitation_probability)
+                                           : 0.;
+
+      assert_testmodeonly(std::isfinite(collisional_return) && collisional_return >= 0.);
+      assert_testmodeonly(std::isfinite(radiative_heating) && radiative_heating >= 0.);
+      C_deexc += collisional_return + radiative_heating;
     }
   }
   return C_deexc;

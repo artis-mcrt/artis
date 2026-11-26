@@ -293,6 +293,20 @@ bound-free heating (see [the radiation field model](#the-radiation-field-model))
 [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), the collisional heating comes
 from a Monte Carlo estimator, which also holds the collisional recombination heating.
 
+With [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), an ion without NLTE
+levels has Boltzmann populations at T_e, so the collisional heating of each line is equal to its collisional
+cooling. With [COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE](options.md#collisional_heating_lte_ions_sobolev_escape),
+each line of such an ion gets the net cooling of a two-level atom with the Sobolev escape probability $\beta$:
+
+$$
+C_\mathrm{net} = n_l C_{lu} \Delta E \, \frac{\beta A_{ul}}{\beta A_{ul} + C_{ul}}
+- \left( n_l B_{lu} - n_u B_{ul} \right) J_\nu \, \beta \Delta E \, \frac{C_{ul}}{\beta A_{ul} + C_{ul}}
+$$
+
+$J_\nu$ comes from the radiation field model of the cell. The formula is the first de-activation step of the macro
+atom, and it ignores the cascades through the other levels of the ion. It follows each trial T_e and has no Monte
+Carlo noise.
+
 The cooling rates $C$ are the free-free, the free-bound, and the collisional cooling, and the adiabatic cooling of
 the expansion. With the gas pressure $p = (n_\mathrm{ion} + n_e) \, k_\mathrm{B} T_e$ and a volume that grows as
 $t^3$, the adiabatic cooling is $C_\mathrm{ad} = 3 p / t$.
@@ -313,6 +327,7 @@ limits has no thermal balance, and the log of its rank has a warning (see
 [Troubleshooting](troubleshooting.md#the-log)).
 
 - Options: [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops),
+  [COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE](options.md#collisional_heating_lte_ions_sobolev_escape),
   [BFCOOLING_USELEVELPOPNOTIONPOP](options.md#bfcooling_uselevelpopnotionpop),
   [USE_ION_BFHEATING_ESTIMATORS](options.md#use_ion_bfheating_estimators), and
   [WRITE_ION_HEATING_COOLING_RATES](options.md#write_ion_heating_cooling_rates).
