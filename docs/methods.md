@@ -295,7 +295,7 @@ from a Monte Carlo estimator, which also holds the collisional recombination hea
 
 With [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), an ion without NLTE
 levels has Boltzmann populations at T_e, so the collisional heating of each line is equal to its collisional
-cooling. With [COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE](options.md#collisional_heating_lte_ions_sobolev_escape),
+cooling. With [COLLISIONAL_HEATING_IONS_WITHOUT_NLTE_LEVELS_SOBOLEV_ESCAPE](options.md#collisional_heating_ions_without_nlte_levels_sobolev_escape),
 each line of such an ion gets the net cooling of a two-level atom with the Sobolev escape probability $\beta$:
 
 $$
@@ -327,7 +327,7 @@ limits has no thermal balance, and the log of its rank has a warning (see
 [Troubleshooting](troubleshooting.md#the-log)).
 
 - Options: [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops),
-  [COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE](options.md#collisional_heating_lte_ions_sobolev_escape),
+  [COLLISIONAL_HEATING_IONS_WITHOUT_NLTE_LEVELS_SOBOLEV_ESCAPE](options.md#collisional_heating_ions_without_nlte_levels_sobolev_escape),
   [BFCOOLING_USELEVELPOPNOTIONPOP](options.md#bfcooling_uselevelpopnotionpop),
   [USE_ION_BFHEATING_ESTIMATORS](options.md#use_ion_bfheating_estimators), and
   [WRITE_ION_HEATING_COOLING_RATES](options.md#write_ion_heating_cooling_rates).

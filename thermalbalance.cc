@@ -38,11 +38,12 @@ static_assert(!BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR || !USE_LUT_PHOTO
               "USE_LUT_PHOTOION must be false when BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR is true");
 
 // the escape fraction replaces the zero net collisional cooling of the level populations at T_e
+static_assert(!COLLISIONAL_HEATING_IONS_WITHOUT_NLTE_LEVELS_SOBOLEV_ESCAPE || COLLISIONAL_HEATING_FROM_LEVELPOPS,
+              "COLLISIONAL_HEATING_FROM_LEVELPOPS must be true when "
+              "COLLISIONAL_HEATING_IONS_WITHOUT_NLTE_LEVELS_SOBOLEV_ESCAPE is true");
 static_assert(
-    !COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE || COLLISIONAL_HEATING_FROM_LEVELPOPS,
-    "COLLISIONAL_HEATING_FROM_LEVELPOPS must be true when COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE is true");
-static_assert(!COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE || !LTEPOP_EXCITATION_USE_TJ,
-              "LTEPOP_EXCITATION_USE_TJ must be false when COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE is true");
+    !COLLISIONAL_HEATING_IONS_WITHOUT_NLTE_LEVELS_SOBOLEV_ESCAPE || !LTEPOP_EXCITATION_USE_TJ,
+    "LTEPOP_EXCITATION_USE_TJ must be false when COLLISIONAL_HEATING_IONS_WITHOUT_NLTE_LEVELS_SOBOLEV_ESCAPE is true");
 
 namespace {
 
@@ -64,14 +65,15 @@ auto integrand_bfheatingcoeff(const double nu, const double nu_edge, const int n
 
 // Sum the thermal heating rate from collisional de-excitations over all levels of a single ion (the energy given
 // to the thermal electron pool when bound electrons are collisionally de-excited).
-// With COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE, an ion without NLTE levels gets the two-level Sobolev result
-// instead: for each line, the share of the collisional excitations that the line does not radiate, plus the share of
-// the absorbed radiation that collisional de-excitation gives to the electrons. The Sobolev escape probability beta is
-// that of Kromer & Sim (2009), MNRAS, 398, 1809-1826, doi:10.1111/j.1365-2966.2009.15256.x, Section 3.5.2.
+// With COLLISIONAL_HEATING_IONS_WITHOUT_NLTE_LEVELS_SOBOLEV_ESCAPE, an ion without NLTE levels gets the two-level
+// Sobolev result instead: for each line, the share of the collisional excitations that the line does not radiate, plus
+// the share of the absorbed radiation that collisional de-excitation gives to the electrons. The Sobolev escape
+// probability beta is that of Kromer & Sim (2009), MNRAS, 398, 1809-1826, doi:10.1111/j.1365-2966.2009.15256.x,
+// Section 3.5.2.
 auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const float T_e,
                                 const float clumpednne) -> double {
   const bool use_sobolev_escape =
-      COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE && get_nlevels_excited_nlte(element, ion) == 0;
+      COLLISIONAL_HEATING_IONS_WITHOUT_NLTE_LEVELS_SOBOLEV_ESCAPE && get_nlevels_excited_nlte(element, ion) == 0;
   const double t_mid = globals::timesteps[globals::timestep].mid;
   double C_deexc = 0.;
   const int nlevels = get_nlevels(element, ion);

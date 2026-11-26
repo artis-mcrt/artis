@@ -257,7 +257,7 @@ constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
 // The formula is the first de-activation step of the macro atom. It follows each trial T_e and has no Monte Carlo
 // noise. It ignores the cascades through the other levels of the ion. Needs COLLISIONAL_HEATING_FROM_LEVELPOPS = true
 // and LTEPOP_EXCITATION_USE_TJ = false.
-constexpr bool COLLISIONAL_HEATING_LTE_IONS_SOBOLEV_ESCAPE;
+constexpr bool COLLISIONAL_HEATING_IONS_WITHOUT_NLTE_LEVELS_SOBOLEV_ESCAPE;
 
 // The bound-free cooling coefficient of each (level, target) continuum is per population of the target level of
 // the upper ion, like the spontaneous recombination coefficient alpha_sp. True multiplies it by the population
