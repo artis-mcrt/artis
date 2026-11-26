@@ -10,6 +10,8 @@
 // A preset for kilonovae from about 2 to 100 days. It has:
 // - NLTE populations of Sr, Y, and Zr, and a Saha ionisation balance for the other elements;
 // - a non-thermal electron solver;
+// - the collisional heating from the level populations, so the non-thermal excitation energy of the other elements
+//   goes to the heating (see COLLISIONAL_HEATING_FROM_LEVELPOPS in artisoptions_doc.md);
 // - the Grassmann-Taksar-Heyman (GTH) solver for the NLTE rate matrix;
 // - Anderson acceleration of the outer iteration.
 
@@ -110,7 +112,7 @@ constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = false;
 
 // --- Heating and cooling ---
 
-constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS = false;
+constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS = true;
 
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 

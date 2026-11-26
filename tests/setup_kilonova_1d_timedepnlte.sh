@@ -57,7 +57,6 @@ setoption FORCE_SAHA_ION_BALANCE '{ return false; }'
 
 setoption NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS '{ return 10; }'
 
-setoption COLLISIONAL_HEATING_FROM_LEVELPOPS 'true'
 setoption MINTEMP '500.'
 setoption MAXTEMP '100000.'
 setoption DETAILED_BF_ESTIMATORS_LEVEL_SELECTED '{ return true; }'
