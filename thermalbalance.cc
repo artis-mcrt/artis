@@ -441,51 +441,42 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
     // bracketing solver with inverse cubic interpolation, so it keeps the root bracketed like bisection
     // but converges superlinearly on the smooth part of the residual
     uintmax_t iternum = maxit;
-    auto result = toms748_solve(f_T_e, MINTEMP, MAXTEMP, f_T_min, f_T_max, ftol<fractional_accuracy>, iternum);
-    T_e = 0.5 * (result.first + result.second);
+    const auto [T_e_root_lower, T_e_root_upper] =
+        toms748_solve(f_T_e, MINTEMP, MAXTEMP, f_T_min, f_T_max, ftol<fractional_accuracy>, iternum);
+    T_e = 0.5 * (T_e_root_lower + T_e_root_upper);
     if (iternum >= maxit) {
       printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations. interval [{:g}, {:g}] [K]",
-                 iternum, result.first, result.second);
+                 iternum, T_e_root_lower, T_e_root_upper);
     } else {
-      printlnlog("after {} iterations, T_e = {:g} [K], interval [{:g}, {:g}] [K]", iternum, T_e, result.first,
-                 result.second);
+      printlnlog("after {} iterations, T_e = {:g} [K], interval [{:g}, {:g}] [K]", iternum, T_e, T_e_root_lower,
+                 T_e_root_upper);
     }
 
-    // The solver evaluates only points that bracket one root. After a large change from T_e_old, a sign change
-    // between T_e_old and the opposite limit of the T_e range proves a second root.
+    // after a large change of T_e, a sign change between T_e_old and the opposite limit proves a second root
     constexpr double T_e_fractional_change_for_second_root_test = 0.2;
     if (T_e_old >= MINTEMP && T_e_old <= MAXTEMP &&
         std::abs((T_e / T_e_old) - 1.) > T_e_fractional_change_for_second_root_test) {
-      // The evaluation changes the cell state that the final evaluation reads, so the code restores that state.
-      const auto cellion_slice_start = static_cast<size_t>(get_cellionindex(nonemptymgi, 0));
-      const auto ncellions = static_cast<size_t>(get_includedions());
-      const auto groundlevelpops = grid::ion_groundlevelpops_allcells.subspan(cellion_slice_start, ncellions);
-      const auto partfuncts = grid::ion_partfuncts_allcells.subspan(cellion_slice_start, ncellions);
-      const auto gammaestimators =
-          std::span(globals::gammaestimator)
-              .subspan(static_cast<size_t>(nonemptymgi) * globals::nbfcontinua_ground, globals::nbfcontinua_ground);
+      // the final evaluation reads nne and the ground level populations of the last evaluation
+      const auto groundlevelpops = grid::ion_groundlevelpops_allcells.subspan(
+          static_cast<size_t>(get_cellionindex(nonemptymgi, 0)), static_cast<size_t>(get_includedions()));
       const std::vector<float> groundlevelpops_of_solution(groundlevelpops.begin(), groundlevelpops.end());
-      const std::vector<float> partfuncts_of_solution(partfuncts.begin(), partfuncts.end());
-      const std::vector<double> gammaestimators_of_solution(gammaestimators.begin(), gammaestimators.end());
       const float nne_of_solution = grid::get_nne(nonemptymgi);
 
       const double f_T_e_old = f_T_e(T_e_old);
 
       std::ranges::copy(groundlevelpops_of_solution, groundlevelpops.begin());
-      std::ranges::copy(partfuncts_of_solution, partfuncts.begin());
-      std::ranges::copy(gammaestimators_of_solution, gammaestimators.begin());
       grid::set_nne(nonemptymgi, nne_of_solution);
 
-      // [result.first, result.second] is the interval of the solver root
-      const bool second_root_below_T_e_old = (T_e_old < result.first) && (f_T_e_old * f_T_min < 0);
-      const bool second_root_above_T_e_old = (T_e_old > result.second) && (f_T_e_old * f_T_max < 0);
+      const bool second_root_below_T_e_old = (T_e_old < T_e_root_lower) && (f_T_e_old * f_T_min < 0);
+      const bool second_root_above_T_e_old = (T_e_old > T_e_root_upper) && (f_T_e_old * f_T_max < 0);
       if ((second_root_below_T_e_old || second_root_above_T_e_old) &&
           second_T_e_root_warned.is_first_occurrence(nonemptymgi)) {
+        const double T_e_opposite_limit = second_root_below_T_e_old ? MINTEMP : MAXTEMP;
         printlnlog(
             "[warning] call_T_e_finder: cell {} timestep {}: the thermal balance has a second root in [{:g}, {:g}] "
             "[K]. The solver changed T_e from {:g} to {:g} [K] (repeats suppressed)",
-            modelgridindex, globals::timestep, second_root_below_T_e_old ? MINTEMP : T_e_old,
-            second_root_below_T_e_old ? T_e_old : MAXTEMP, T_e_old, T_e);
+            modelgridindex, globals::timestep, std::min(T_e_old, T_e_opposite_limit),
+            std::max(T_e_old, T_e_opposite_limit), T_e_old, T_e);
       }
     }
   } else if (f_T_max < 0) {
