@@ -121,10 +121,24 @@ The `git version` and `git status` lines at the start of the log of each job giv
 
 ### The run starts again from the first timestep
 
-`sn3d` updates `input.txt` for the next job and keeps the parameters of the new simulation in `input-newrun.txt`.
-If `input.txt` is absent, both `sn3d` and `exspec` copy `input-newrun.txt` to `input.txt`.
-To resume, use the `input.txt` for the timestep of your restart files.
-A new simulation [removes previous output and restart files](outputfiles.md#a-new-simulation-removes-the-files-of-the-previous-one).
+Keep the parameters for the saved timestep in the plain file `input.txt`.
+If only `input.txt.zst` holds those parameters, a plain `input-newrun.txt` takes priority.
+If the plain `input.txt` is absent, recover the current parameters with this command.
+
+```sh
+zstd -d input.txt.zst -o input.txt
+```
+
+Run the [input check](running.md#check-the-input-before-a-job) with the rank count of the saved run.
+Read the selected mode and timestep in its log.
+
+```sh
+grep -E 'input: (resuming simulation|starting a new simulation)|sn3d stops before timestep' inputcheck/output_0-0.txt
+```
+
+For a restart, the log must show `resuming simulation from saved point` and the timestep of the restart files.
+If it shows a new simulation, correct `input.txt` before you run `sn3d`.
+A new simulation [removes the previous output and restart files](outputfiles.md#a-new-simulation-removes-the-files-of-the-previous-one).
 
 ## The results
 
