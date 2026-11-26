@@ -339,6 +339,11 @@ The code keeps T_e between [MINTEMP](options.md#mintemp) and [MAXTEMP](options.m
 limits has no thermal balance, and the log of its rank has a warning (see
 [Troubleshooting](troubleshooting.md#the-log)).
 
+The solver finds one root between the limits. After a change of T_e of more than 20% in one iteration, the code
+evaluates the balance at the T_e from the start of the iteration. A sign change between that T_e and the opposite
+limit proves a second root, and the log gets a warning (see
+[Troubleshooting](troubleshooting.md#a-warning-of-a-second-root-of-the-thermal-balance)).
+
 - Options: [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops),
   [BFCOOLING_USELEVELPOPNOTIONPOP](options.md#bfcooling_uselevelpopnotionpop),
   [USE_ION_BFHEATING_ESTIMATORS](options.md#use_ion_bfheating_estimators), and

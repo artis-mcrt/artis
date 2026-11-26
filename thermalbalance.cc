@@ -39,6 +39,8 @@ static_assert(!BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR || !USE_LUT_PHOTO
 
 namespace {
 
+THREADLOCALONHOST CellWarningMarker second_T_e_root_warned;
+
 // Integrand to calculate the rate coefficient for bfheating. With
 // BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR, the stimulated recombination factor is the factor of
 // integrand_corrphotoioncoeff_custom_radfield() in ratecoeff.cc, so the photoionisation rate and the heating rate of a
@@ -447,6 +449,42 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
     } else {
       printlnlog("after {} iterations, T_e = {:g} [K], interval [{:g}, {:g}] [K]", iternum, T_e, result.first,
                  result.second);
+    }
+
+    // The solver evaluates only points that bracket one root. After a large change from T_e_old, a sign change
+    // between T_e_old and the far limit of the T_e range proves a second root.
+    constexpr double T_e_fractional_change_for_second_root_test = 0.2;
+    if (std::abs((T_e / T_e_old) - 1.) > T_e_fractional_change_for_second_root_test) {
+      // The evaluation changes the cell state that the final evaluation reads, so the state is restored after it.
+      const auto cellion_slice_start = static_cast<size_t>(get_cellionindex(nonemptymgi, 0));
+      const auto ncellions = static_cast<size_t>(get_includedions());
+      const auto groundlevelpops = grid::ion_groundlevelpops_allcells.subspan(cellion_slice_start, ncellions);
+      const auto partfuncts = grid::ion_partfuncts_allcells.subspan(cellion_slice_start, ncellions);
+      const auto gammaestimators =
+          std::span(globals::gammaestimator)
+              .subspan(static_cast<size_t>(nonemptymgi) * globals::nbfcontinua_ground, globals::nbfcontinua_ground);
+      const std::vector<float> groundlevelpops_of_solution(groundlevelpops.begin(), groundlevelpops.end());
+      const std::vector<float> partfuncts_of_solution(partfuncts.begin(), partfuncts.end());
+      const std::vector<double> gammaestimators_of_solution(gammaestimators.begin(), gammaestimators.end());
+      const float nne_of_solution = grid::get_nne(nonemptymgi);
+
+      const double f_T_e_old = f_T_e(T_e_old);
+
+      std::ranges::copy(groundlevelpops_of_solution, groundlevelpops.begin());
+      std::ranges::copy(partfuncts_of_solution, partfuncts.begin());
+      std::ranges::copy(gammaestimators_of_solution, gammaestimators.begin());
+      grid::set_nne(nonemptymgi, nne_of_solution);
+
+      const bool second_root_below_T_e_old = (T_e > T_e_old) && (f_T_e_old * f_T_min < 0);
+      const bool second_root_above_T_e_old = (T_e < T_e_old) && (f_T_e_old * f_T_max < 0);
+      if ((second_root_below_T_e_old || second_root_above_T_e_old) &&
+          second_T_e_root_warned.is_first_occurrence(nonemptymgi)) {
+        printlnlog(
+            "[warning] call_T_e_finder: cell {} timestep {}: the thermal balance has a second root in [{:g}, {:g}] "
+            "[K]. The solver changed T_e from {:g} to {:g} [K] (repeats suppressed)",
+            modelgridindex, globals::timestep, second_root_below_T_e_old ? MINTEMP : T_e_old,
+            second_root_below_T_e_old ? T_e_old : MAXTEMP, T_e_old, T_e);
+      }
     }
   } else if (f_T_max < 0) {
     // Thermal balance equation always negative ===> T_e = T_min
