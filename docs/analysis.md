@@ -42,7 +42,9 @@ file. `check` gives one row for each check of the results. `logsummary` counts e
 
 ## Direction-resolved results
 
-A 2D or a 3D model gives the results of each observer direction bin. Each `--plotviewingangle` number is one bin:
+A 2D or a 3D model gives a spectrum and a light curve for each direction bin.
+If you ran the simulation manually, [merge the direction bins](exspec.md#read-the-spectra-of-each-direction) before you plot the spectra or light curves.
+Each number after `--plotviewingangle` selects one bin.
 
 ```sh
 artistools plotspectra -t <days> <model folder> --plotviewingangle 0

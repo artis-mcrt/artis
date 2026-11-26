@@ -133,8 +133,9 @@ The job script holds the other values, e.g. the rank count and the wall time. On
 values. Each model folder has its own clone, so an edit of these scripts changes only the values of that model folder.
 The `git status` line of the log then names the changed script.
 
-A new simulation keeps the default Slurm output file, `slurm-<job ID>.out`. If you use a name such as `job.out` or
-`job.out.zst`, put the file outside the model folder. See [which files a new simulation removes](outputfiles.md#a-new-simulation-removes-the-files-of-the-previous-one).
+A new simulation keeps the default Slurm output file, `slurm-<job ID>.out`. Keep a custom submission script such as
+`submit.slurm` in a subfolder. Put a custom output file such as `job.out` outside the model folder.
+See [which files a new simulation removes](outputfiles.md#a-new-simulation-removes-the-files-of-the-previous-one).
 
 ## What the job scripts do
 

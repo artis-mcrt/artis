@@ -28,7 +28,9 @@ tar -xf atomicdata_feconi.tar.xz
 
 `artis/tests/atomic_data_release.txt` names the release that holds the archive.
 
-The archive holds Fe, Co, and Ni, so the model can hold only these elements. A cell with mass only in other elements becomes an empty cell.
+The archive supplies atomic data for iron (Fe), cobalt (Co), and nickel (Ni).
+This model uses nickel for the radioactive material and iron for the stable material.
+The decay of Ni56 also produces cobalt.
 
 ## 2. Write the model files
 
@@ -103,13 +105,14 @@ The script gives this line:
 total mass 1.000 Msun, Ni56 mass 0.260 Msun
 ```
 
-The script writes two files:
+The script uses format version 1. It writes two files.
 
 - `model.txt` has the number of cells, the snapshot time in days, a header line, and one row for each shell.
 - `abundances.txt` has one row for each cell. The values start at hydrogen, so Fe is value 26 and Ni is value 28.
 
-The Ni56 of `X_Ni56` is also in the mass fraction of nickel in `abundances.txt`, because the mass fraction of an
-element must not be less than the sum of its nuclides.
+In the first shell, `X_Ni56` is 0.7. The nickel entry in `abundances.txt` also contains 0.7.
+These values describe the same mass. The iron entry contains the remaining 0.3.
+`X_Fegroup` is 1.0 because all the mass in this shell belongs to iron-group elements.
 
 ## 3. Check the model
 
@@ -117,11 +120,20 @@ element must not be less than the sum of its nuclides.
 artistools inputmodel describe .
 ```
 
-Compare these values with the values that you intended:
+Compare the output with the values for this model.
 
-- the line `M_tot_rho`, which is the total mass;
-- the line `vmax`, which is the outer velocity;
-- the mass of each element and of each nuclide. The output of this model has 0.260 solar masses of Ni.
+| Quantity in the output | Expected value |
+| --- | --- |
+| Snapshot time | 1 day |
+| Number of shells | 20 |
+| `vmax` | 15,000 km/s |
+| `M_tot_rho` (sum of density times volume) | 1.000 solar mass |
+| `M_tot_elem` (sum of the element masses) | 1.000 solar mass |
+| Fe and Ni at the snapshot time | 0.740 and 0.260 solar masses |
+
+For a model made from a hydrodynamic simulation, compare these masses with the masses in the original snapshot.
+Use the density and the shell volumes at the same time. In homologous expansion, multiplying the time by two
+multiplies each volume by eight and divides each density by eight.
 
 `artistools plotdensity .` plots the enclosed mass and the mass per unit velocity against the velocity.
 
@@ -190,6 +202,7 @@ Look for the lines `timestep 3 is complete` in `output_0-0.txt`. To run the rema
   `X_Co57`.
 - **The packets and the shells.** Increase `NUM_PACKETS`, and use enough shells to resolve the density and the
   composition.
-- **The geometry.** A 2D or a 3D model has a different layout of `model.txt` (see [Input files](inputfiles.md)).
+- **The geometry.** A multidimensional model can specify its velocity edges and its composition in one file.
+  See the [3D spherical example](inputfiles.md#format-version-2).
 
 Next: [Plan a simulation](planning.md).

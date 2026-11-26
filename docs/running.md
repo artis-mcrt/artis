@@ -61,8 +61,8 @@ removes the folder of the check before it, so run only one check at a time in a 
 
 A check differs from a run in these points:
 
-- A run restores an absent `input.txt` from `input-newrun.txt`. The check restores no file. Without `input.txt`, it
-  reads `input-newrun.txt` directly.
+- When a run would restore `input.txt` from `input-newrun.txt`, the check reads `input-newrun.txt` directly.
+  See the [order of the parameter files](inputfiles.md#inputtxt).
 - The check of a new simulation needs little memory for the packets, so a low rank count is sufficient, e.g. on a
   login node.
 - The check of a resumed simulation needs the rank count and the memory of the simulation, because each rank reads
@@ -70,12 +70,21 @@ A check differs from a run in these points:
 
 ## A simulation in several jobs
 
-To split a long simulation across several queued jobs, run `sn3d` with `-w WALLTIMELIMITHOURS`. From the second
-timestep of a job, `sn3d` writes the restart files and updates `input.txt` after the grid update of each timestep. Then it
-tests the remaining wall time. When too little wall time remains to complete another timestep, the job stops cleanly, and the
-log then has the line `RESTART_NEEDED` before its last line. The bundled cluster job scripts detect that text and submit a
-continuation job, and they pass the remaining Slurm allocation time automatically (see
-[Runs on a cluster](clusters.md)).
+To split a simulation across jobs, give `sn3d -w` the available wall time in hours.
+The [cluster scripts](clusters.md#what-the-job-scripts-do) get this value from Slurm.
+From the second timestep of a job, `sn3d` saves the grid and the packets before it tests the remaining wall time.
+Read the log of rank 0 to decide what to do next.
+
+| Text in the log | Next step |
+| --- | --- |
+| `RESTART_NEEDED` | The job has too little time for the next timestep. The cluster script submits the next job. For a manual run, use the current `input.txt` and the same rank count. |
+| `Completed the requested timestep range` | The job reached `timestep_finish` before the end of the model. To continue, increase only `timestep_finish` in `input.txt`. Then submit the next job. |
+| `No need for restart` | The job reached the end of the model. The spectra and light curves are ready for [analysis](analysis.md). |
+
+For example, a new job with the range `000 009` propagates timesteps 0 to 8.
+Its last restart files hold the state before packet propagation at timestep 8.
+To continue a 20-timestep model, change `008 009` to `008 020` in the current `input.txt`.
+Keep the continuation flag at 1. The next job propagates timestep 8 again.
 
 Run `artis/sn3d -h` to list all command-line options. `artis/sn3d --version` gives the git version, the preset, and
 the compiler of the build. An unknown option or argument stops `sn3d` before it reads a file.

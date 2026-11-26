@@ -87,8 +87,6 @@ A run writes these files into the model folder:
     - `gammalinelist.out`: each gamma line of each nuclide, with its energy in MeV and its number of photons for
       each decay;
     - `bflist.out`: each bound-free continuum, with its ion, its lower level, and its upper level.
-- `syn_dir.txt`: the three components of the unit vector from which the direction bins measure the polar angle. The
-  value is always `0 0 1`. Rank 0 writes the file at the start of each job, and the file stays plain in every build.
 - `artis.pid`: the process id of rank 0 and the path of the model folder. `sn3d` and `exspec` stop when this file
   names a process that still runs in the same folder, and each program removes the file at the end.
 - `gridsave_ts*.tmp` and `packets_*_ts*.tmp`: restart files that hold the state at the start of a timestep, after its
@@ -129,7 +127,8 @@ writes it.
 `spec.out` has one header row, and then one row for each of the 1000 frequency bins. The bins have a logarithmic
 spacing from `NU_MIN_R` to `NU_MAX_R`.
 
-- The header row holds a 0, and then the midpoint of each complete timestep [days].
+- The header row holds a 0, and then one midpoint [days] per timestep. `sn3d` writes the complete timesteps.
+  `exspec` writes all timesteps, even for [a partial run](exspec.md).
 - Each other row holds the middle frequency of a bin, and then the flux of each timestep.
 - The flux is F_nu [erg/s/cm^2/Hz] for an observer at a distance of 1 Mpc. A packet goes into the timestep of its
   arrival time at the observer.
@@ -148,18 +147,20 @@ frequency bin of that absorption. Its columns therefore do not divide the flux o
 files have no header, no frequency column, and no time column.
 
 - The files have one row for each frequency bin and each timestep of the model. The rows of all timesteps of the
-  first frequency bin come first, then the rows of the second bin. The timesteps after the last complete timestep
-  hold zeros. `timesteps.out` gives the number of timesteps.
+  first frequency bin come first, then the rows of the second bin. `timesteps.out` gives the number of timesteps.
+  After a partial run, `sn3d` writes zeros for later timesteps. `exspec` includes any packets with later arrival times.
 - The unit of the values is the unit of `spec.out`.
 - A column belongs to an ion. Its number, from 0, is the element index times the maximum ion count plus the ion
   index. The element index is the row of the element in `compositiondata.txt`, from 0. The ion index counts from the
   lowest ion stage of the element, from 0. The maximum ion count is the largest number of ion stages of one element.
 - `emission.out` has a first group of ion columns for the bound-bound emission, a second group for the bound-free
   emission, and then one column for the free-free emission. The process is the last emission of the packet.
-- `emissiontrue.out` has the same columns. The process is the last emission of the packet from the thermal energy
-  of the gas, so a later scattering or {term}`macro atom` event does not change it.
-- `absorption.out` has one group of ion columns. A packet goes into the frequency bin of its last absorption, and
-  into the column of the ion of that line. Only a bound-bound absorption gives a value.
+  The free-free column also includes blackbody emission from k-packets.
+- `emissiontrue.out` has the same columns. A k-packet emission sets the process. After non-thermal or collisional
+  activation of a {term}`macro atom`, its first radiative emission sets the process. Later scatterings preserve it.
+- `absorption.out` has one group of ion columns. A packet contributes when its last absorption has a line index.
+  Both the escape frequency and the absorption frequency must lie inside the spectrum range.
+  The absorption frequency selects the bin. The ion of the line selects the column.
 - `emissionpol.out` and `absorptionpol.out` hold, for each frequency bin, the rows of Stokes I for all timesteps,
   then the rows of Stokes Q, and then the rows of Stokes U.
 
@@ -175,16 +176,22 @@ The `speclc_angle_res` folder holds one file of each type for each of the 100 di
 - `absorption_res`.
 
 A run with `POL_ON` adds `specpol_res`, `emissionpol_res`, and `absorptionpol_res`. Each file has the layout of the
-file for all directions, e.g. `spec_res_07.out` has the layout of `spec.out`. The values are for an observer in that
-direction, as if the emission were the same in all directions.
+file for all directions. For example, read `speclc_angle_res/spec_res_07.out` as `spec.out` to get the spectrum
+of bin 7. With libzstd, the filename ends in `.out.zst`.
+
+Each bin covers one hundredth of the full solid angle. ARTIS multiplies its flux and luminosity by 100.
+The mean of the 100 spectra gives the spectrum for all directions, to the precision of the files.
+The gamma-ray files give only the result for all directions.
 
 The number of a direction bin is 10 times its cos(theta) bin plus its phi bin. The polar angle theta is relative to
 the z axis, and the cos(theta) bin 0 starts at cos(theta) = -1. The phi bins do not follow the azimuthal angle phi in
 sequence. The bins 0 to 4 go from 2 pi down to pi, and the bins 5 to 9 go from 0 up to pi.
 
-`scripts/mergeangleres.py` makes `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. `sn3d` and `exspec`
-write only the files of the direction bins. A merged file holds the content of the files of all direction bins, one
-after the other in the sequence of the bin numbers. Only a run with `POL_ON` has `specpol_res.out`.
+The [merge command](exspec.md#read-the-spectra-of-each-direction) writes `light_curve_res.out`, `spec_res.out`, and, with `POL_ON`, `specpol_res.out`
+in the model folder. For each file type, it needs all 100 bins in the same form, either plain or compressed.
+The merged file has the same form. It holds one block per direction bin in order from 0 to 99.
+Each spectrum block starts with its own header and has 1000 frequency rows. For example, the eighth block holds bin 7.
+The emission and absorption files stay separate for each bin.
 
 ### deposition.out
 
@@ -316,14 +323,14 @@ the rank. A run without `KEEP_ESCAPED_GAMMAS` writes no rows for the escaped gam
 | `escape_type_id` | The type of the packet when it escaped, or 0. |
 | `escape_time` | The time when the packet left the grid, or -1. |
 | `emissiontype` | The process of the last emission (see below). |
-| `trueemissiontype` | The process of the last emission from the thermal energy of the gas. |
+| `trueemissiontype` | The emission process that selects the column of [`emissiontrue.out`](#the-emission-and-absorption-files). |
 | `em_posx`, `em_posy`, `em_posz` | The position of the last emission. A scattering of an r-packet and the Compton scattering of a gamma packet also set the position and `em_time`. The position is `nan` for a pellet, and for a packet of particles from a pellet decay, which sets only `em_time`. |
 | `absorption_type`, `absorption_freq` | The process of the last absorption (see below), and the rest-frame frequency of the last absorption of an r-packet. `absorption_freq` is 0 until an r-packet absorption sets it. |
 | `nscatterings` | The number of electron scatterings since the last emission. An event in a cell with the grey opacity also adds one. |
 | `em_time` | The time of the last emission, or of the last scattering. |
 | `stokes_q`, `stokes_u` | The Stokes parameters Q/I and U/I. Only a run with `POL_ON` has these columns. |
 | `originated_from_particlenotgamma` | 1 if the decay of the pellet made a particle, and 0 if it made a gamma ray. The initial energy of the cells and the input energy of `THERMAL_ENERGY_INPUT_FROM_FILES` also hold 0, and their `pellet_decaytype` is -1. |
-| `trueem_posx`, `trueem_posy`, `trueem_posz`, `trueem_time` | The position and the time of the last emission from the thermal energy of the gas. A packet with no such emission holds `nan` in the position and -1 in the time. |
+| `trueem_posx`, `trueem_posy`, `trueem_posz`, `trueem_time` | The position and time of the emission that set `trueemissiontype`. A packet with no such emission holds `nan` in the position and -1 in the time. |
 | `pellet_nucindex` | The nuclide of the pellet decay, as the index of `nuclides.out`, or -1 for the initial energy of the cells and for the input energy of `THERMAL_ENERGY_INPUT_FROM_FILES`. |
 | `pellet_decaytype` | The decay type of the pellet, as a value of the list below. The value -1 is the initial energy of the cells, or the input energy of `THERMAL_ENERGY_INPUT_FROM_FILES`. |
 
@@ -479,8 +486,10 @@ Python has no numpy, run the script with uv, e.g. `uv run --with numpy read_spec
 
 A new simulation removes the restart files and the `job_from_ts*` folders. At the top level of the model folder,
 `sn3d` also removes files that match `*.out` or `*.out.*`. This includes personal files such as `analysis.out.zst`.
-`sn3d` keeps files that match `slurm-*.out`. Move personal output files outside the model folder before you start a
-new simulation. `scripts/clean.sh` also removes the Slurm output files and the core files.
+It removes both files and folders that match `*.slurm`, including a submission script such as `submit.slurm`.
+Keep such scripts in a subfolder, for example `artis/scripts/`.
+`sn3d` keeps the default Slurm output files that match `slurm-*.out`.
+`scripts/clean.sh` also removes those output files and the core files.
 
 ## Plotting and analysis
 

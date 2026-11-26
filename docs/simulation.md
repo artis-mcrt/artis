@@ -9,15 +9,16 @@ ARTIS uses indivisible energy packets (Lucy (2002), A&A, 384, 725-735, doi:10.10
 never splits a packet into smaller packets, and it follows each packet until the packet escapes or the simulation
 ends. A packet changes its type as its energy changes its form:
 
-- each {term}`pellet` holds the same energy by default. That energy is the decay energy of the whole model in the time
-  range of the simulation, divided by the number of packets of the {term}`rank`. A pellet moves with the ejecta until
-  the time of its decay;
+- each {term}`rank` samples the decay energy of the whole model. With [INITIAL_PACKETS_ON](options.md#initial_packets_on),
+  the energy also includes decays before the first timestep and the initial energy from the model. By default, each
+  {term}`pellet` receives an equal share and moves with the ejecta until its release time.
 - the decay makes a {term}`gamma packet`, or a packet of positrons, electrons, alpha particles, or fission fragments;
 - a gamma packet gives its energy to the gas by Compton scattering, by photoelectric absorption, or by pair
   production;
-- the energy of a fast lepton goes to the heating, the ionisation, and the excitation of the gas. The Spencer-Fano
-  solver gives the three fractions (see [NT_SCHEME](options.md#nt_scheme)). The alpha particles and the fission
-  fragments give all of their energy to the heating, so they need no such solution;
+- with the Spencer-Fano solver, a fast lepton can heat, ionise, or excite the gas. The solver gives the
+  probabilities for its packet. In a cell with {term}`grey opacity`, or with another [NT_SCHEME](options.md#nt_scheme),
+  all deposited lepton energy heats the gas. Deposited energy from alpha particles and fission fragments always
+  heats the gas.
 - a {term}`k-packet` holds thermal energy. A cooling channel of the cell converts it into radiation or into a {term}`macro atom`. In
   an optically thick cell, the k-packet emits an {term}`r-packet` from a Planck function instead;
 - a macro atom makes internal transitions until it emits radiation or becomes a k-packet again;
@@ -75,9 +76,9 @@ flowchart TD
     next -->|"yes"| packets["packet files, then the job ends"]
 ```
 
-1. **The grid update.** Each rank solves the state of its own model grid cells. The solution gives the electron
-   temperature, the ion and level populations, and the opacities, and it uses the {term}`estimators <estimator>` of the previous
-   timestep.
+1. **The grid update.** Each rank solves the state of its own model grid cells. The first update of a new run uses
+   the initial temperatures and the Saha ionisation balance. Later updates use the {term}`estimators <estimator>`
+   from the previous timestep to calculate the temperature, the populations, and the opacities.
 2. **The exchange of the cell state.** The ranks send their cells to the other ranks. Every rank then holds the whole
    grid, because a packet of any rank can enter any cell.
 3. **The {term}`restart files <restart file>`.** From the second timestep of a job, `sn3d` writes the grid and the packets and updates
@@ -97,8 +98,10 @@ A packet adds to the estimators of each cell that it enters, e.g. to the mean in
 the photoionisation rates. The packets of all ranks enter the same cells, so the sums of one rank are incomplete
 until step 5 above. The grid update of the next timestep then reads them.
 
-The radiation field model fits a diluted blackbody to the full spectrum of each cell, and it can also fit one to each
-frequency bin (Shingles et al. (2020), MNRAS, 492, 2029-2043, section 2.2, doi:10.1093/mnras/stz3412). The rates of
-the photoionisation and of the heating use these fits.
+Outside an {term}`LTE` update, a cell that used detailed transport in the previous timestep gets a dilute blackbody
+fit to its radiation field. The code can also fit each frequency bin. The radiation field gives photoionisation rates
+and bound-free heating. For a continuum with an active detailed estimator, the packet paths give the photoionisation
+rate directly. The heating of that continuum still uses the radiation field. See
+[the radiation field model](methods.md#the-radiation-field-model).
 
 [Plan a simulation](planning.md#the-ranks) describes the work and the memory of each rank.

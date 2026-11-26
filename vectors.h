@@ -143,32 +143,25 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
 }
 
 [[gnu::pure]] [[nodiscard]] constexpr auto get_escapedirectionbin(const Vec3d& dir_in) -> int {
-  constexpr auto xhat = Vec3d{1.0, 0.0, 0.0};
-
   // sometimes dir vectors aren't accurately normalised
   const double dirmag = vec_len(dir_in);
   const auto dir = Vec3d{dir_in[0] / dirmag, dir_in[1] / dirmag, dir_in[2] / dirmag};
 
-  // find the cos(theta) bin and the phi bin of the direction relative to syn_dir
-  const double costheta = dot(dir, syn_dir);
+  // theta is the polar angle from zhat, and phi is the azimuthal angle from xhat towards yhat
+  const double costheta = dir[2];
   const int costhetabin = std::clamp(static_cast<int>((costheta + 1.0) * NCOSTHETABINS / 2.0), 0, NCOSTHETABINS - 1);
 
-  const auto vec1 = cross_prod(dir, syn_dir);
-  constexpr auto vec2 = cross_prod(xhat, syn_dir);
-  const double vec1_len = vec_len(vec1);
-  const double cosphi = vec1_len > 1e-12 ? std::clamp(dot(vec1, vec2) / vec1_len, -1.0, 1.0) : 1.0;
+  const double sintheta = std::sqrt(pow2(dir[0]) + pow2(dir[1]));
+  const double cosphi = sintheta > 1e-12 ? std::clamp(dir[0] / sintheta, -1.0, 1.0) : 1.0;
 
-  constexpr auto vec3 = cross_prod(vec2, syn_dir);
-  const double testphi = dot(vec1, vec3);
-
-  // With syn_dir = z and phi defined by dir = (sin(theta) cos(phi), sin(theta) sin(phi), cos(theta)),
+  // With phi defined by dir = (sin(theta) cos(phi), sin(theta) sin(phi), cos(theta)),
   // the mapped angle is phi + pi for phi in (0, pi) and 2 pi - phi for phi in (pi, 2 pi).
   // The bins 0..(NPHIBINS/2 - 1) therefore cover phi from 2 pi down to pi in decreasing order, and
   // the bins NPHIBINS/2..(NPHIBINS - 1) cover phi from 0 up to pi in increasing order.
   // artistools contains the same mapping, so a change here breaks the analysis of the output files.
   // test_escapedirectionbin() in unittests.cc pins this mapping.
   const int phibin =
-      std::clamp(static_cast<int>((testphi > 0 ? std::acos(cosphi) : std::acos(cosphi) + PI) / 2. / PI * NPHIBINS), 0,
+      std::clamp(static_cast<int>((dir[1] < 0 ? std::acos(cosphi) : std::acos(cosphi) + PI) / 2. / PI * NPHIBINS), 0,
                  NPHIBINS - 1);
 
   const int na = ((costhetabin * NPHIBINS) + phibin);

@@ -57,14 +57,45 @@ auto integrand_bfheatingcoeff(const double nu, const double nu_edge, const int n
 
 // Sum the thermal heating rate from collisional de-excitations over all levels of a single ion (the energy given
 // to the thermal electron pool when bound electrons are collisionally de-excited).
+//
+// Level populations that are Boltzmann at T_e make this sum equal to the collisional excitation cooling, so the ion
+// then has no net line cooling. With LTEPOP_EXCITATION_USE_TJ false, two groups of ions have such populations. The
+// first group is the ions without NLTE levels. The second group is the ions of an element whose last NLTE solve in
+// the cell fell back to LTE. For each line of these ions, the term of the sum is the energy flow of a two-level
+// macro atom:
+//   [n_l C_lu + (n_l B_lu - n_u B_ul) beta J_nu] dE C_ul / (beta A_ul + C_ul)
+//
+// The first factor is the rate of the excitations of the upper level by collisions and by the net absorption of
+// radiation. C_ul / (beta A_ul + C_ul) is the probability of a collisional de-excitation. beta is the Sobolev escape
+// probability of Kromer & Sim (2009), MNRAS, 398, 1809-1826, doi:10.1111/j.1365-2966.2009.15256.x, Section 3.5.2.
+// The populations are the Boltzmann populations, as for the line opacity of the packets. The net cooling of a line is
+// thus zero when J_nu is the Planck function at T_e. The term ignores the cascades through the other levels.
+//
+// The ions of an element with NLTE levels keep the sum before the first NLTE solve of the cell. All ions keep the sum
+// with RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, because the packets then use no macro atom for the lines.
 auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const float T_e,
                                 const float clumpednne) -> double {
+  const bool use_two_level_macro_atom =
+      !LTEPOP_EXCITATION_USE_TJ && !RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() &&
+      (get_nlevels_excited_nlte(element, ion) == 0 || elem_nlte_solve_fell_back_to_lte(nonemptymgi, element));
+  const double t_mid = globals::timesteps[globals::timestep].mid;
   double C_deexc = 0.;
   const int nlevels = get_nlevels(element, ion);
   const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+
+  // the two-level macro atom needs the population of the lower level of each line
+  THREADLOCALONHOST std::vector<double> levelpops;
+  if (use_two_level_macro_atom) {
+    reserve_resize(levelpops, static_cast<size_t>(nlevels));
+    for (int level = 0; level < nlevels; level++) {
+      levelpops[level] = calculate_levelpop(nonemptymgi, element, ion, level);
+    }
+  }
+
   for (int level = 0; level < nlevels; level++) {
     const auto uniquelevelindex = ionuniquelevelindexstart + level;
-    const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
+    const double nnlevel =
+        use_two_level_macro_atom ? levelpops[level] : calculate_levelpop(nonemptymgi, element, ion, level);
     const double epsilon_level = epsilon(uniquelevelindex);
     const double statweight = stat_weight(uniquelevelindex);
 
@@ -76,10 +107,33 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
       const int lower = globals::alltrans.targetlevelindex[alltransindex];
       const double epsilon_trans = epsilon_level - epsilon(ionuniquelevelindexstart + lower);
       const auto lower_statweight = stat_weight(ionuniquelevelindexstart + lower);
-      const double C =
-          nnlevel *
-          col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex) *
-          epsilon_trans;
+      const double C_ul =
+          col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex);
+
+      double collisional_deexcitation_rate_density = nnlevel * C_ul;  // [cm^-3 s^-1]
+      if (use_two_level_macro_atom && C_ul > 0.) {
+        const double A_ul = globals::alltrans.einstein_A[alltransindex];
+        const double nu_trans = epsilon_trans / H;
+        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(nu_trans) * A_ul;
+        const double B_lu = statweight / lower_statweight * B_ul;
+        const double net_absorption_rate_density_over_beta_J_nu = (B_lu * levelpops[lower]) - (B_ul * nnlevel);
+        const double tau_sobolev = net_absorption_rate_density_over_beta_J_nu * HCLIGHTOVERFOURPI * t_mid;
+        // a thin line or an inverted population has the thin limit, as in rad_deexcitation_ratecoeff()
+        const bool line_absorbs_radiation = tau_sobolev > 1e-100;
+        const double beta = line_absorbs_radiation ? (-std::expm1(-tau_sobolev) / tau_sobolev) : 1.;
+        const double net_absorption_rate_density =
+            line_absorbs_radiation
+                ? (net_absorption_rate_density_over_beta_J_nu * beta * radfield::radfield(nu_trans, nonemptymgi))
+                : 0.;
+
+        // n_l C_lu is equal to n_u C_ul for the Boltzmann populations
+        const double upper_level_excitation_rate_density = (nnlevel * C_ul) + net_absorption_rate_density;
+        collisional_deexcitation_rate_density = upper_level_excitation_rate_density * C_ul / (C_ul + (beta * A_ul));
+        assert_testmodeonly(std::isfinite(collisional_deexcitation_rate_density) &&
+                            collisional_deexcitation_rate_density >= 0.);
+      }
+
+      const double C = collisional_deexcitation_rate_density * epsilon_trans;
       C_deexc += C;
     }
   }
