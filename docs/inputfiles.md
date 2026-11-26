@@ -6,8 +6,8 @@ thus finds the physics data that comes with the source, and you copy nothing (se
 [Atomic and model data](data.md)).
 
 A build with libzstd also reads a text input file in zstd compressed form, e.g. `model.txt.zst`,
-`transitiondata.txt.zst`, or `packets/packets00_0000.out.zst` for `exspec`. The plain file has priority when both
-exist.
+`transitiondata.txt.zst`, or `packets/packets00_0000.out.zst` for `exspec`. Within each folder, the plain file has
+priority. Keep the active [run parameters](#inputtxt) in the plain file `input.txt`.
 
 | File | Necessary | Content |
 | --- | --- | --- |
@@ -78,9 +78,12 @@ The {term}`LTE` timesteps and the grey cells:
   `optical_depth_is_thick` or more gets the {term}`grey opacity` treatment. This applies to each timestep before the timestep
   `num_grey_timesteps`.
 
-At the start of a new simulation, `sn3d` writes `input.txt` again with a comment on each line and with the value of
-`nprocs_exspec`. It keeps the same content in `input-newrun.txt`. If `input.txt` is absent at the start of a run,
-{term}`rank` 0 restores it from `input-newrun.txt`.
+At the start of a new simulation, `sn3d` writes the rank count and the standard comments to `input.txt`.
+It saves a copy in `input-newrun.txt`. At each restart point, it updates only `input.txt`.
+
+If the model folder has no plain `input.txt`, both programs look for a plain `input-newrun.txt` first.
+If they find it, they restore it to `input.txt`, even when `input.txt.zst` holds newer parameters.
+The [input check](running.md#check-the-input-before-a-job) reads the same parameters without restoring the file.
 
 ## model.txt
 
@@ -157,7 +160,7 @@ The columns of each cell:
 | `rho` | 2D, 3D | The density [g/cm^3] at `t_model`. A value of zero gives an empty cell. A negative value stops the run, and also a value that is too large for a 32-bit float. |
 | `X_Fegroup` | all | The mass fraction of the iron-group elements. The value must not be above 1.001, which permits a rounding error. `sn3d` treats a negative value as it treats a negative `X_<nuclide>` value. |
 | `X_<nuclide>` | all | The mass fraction of one nuclide at `t_model`, e.g. `X_Ni56`. The name has the element symbol and the mass number, and its case has no effect. `X_n1` is the mass fraction of the free neutrons. `sn3d` does not decay the free neutrons, thus it does not use this column, and the log names the column as ignored. Each other mass number after `n` gives nitrogen, e.g. `X_N14`. A mass number below the atomic number stops the run. Two columns that give the same nuclide also stop the run, e.g. `X_Ni56` and `X_ni56`. The value must be in the range from 0 to 1. `sn3d` sets a negative value above -1e-6 to 0, and a value below that limit stops the run. |
-| `Ye` or `cellYe` | all | The electron fraction. |
+| `Ye` or `cellYe` | all | The electron fraction, equal to the number of protons per baryon. The grey opacity method `TANAKA2020_ELECTRONFRAC` needs a positive value in each cell with matter. |
 | `q` | all | The trapped radiation energy per mass [erg/g] at `t_model`. The value must not be negative. |
 
 More rules for the cells:
@@ -180,24 +183,35 @@ More rules for the cells:
 
 ### Format version 2
 
-A `model.txt` of format version 2 has the line `format_version 2` as its first line. Its header gives one key on each
-line, with the edges of the cells on each axis. This is a 3D spherical model:
+A `model.txt` of format version 2 starts with the line `format_version 2`. Each axis has a list of cell edges.
+This complete example describes a 3D spherical model at one day. It has eight cells, two of which contain matter.
 
 ```text
 format_version 2
 coordinates spherical3d
-cells_per_axis <n_r> <n_costheta> <n_phi>
-t_model_init_days <t_model in days>
-vel_r_edges_kmps <n_r + 1 radial velocities in km/s>
-costheta_edges <n_costheta + 1 values of cos(theta) from -1 to 1>
-phi_edges_radians <n_phi + 1 azimuthal angles in radians>
-cell_line_count <number of cell lines>
-columns inputcellid rho X_Fegroup X_Ni56 X_Ni_otherstable Ye
-<one row for each cell that is not empty>
+cells_per_axis 2 2 2
+t_model_init_days 1.0
+vel_r_edges_kmps 0 3000 6000
+costheta_edges -1 0 1
+phi_edges_radians 0 3.141592653589793 6.283185307179586
+cell_line_count 2
+columns inputcellid rho X_Fegroup X_Ni56 X_Fe_otherstable Ye
+0 2e-10 1.0 0.7 0.3 0.489
+7 1e-11 1.0 0.0 1.0 0.464
 ```
 
-Only the columns `inputcellid` and `rho` are necessary. The columns can also hold `X_<element>_otherstable`, e.g.
-`X_Ni_otherstable` (see [The element mass fractions](#the-element-mass-fractions)).
+Cell 0 occupies the inner shell at negative z, with phi from 0 to pi.
+Cell 7 occupies the outer shell at positive z, with phi from pi to 2 pi. Cells 1 to 6 are empty.
+
+Give `rho` in g/cm³ at the snapshot time, including for a 1D model.
+In cell 0, 70 percent of the mass is Ni56 and 30 percent is stable iron.
+`X_Fegroup` gives the combined iron-group mass fraction for the opacity calculation.
+Only `inputcellid` and `rho` are mandatory columns.
+A cell also needs mass in an element with atomic data to contribute to the simulation.
+See [The element mass fractions](#the-element-mass-fractions).
+
+With the atomic data from the [model guide](ownmodel.md), `sn3d -c` reports that two of the eight cells contain matter.
+The log gives a total input mass of 0.002476 solar masses.
 
 The key `coordinates` gives the grid, and each grid has its own keys for the edges, in the sequence of its axes:
 
@@ -236,12 +250,13 @@ The header:
   which is the position tolerance of a cell boundary.
 - A list of r, rcyl, or phi starts at 0. The last value of the list of the first axis is `vmax`. For the
   spherical coordinates, `vmax` must be less than the speed of light.
-- A cylindrical or a Cartesian grid has cells of equal width, because `sn3d` holds no other grid of these types. The
-  lists of x, y, and z must have equal steps from -`vmax` to `vmax`, and the list of rcyl from 0 to `vmax`. `sn3d`
-  permits a difference of 1e-9 times `vmax` for each edge. The three lists of a Cartesian grid must have the same
+- A cylindrical or a Cartesian grid has equal steps on each axis. The Cartesian axes span -`vmax` to `vmax`.
+  The cylindrical radius spans 0 to `vmax`. The cylindrical z axis spans -`vmax` to `vmax`, or 0 to `vmax` with
+  [mirror symmetry](#mirror-symmetry). `sn3d` permits a difference of 1e-9 times `vmax` for each edge.
+  The three lists of a Cartesian grid must have the same
   number of values. The rule of the corner velocity of format version 1 also applies.
-- The values of `costheta_edges` are the cosine of the polar angle theta. The first value must be exactly -1, which
-  is the -z axis. The last value must be exactly 1, which is the +z axis. An edge at 0 is the plane z = 0.
+- The values of `costheta_edges` are the cosines of the polar angles. The first value is exactly -1 at the -z axis,
+  or exactly 0 at the mirror plane. The last value is exactly 1 at the +z axis. An edge at 0 is the plane z = 0.
 - The last value of `phi_edges_radians` must be 2 pi. `sn3d` accepts a difference of 1e-8 and then uses the exact
   value.
 - Each cell in cos(theta) must be wider than 1e-8, and each cell in phi must be wider than 1e-8 rad. A polar edge

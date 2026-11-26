@@ -35,8 +35,8 @@ The `scripts` folder holds the job scripts of the clusters that we use and some 
   with a timestep range that covers the whole model.
 - `aliases.sh`: shell aliases for Slurm and the `MAKEFLAGS` setting. Source the file from your `.bashrc`. The file
   sets no `EMAIL`, so export your address in your `.bashrc` too.
-- `clean.sh`: remove all output files, keep the input files, and reset the simulation to the beginning. The script also
-  removes the `job_from_ts*` folders of `sn3d` and the `*.slurm` folders of older versions.
+- `clean.sh` removes the previous output and restart files from the model folder. It restores `input.txt` if `input-newrun.txt` exists.
+  Check the [names it removes](outputfiles.md#a-new-simulation-removes-the-files-of-the-previous-one) before use.
 - `sumcorehoursslurm.py`: calculate the summed core hours of all jobs from the Slurm job output files.
 - `make_options_docs.py`: write the [Compile-time options](options.md) page from `artisoptions_doc.md` and the {term}`presets <preset>`.
 - `check_docs.py`: compare the make options, the quoted log messages, and the `input.txt` table of `docs/` with the
