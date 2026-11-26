@@ -454,7 +454,8 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
     // The solver evaluates only points that bracket one root. After a large change from T_e_old, a sign change
     // between T_e_old and the opposite limit of the T_e range proves a second root.
     constexpr double T_e_fractional_change_for_second_root_test = 0.2;
-    if (std::abs((T_e / T_e_old) - 1.) > T_e_fractional_change_for_second_root_test) {
+    if (T_e_old >= MINTEMP && T_e_old <= MAXTEMP &&
+        std::abs((T_e / T_e_old) - 1.) > T_e_fractional_change_for_second_root_test) {
       // The evaluation changes the cell state that the final evaluation reads, so the code restores that state.
       const auto cellion_slice_start = static_cast<size_t>(get_cellionindex(nonemptymgi, 0));
       const auto ncellions = static_cast<size_t>(get_includedions());
@@ -475,8 +476,9 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
       std::ranges::copy(gammaestimators_of_solution, gammaestimators.begin());
       grid::set_nne(nonemptymgi, nne_of_solution);
 
-      const bool second_root_below_T_e_old = (T_e > T_e_old) && (f_T_e_old * f_T_min < 0);
-      const bool second_root_above_T_e_old = (T_e < T_e_old) && (f_T_e_old * f_T_max < 0);
+      // [result.first, result.second] is the interval of the solver root
+      const bool second_root_below_T_e_old = (T_e_old < result.first) && (f_T_e_old * f_T_min < 0);
+      const bool second_root_above_T_e_old = (T_e_old > result.second) && (f_T_e_old * f_T_max < 0);
       if ((second_root_below_T_e_old || second_root_above_T_e_old) &&
           second_T_e_root_warned.is_first_occurrence(nonemptymgi)) {
         printlnlog(
