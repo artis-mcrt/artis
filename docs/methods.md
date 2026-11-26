@@ -293,19 +293,32 @@ bound-free heating (see [the radiation field model](#the-radiation-field-model))
 [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), the collisional heating comes
 from a Monte Carlo estimator, which also holds the collisional recombination heating.
 
-With [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), an ion without NLTE
-levels has Boltzmann populations. With [LTEPOP_EXCITATION_USE_TJ](options.md#ltepop_excitation_use_tj) false, they
-are at T_e, and the sum of the collisional de-excitation heating would be equal to the collisional cooling. Each line
-of such an ion therefore gets the net cooling of a two-level atom with the Sobolev escape probability $\beta$:
+With [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), the collisional heating
+is the sum of $n_u C_{ul} \Delta E$ over the lines. $C_{ul}$ and $C_{lu}$ are the collisional rates of a line for
+each atom, and $\Delta E$ is the energy of the line. Level populations that are Boltzmann at T_e make this sum equal
+to the collisional excitation cooling. With [LTEPOP_EXCITATION_USE_TJ](options.md#ltepop_excitation_use_tj) false,
+two groups of ions have such populations. The first group is the ions without NLTE levels. The second group is the
+ions of an element whose last NLTE solve in the cell fell back to {term}`LTE`.
+
+For each line of these ions, the term of the sum is therefore the energy flow of a two-level macro atom:
 
 $$
-C_\mathrm{net} = n_l C_{lu} \Delta E \, \frac{\beta A_{ul}}{\beta A_{ul} + C_{ul}}
-- \left( n_l B_{lu} - n_u B_{ul} \right) J_\nu \, \beta \Delta E \, \frac{C_{ul}}{\beta A_{ul} + C_{ul}}
+H_{ul} = \left[ n_l C_{lu} + \left( n_l B_{lu} - n_u B_{ul} \right) \beta J_\nu \right] \Delta E \,
+\frac{C_{ul}}{\beta A_{ul} + C_{ul}}
 $$
 
-$J_\nu$ comes from the radiation field model of the cell. The formula is the first de-activation step of the macro
-atom, and it ignores the cascades through the other levels of the ion. It follows each trial T_e and has no Monte
-Carlo noise.
+The first factor is the rate of the excitations of the upper level by collisions and by the net absorption of
+radiation. The last factor is the probability of a collisional de-excitation, with the Einstein coefficient $A_{ul}$.
+$\beta$ is the Sobolev escape probability $(1 - e^{-\tau_{lu}}) / \tau_{lu}$ of Kromer & Sim (2009), with
+$\tau_{lu}$ at the middle of the timestep and $\beta = 1$ for $\tau_{lu} = 0$. $J_\nu$ is the mean intensity of the
+radiation field model of the cell.
+
+The populations are the Boltzmann populations, as for the line opacity, so the formula is different from the
+statistical equilibrium of the two levels. The net cooling of a line is zero when $J_\nu$ is the Planck function at
+T_e. The formula uses only the rates of the line, so it ignores the cascades through the other levels of the ion. It
+also has no term for a macro atom that an ionisation or a recombination activates. With
+[RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](options.md#rpkt_boundbound_thermalisation_probability), the packets use
+no macro atom for the lines, so all ions keep the sum.
 
 The cooling rates $C$ are the free-free, the free-bound, and the collisional cooling, and the adiabatic cooling of
 the expansion. With the gas pressure $p = (n_\mathrm{ion} + n_e) \, k_\mathrm{B} T_e$ and a volume that grows as

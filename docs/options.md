@@ -433,7 +433,7 @@ nltephotospheric
 
 `bool LTEPOP_EXCITATION_USE_TJ`
 
-Use the radiation temperature T_J instead of T_e in the Boltzmann factor of the excitation, also for the sublevels of a superlevel. With false, the T_e finder also recomputes the photoionisation rates of the ground continua of the elements without NLTE levels when T_e moves by more than 10 percent.
+Use the radiation temperature T_J instead of T_e in the Boltzmann factor of the excitation, also for the sublevels of a superlevel. With false, the T_e finder also recomputes the photoionisation rates of the ground continua of the elements without NLTE levels when T_e moves by more than 10 percent. With [COLLISIONAL_HEATING_FROM_LEVELPOPS](#collisional_heating_from_levelpops), the value also selects the collisional heating of the ions with Boltzmann populations (see that option).
 
 **Preset values:** classic `true`, kilonova_lte `false`, nltenebular `false`, nltephotospheric `false`
 
@@ -595,7 +595,23 @@ The reverse rates come from detailed balance. The rates enter the NLTE rate matr
 
 Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator. The estimator also holds the collisional recombination heating. The sum does not. The level populations of an element without NLTE levels do not follow a non-thermal excitation, so the sum would lose the heat of its collisional de-excitation. The same applies in a cell where the last NLTE solve of an element fell back to LTE. With this option, the non-thermal excitation energy of such an element therefore goes to the heating, and its packets become k-packets.
 
-An ion without NLTE levels has Boltzmann populations. With [LTEPOP_EXCITATION_USE_TJ](#ltepop_excitation_use_tj) false they are at T_e, and the sum would be equal to the collisional cooling. Each line of such an ion therefore gets the net cooling of a two-level atom: n_l C_lu dE P_esc - H_rad, with P_esc = beta A_ul / (beta A_ul + C_ul). The heating by the radiation field is H_rad = (n_l B_lu - n_u B_ul) J_nu beta dE C_ul / (beta A_ul + C_ul), with J_nu from the radiation field model of the cell. beta is the Sobolev escape probability. The formula ignores the cascades through the other levels of the ion.
+Level populations that are Boltzmann at T_e make the sum equal to the collisional excitation cooling. With [LTEPOP_EXCITATION_USE_TJ](#ltepop_excitation_use_tj) false, two groups of ions have such populations. The first group is the ions without NLTE levels. The second group is the ions of an element whose last NLTE solve in the cell fell back to LTE. For each line of these ions, the term of the sum is therefore the energy flow of a two-level macro atom: [n_l C_lu + (n_l B_lu - n_u B_ul) beta J_nu] dE C_ul / (beta A_ul + C_ul). With [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](#rpkt_boundbound_thermalisation_probability), the packets use no macro atom for the lines, so all ions keep the sum.
+
+The first factor is the rate of the excitations of the upper level by collisions and by the net absorption of radiation. C_ul / (beta A_ul + C_ul) is the probability of a collisional de-excitation. The populations are the Boltzmann populations, as for the line opacity, so the formula is different from the statistical equilibrium of the two levels. It uses only the rates of the line, so it ignores the cascades through the other levels of the ion. It also has no term for a macro atom that an ionisation or a recombination activates.
+
+The symbols of the formula are:
+
+- n_l and n_u: the populations of the lower and the upper level;
+
+- C_lu and C_ul: the collisional rates of the line for each atom;
+
+- A_ul, B_lu, and B_ul: the Einstein coefficients of the line;
+
+- dE: the energy of the line;
+
+- beta: the Sobolev escape probability of Kromer & Sim (2009), MNRAS, 398, 1809-1826, doi:10.1111/j.1365-2966.2009.15256.x;
+
+- J_nu: the mean intensity of the radiation field model of the cell.
 
 **Preset values:** classic `false`, kilonova_lte `true`, nltenebular `true`, nltephotospheric `true`
 
