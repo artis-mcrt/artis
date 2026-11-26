@@ -295,7 +295,7 @@ from a Monte Carlo estimator, which also holds the collisional recombination hea
 
 With [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), the collisional heating
 is the sum of $n_u C_{ul} \Delta E$ over the lines. $C_{ul}$ and $C_{lu}$ are the collisional rates of a line for
-each atom, and $\Delta E$ is the energy of the line. Level populations that are Boltzmann at T_e make this sum equal
+each atom, and $\Delta E$ is the energy of the line. Level populations that are Boltzmann at $T_e$ make this sum equal
 to the collisional excitation cooling. With [LTEPOP_EXCITATION_USE_TJ](options.md#ltepop_excitation_use_tj) false,
 two groups of ions have such populations. The first group is the ions without NLTE levels. The second group is the
 ions of an element whose last NLTE solve in the cell fell back to {term}`LTE`.
@@ -315,7 +315,7 @@ radiation field model of the cell.
 
 The populations are the Boltzmann populations, as for the line opacity, so the formula is different from the
 statistical equilibrium of the two levels. The net cooling of a line is zero when $J_\nu$ is the Planck function at
-T_e. The formula uses only the rates of the line, so it ignores the cascades through the other levels of the ion. It
+$T_e$. The formula uses only the rates of the line, so it ignores the cascades through the other levels of the ion. It
 also has no term for a macro atom that an ionisation or a recombination activates. With
 [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](options.md#rpkt_boundbound_thermalisation_probability), the packets use
 no macro atom for the lines, so all ions keep the sum.
