@@ -285,8 +285,8 @@ version 2. The density of a 1D cell can differ in the last digits, because versi
 For a 2D spherical or a 3D spherical model without [GRID_TYPE_OVERRIDE](options.md#grid_type_override), the
 propagation grid has the cells of the model. A boundary of cos(theta) is a cone around the z axis, and a boundary of
 phi is a half of a plane through the z axis. These boundaries have constant velocity coordinates, thus they do not move
-in the homologous expansion. The cells near the centre and near the z axis are small. A packet path within 10 cm of
-the centre changes its cell there in one step. Thus `sn3d` stops if the outer radius of the first radial shell is not
+in the homologous expansion. A ray through the centre enters the cell of its outgoing direction. A ray that misses
+the centre crosses each angular boundary that it meets. `sn3d` stops if the outer radius of the first radial shell is not
 above 1e5 cm at the start time.
 
 ### Mirror symmetry

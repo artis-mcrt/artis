@@ -236,8 +236,8 @@ template <BoundaryType boundarytype>
   return movingtowards && (overshoot >= 0.) && (overshoot <= cellbound_tolerance(boundarypos));
 }
 
-// The first crossing of a polar or an azimuthal cell boundary of a spherical grid on a packet path: the distance
-// [cm] to the crossing, or -1 if no such crossing lies ahead, and the polar and the azimuthal cell index after it.
+// The distance [cm] to the next polar or azimuthal cell boundary, or to a stop before the closest approach to the
+// centre or to the z axis. The cell indices apply after the step. A negative distance means no such point ahead.
 struct AngularBoundaryCrossing {
   double distance;
   int index_costheta;
@@ -246,10 +246,10 @@ struct AngularBoundaryCrossing {
 
 // Find the first crossing of a polar or an azimuthal cell boundary on the path from pos along the unit vector dir,
 // for a packet in the cell with the given polar and azimuthal index. The cones of constant cos(theta) and the
-// half-planes of constant phi do not move with the homologous expansion, thus the result does not depend on the time.
+// half-planes of constant phi do not move with the homologous expansion. The time limits the length of a stop.
 [[nodiscard]] DEVICE_FUNC auto get_first_angular_boundary_crossing(const Vec3d& pos, const Vec3d& dir,
-                                                                   const int index_costheta, const int index_phi)
-    -> AngularBoundaryCrossing {
+                                                                   const int index_costheta, const int index_phi,
+                                                                   const double time) -> AngularBoundaryCrossing {
   const int num_costheta = ncoordgrid[1];
   const int num_phi = ncoordgrid[2];
   AngularBoundaryCrossing first_crossing{.distance = -1., .index_costheta = index_costheta, .index_phi = index_phi};
@@ -260,36 +260,50 @@ struct AngularBoundaryCrossing {
     }
   };
 
+  if (num_costheta == 1 && num_phi == 1) {
+    return first_crossing;
+  }
   // The angular momentum pos x dir of a unit direction has the length of the smallest distance of the path from the
   // centre. Its z component divided by the length of dir in the xy plane is the smallest distance from the z axis.
   const auto angmom = cross_prod(pos, dir);
   const double dir_xy_squared = pow2(dir[0]) + pow2(dir[1]);
-  // every polar cell and every azimuthal cell of a shell meets at the centre, and every azimuthal cell meets at
-  // the z axis. A path within this distance [cm] of one of them changes its cell there in one event
-  const double path_through_axis_tolerance = cellbound_tolerance(0.);
-
-  if (vec_len(angmom) <= path_through_axis_tolerance) {
+  if (angmom[0] == 0. && angmom[1] == 0. && angmom[2] == 0.) {
     // The path goes through the centre, e.g. the radial path of a new packet. Its cos(theta) and phi are constant on
     // each side of the centre, and after the centre they are the values of dir.
     const auto [costheta_of_dir, phi_of_dir] = get_costheta_phi_from_xyz(dir);
     const int index_costheta_after = get_cellindex_from_lower_edges(coord_pos_min_tmin[1], costheta_of_dir);
     const int index_phi_after = get_cellindex_from_lower_edges(coord_pos_min_tmin[2], phi_of_dir);
     if (index_costheta_after != index_costheta || index_phi_after != index_phi) {
-      // A packet after the centre that is not in the cell of its direction changes cell at once. It is within the
-      // tolerance of each boundary between the two cells, because the path stays that near to the ray of dir.
+      // At the centre itself, the cell is the cell of dir.
       take_crossing_if_nearer(std::max(-dot(pos, dir), 0.), index_costheta_after, index_phi_after);
     }
     return first_crossing;
   }
+
+  // All cell boundaries meet at the centre, and the azimuthal boundaries meet at the z axis. From far away, the
+  // rounding error of the position can be larger than the impact parameter of the path. Then the packet stops
+  // before the closest approach, and the next call finds the boundaries from that nearer position.
+  const auto stop_before_unresolved_closest_approach = [&](const double distance_to_closest_approach,
+                                                           const double impact_parameter) {
+    const double sqrt_epsilon = std::sqrt(std::numeric_limits<double>::epsilon());
+    if (distance_to_closest_approach > 0. && impact_parameter < sqrt_epsilon * distance_to_closest_approach) {
+      // A step below epsilon * c * t can leave the packet time unchanged, thus the packet goes to the closest approach
+      const double distance = distance_to_closest_approach > std::numeric_limits<double>::epsilon() * CLIGHT_PROP * time
+                                  ? distance_to_closest_approach * (1. - sqrt_epsilon)
+                                  : distance_to_closest_approach;
+      take_crossing_if_nearer(distance, index_costheta, index_phi);
+    }
+  };
+  stop_before_unresolved_closest_approach(-dot(pos, dir), vec_len(angmom));
 
   // the tolerance of a boundary that the packet is at, or just went through (see
   // is_boundary_overshoot_within_tolerance). An angle tolerance has no use near the centre, thus the test uses
   // the distance [cm] from the boundary
   const double tolerance = cellbound_tolerance(vec_len(pos));
 
-  // the distance from the z axis, and its rate of change along the path
+  // r^3 d(cos(theta))/ds along the path
   const double rcyl = std::sqrt(pow2(pos[0]) + pow2(pos[1]));
-  const double rcyl_rate = (rcyl > 0.) ? ((pos[0] * dir[0]) + (pos[1] * dir[1])) / rcyl : std::sqrt(dir_xy_squared);
+  const double costheta_rate_times_r_cubed = (pos[1] * angmom[0]) - (pos[0] * angmom[1]);
 
   // The polar axis is not a cell boundary, thus the first cell has no lower boundary and the last cell has no upper
   // boundary. cos(theta) can have an extremum on the path, thus both boundaries get a test for each direction.
@@ -299,12 +313,26 @@ struct AngularBoundaryCrossing {
     // r * sin(theta_edge - theta): the distance of the packet from the cone, positive on the side of larger
     // cos(theta)
     const double distance_from_cone = (theta_edge_sin[edgeindex] * pos[2]) - (theta_edge_cos[edgeindex] * rcyl);
-    const double distance_from_cone_rate =
-        (theta_edge_sin[edgeindex] * dir[2]) - (theta_edge_cos[edgeindex] * rcyl_rate);
-    const bool moves_through_boundary = is_upper ? (distance_from_cone_rate > 0.) : (distance_from_cone_rate < 0.);
-    const double distance = (moves_through_boundary && std::abs(distance_from_cone) <= tolerance)
-                                ? 0.
-                                : costheta_cone_intersection<boundarytype>(pos, dir, theta_edge_cos[edgeindex]);
+    // Only the sign is used. At an extremum of cos(theta), the path moves towards the plane z = 0 after the extremum.
+    const double outgoing_costheta_rate = (costheta_rate_times_r_cubed != 0.) ? costheta_rate_times_r_cubed : -pos[2];
+    const bool moves_through_boundary = is_upper ? outgoing_costheta_rate > 0. : outgoing_costheta_rate < 0.;
+    // A packet at the boundary or just past it changes cell at once. On the side of the cone, the test uses the
+    // quadratic of costheta_cone_intersection(), thus the two functions agree about the side of the packet.
+    bool is_at_or_past_boundary = false;
+    if (moves_through_boundary && std::abs(distance_from_cone) <= tolerance) {
+      const double cos_theta_edge = theta_edge_cos[edgeindex];
+      // positive on the side of larger cos(theta)
+      double side_of_boundary = distance_from_cone;
+      if (cos_theta_edge == 0.) {
+        side_of_boundary = pos[2];
+      } else if (pos[2] * cos_theta_edge > 0.) {
+        const double cone_quadratic = pow2(pos[2]) - (pow2(cos_theta_edge) * dot(pos, pos));
+        side_of_boundary = (cos_theta_edge > 0.) ? cone_quadratic : -cone_quadratic;
+      }
+      is_at_or_past_boundary = is_upper ? side_of_boundary >= 0. : side_of_boundary <= 0.;
+    }
+    const double distance =
+        is_at_or_past_boundary ? 0. : costheta_cone_intersection<boundarytype>(pos, dir, theta_edge_cos[edgeindex]);
     take_crossing_if_nearer(distance, index_costheta_after, index_phi);
   };
   if (index_costheta < num_costheta - 1) {
@@ -319,7 +347,7 @@ struct AngularBoundaryCrossing {
     return first_crossing;
   }
 
-  if (std::abs(angmom[2]) <= path_through_axis_tolerance * std::sqrt(dir_xy_squared)) {
+  if (angmom[2] == 0.) {
     // The path goes through the z axis, where phi changes by pi. After the axis, phi is the angle of dir.
     const int index_phi_after =
         get_cellindex_from_lower_edges(coord_pos_min_tmin[2], get_costheta_phi_from_xyz(dir)[1]);
@@ -329,6 +357,9 @@ struct AngularBoundaryCrossing {
     }
     return first_crossing;
   }
+
+  stop_before_unresolved_closest_approach(-((pos[0] * dir[0]) + (pos[1] * dir[1])) / dir_xy_squared,
+                                          std::abs(angmom[2]) / std::sqrt(dir_xy_squared));
 
   // phi is periodic: the half-plane phi = 2 pi of the last cell is the half-plane phi = 0 of the first cell
   const auto take_phi_boundary_if_nearer = [&]<BoundaryType boundarytype>(const int index_phi_after) {
@@ -343,8 +374,9 @@ struct AngularBoundaryCrossing {
                                                  : (angmom[2] < 0. && distance_from_plane_rate < 0.);
     // the other half of the plane has phi = phi_edge + pi
     const bool is_near_boundary_half = ((cos_edge * pos[0]) + (sin_edge * pos[1])) > 0.;
+    const double overshoot = is_upper ? distance_from_plane : -distance_from_plane;
     const double distance =
-        (moves_through_boundary && is_near_boundary_half && std::abs(distance_from_plane) <= tolerance)
+        (moves_through_boundary && is_near_boundary_half && overshoot >= 0. && overshoot <= tolerance)
             ? 0.
             : phi_halfplane_intersection<boundarytype>(pos, dir, cos_edge, sin_edge);
     take_crossing_if_nearer(distance, index_costheta, index_phi_after);
@@ -597,9 +629,7 @@ void setup_grid_spherical() {
   ngrid = static_cast<ptrdiff_t>(ncoordgrid[0]) * ncoordgrid[1] * ncoordgrid[2];
   assert_always(ngrid == get_npts_model() * (model_mirror_z ? 2 : 1));
 
-  // The centre of the grid is a point of every polar cell and every azimuthal cell of the first shell. A packet
-  // path within cellbound_tolerance(0.) of the centre changes its cell there in one event, thus that distance must
-  // be small against the first shell.
+  // The crossing of a shell that is very small compared with the distance of the packet loses precision
   const double first_shell_outer_radius = (ncoordgrid[0] > 1) ? coord_pos_min_tmin[0][1] : globals::rmax;
   if (!(first_shell_outer_radius > 1e4 * cellbound_tolerance(0.))) {
     fatal_crash(
@@ -956,7 +986,8 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     // angle phi
     take_radial_shell_boundary_if_nearer();
 
-    const auto angular_crossing = get_first_angular_boundary_crossing(pos, dir, cellcoordidx[1], cellcoordidx[2]);
+    const auto angular_crossing =
+        get_first_angular_boundary_crossing(pos, dir, cellcoordidx[1], cellcoordidx[2], tstart);
     if ((angular_crossing.distance >= 0.) && (angular_crossing.distance < distance)) {
       distance = angular_crossing.distance;
       next_cellindex =
