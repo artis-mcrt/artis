@@ -379,6 +379,7 @@ auto solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
     // Find T_e as solution for thermal balance. The densities of the cell are at the mid time of timestep nts, so
     // the adiabatic cooling 3p/t uses the same time.
     call_T_e_finder(nonemptymgi, globals::timesteps[nts].mid, heatingcoolingrates, bfheatingcoeffs);
+    cooling_rates_match_populations = true;
 
     const auto duration_solve_T_e =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_Te).count();
@@ -394,7 +395,6 @@ auto solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
       printlnlog(
           "Grid solver cell {} timestep {}: time spent on: Spencer-Fano {:.1f}s, partfuncs/gamma {:.1f}s, T_e {:.1f}s",
           mgi, nts, duration_solve_spencerfano, duration_solve_partfuncs, duration_solve_T_e);
-      cooling_rates_match_populations = true;
       break;  // no iteration is needed without nlte pops
     }
 
@@ -467,8 +467,6 @@ auto solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
               "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: converged with an estimated error "
               "{:g} <= {:g} (T_e change {:g}, nne change {:g}, map changed {})",
               mgi, nts, nlte_iter, error_estimate, NLTE_TE_NNE_RELTOL, change[0], change[1], map_changed ? 1 : 0);
-          // this pass stops before the element solves
-          cooling_rates_match_populations = true;
           break;
         }
         if (nlte_iter == last_nlte_iter || map_changed) {
@@ -545,6 +543,7 @@ auto solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
       }
     }
 
+    cooling_rates_match_populations = false;
     const auto sys_time_start_nltepops = std::chrono::steady_clock::now();
     for (int element = 0; element < get_nelements(); element++) {
       if (get_nions(element) > 0 && elem_has_nlte_levels(element)) {
@@ -960,13 +959,12 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     // flag with negative numbers to indicate that the rates are invalid
     const auto ioncooling_contribs = kpkt::get_cell_ion_cooling_contribs(nonemptymgi);
     std::ranges::fill(ioncooling_contribs, -1.);
-  } else if (cooling_rates_match_populations) {
-    // the T_e finder calculated the cooling rates of these populations
   } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial &&
              kpkt::get_cell_ion_cooling_contribs(nonemptymgi)[0] >= 0.) {
     // the gridsave file holds valid cooling rates for this timestep
     assert_always(kpkt::get_cell_ion_cooling_contribs(nonemptymgi).back() >= 0.);
-  } else {
+  } else if (!cooling_rates_match_populations) {
+    // otherwise the T_e finder already calculated the cooling rates of these populations
     // Cooling rates depend only on cell properties, precalculate total cooling
     // and ion contributions inside update grid and communicate between MPI tasks
     const auto sys_time_start_calc_kpkt_rates = std::chrono::steady_clock::now();
