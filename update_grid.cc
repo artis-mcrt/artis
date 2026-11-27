@@ -238,11 +238,11 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
         }
       }
       std::println(estimators_file);
-      // This line keeps its label for artistools. In a cell with a thermal balance, only an element with NLTE levels
-      // keeps the normalised Monte Carlo estimator here. For each other element, the grid update replaces it with
-      // calculate_iongamma_per_gspop(), the analytic radiative and collisional ionisation rate per ground level
-      // population. That rate includes corrphotoionrenorm (see iongamma_is_zero() in ratecoeff.cc). In an LTE
-      // timestep and in a grey cell, every element keeps the normalised Monte Carlo estimator.
+      // This line keeps its label for artistools. In a cell with a thermal balance, an element with NLTE levels or
+      // with FORCE_SAHA_ION_BALANCE keeps the normalised Monte Carlo estimator here. For each other element, the grid
+      // update replaces it with calculate_iongamma_per_gspop(), the analytic radiative and collisional ionisation rate
+      // per ground level population. That rate includes corrphotoionrenorm (see iongamma_is_zero() in ratecoeff.cc).
+      // In an LTE timestep and in a grey cell, every element keeps the normalised Monte Carlo estimator.
       std::print(estimators_file, "gammaestimator     Z={:2d}", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         if (get_groundcontindex(element, ion) >= 0) {
@@ -292,8 +292,10 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   }
 }
 
-void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates& heatingcoolingrates) {
+// Return true if the last call of the T_e finder gave the final populations, so that its cooling rates stay valid.
+auto solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates& heatingcoolingrates) -> bool {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+  bool cooling_rates_match_populations = false;
   THREADLOCALONHOST auto bfheatingcoeffs = std::vector<double>(get_includedlevels());
   if constexpr (!BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR) {
     // bfheating coefficients are needed for the T_e solver, but they only depend on the radiation field, which is
@@ -377,6 +379,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
     // Find T_e as solution for thermal balance. The densities of the cell are at the mid time of timestep nts, so
     // the adiabatic cooling 3p/t uses the same time.
     call_T_e_finder(nonemptymgi, globals::timesteps[nts].mid, heatingcoolingrates, bfheatingcoeffs);
+    cooling_rates_match_populations = true;
 
     const auto duration_solve_T_e =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_Te).count();
@@ -540,6 +543,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
       }
     }
 
+    cooling_rates_match_populations = false;
     const auto sys_time_start_nltepops = std::chrono::steady_clock::now();
     for (int element = 0; element < get_nelements(); element++) {
       if (get_nions(element) > 0 && elem_has_nlte_levels(element)) {
@@ -672,6 +676,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
       "cell {} timestep {}: heat-capacity term of the thermal balance {:.5e} [erg/s/cm^3], k-packet energy factor "
       "{:.5f}",
       mgi, nts, heatingcoolingrates.cooling_heatcapacity, kpkt_energy_factor);
+  return cooling_rates_match_populations;
 }
 
 void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi, const double estimator_normfactor) {
@@ -742,7 +747,8 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
           (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
 
       // with LTEPOP_EXCITATION_USE_TJ false, the T_e finder calculates these rates during the solve
-      if (LTEPOP_EXCITATION_USE_TJ && !elem_has_nlte_levels(element)) {
+      if (LTEPOP_EXCITATION_USE_TJ && !elem_has_nlte_levels(element) &&
+          !FORCE_SAHA_ION_BALANCE(get_atomicnumber(element))) {
         globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
       }
 
@@ -807,6 +813,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
   const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
   const double estimator_normfactor_over4pi = (1. / (4 * PI)) * estimator_normfactor;
+  bool cooling_rates_match_populations = false;
 
   if (nts == globals::timestep_initial) {
     // For the initial timestep, temperatures have already been assigned
@@ -890,7 +897,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       // full-spectrum and binned J and nuJ estimators
       radfield::fit_parameters(nonemptymgi, nts);
 
-      solve_Te_nltepops(nonemptymgi, nts, heatingcoolingrates);
+      cooling_rates_match_populations = solve_Te_nltepops(nonemptymgi, nts, heatingcoolingrates);
     }
     const auto temperature_corrections_duration =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_temperature_corrections)
@@ -956,7 +963,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
              kpkt::get_cell_ion_cooling_contribs(nonemptymgi)[0] >= 0.) {
     // the gridsave file holds valid cooling rates for this timestep
     assert_always(kpkt::get_cell_ion_cooling_contribs(nonemptymgi).back() >= 0.);
-  } else {
+  } else if (!cooling_rates_match_populations) {
+    // the populations changed after the last T_e finder call, or the cell had no T_e solve
     // Cooling rates depend only on cell properties, precalculate total cooling
     // and ion contributions inside update grid and communicate between MPI tasks
     const auto sys_time_start_calc_kpkt_rates = std::chrono::steady_clock::now();
