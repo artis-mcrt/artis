@@ -203,6 +203,9 @@ The run continues after these warnings. The code limits a radiation temperature 
 
 For the electron temperature, the solver tests heating minus cooling at both limits. When the values have the same
 sign or either value is zero, the solver selects a limit. A solution can still lie between the limits.
+With [TE_SOLVER_FOLLOW_PREVIOUS_ROOT](options.md#te_solver_follow_previous_root), the solver tests heating minus
+cooling only in one direction from the T_e at the start of the iteration. It gives these warnings only when its steps
+reach a limit. A solution can then lie on the other side of that start value.
 
 - `call_T_e_finder: cooling bigger than heating at lower T_e boundary ... T_e forced to be MINTEMP` means cooling
   exceeds heating at the upper limit. The solver selects `MINTEMP`.

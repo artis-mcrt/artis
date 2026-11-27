@@ -94,6 +94,8 @@ constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = false;
 
 // --- Heating and cooling ---
 
+constexpr bool TE_SOLVER_FOLLOW_PREVIOUS_ROOT = false;
+
 constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS = false;
 
 constexpr bool COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS = false;

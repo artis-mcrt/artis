@@ -242,6 +242,27 @@ constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
 
 // --- Heating and cooling ---
 
+// Solve the thermal balance from the T_e at the start of the solve, and not over all of [MINTEMP, MAXTEMP]. Let f be
+// heating minus cooling, and let T_e_start be the T_e at the start of the solve, limited to [MINTEMP, MAXTEMP].
+// The solver does these steps:
+// - it calculates f(T_e_start);
+// - it steps to T_e_start * 1.2^k if f > 0, or to T_e_start / 1.2^k if f < 0, for k = 1, 2, 3, ..., until f
+//   changes sign;
+// - it finds the root inside the last step.
+// The steps stop at a factor of two from T_e_start and at MINTEMP or MAXTEMP, because the solve limits T_e to these
+// values. If f has no sign change before the limit, T_e gets that limit.
+//
+// f decreases through zero at the first sign change in the direction of f. If the last step holds one root, that
+// root is stable. The thermal energy density U has dU/dt = f, so T_e moves from T_e_start to this root. A cell thus
+// stays on its branch of the balance until that branch disappears. Without this option, a balance with three roots
+// can give a different stable root in each timestep, e.g. with FORCE_SAHA_ION_BALANCE in a dense kilonova cell.
+//
+// The step factor 1.2 sets the resolution. If one step holds two roots, f has the same sign at its ends, and the
+// solver steps over both roots. If one step holds three roots, the solver can find any of them. Each pass of the grid
+// update starts at the T_e of the previous pass. A step of NLTE_TE_NNE_USE_ANDERSON_ACCEL between two passes can move
+// T_e over an unstable root.
+constexpr bool TE_SOLVER_FOLLOW_PREVIOUS_ROOT;
+
 // Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator.
 // The estimator also holds the collisional recombination heating. The sum does not.
 // The level populations of an element without NLTE levels do not follow a non-thermal excitation, so the sum would
