@@ -311,11 +311,13 @@ per unit volume and time. $C_{ul}$ and $C_{lu}$ are the collisional rates per at
 transition. For Boltzmann populations at $T_e$, this heating exactly cancels the collisional excitation cooling
 $n_l C_{lu}\Delta E$.
 
-The code uses a two-level macro atom for the heating of a line when all three conditions hold.
-
-- [LTEPOP_EXCITATION_USE_TJ](options.md#ltepop_excitation_use_tj) is false, so Boltzmann excitation uses $T_e$.
-- [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](options.md#rpkt_boundbound_thermalisation_probability) has no value.
-- The ion has no excited NLTE levels, or its element fell back to {term}`LTE` in the last NLTE solve of the cell.
+With
+[COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS](options.md#collisional_heating_two_level_macro_atom_for_boltzmann_levelpops),
+the code uses a two-level macro atom for the heating of a line of some ions. These ions have no excited NLTE levels,
+or their element fell back to {term}`LTE` in the last NLTE solve of the cell. The option needs
+[LTEPOP_EXCITATION_USE_TJ](options.md#ltepop_excitation_use_tj) false, so that Boltzmann excitation uses $T_e$. It
+also needs [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](options.md#rpkt_boundbound_thermalisation_probability) with
+no value.
 
 The two-level macro atom gives the heating rate
 
@@ -363,6 +365,7 @@ limit shows a possible second root, and the log gets a warning (see
 [Troubleshooting](troubleshooting.md#a-warning-of-a-possible-second-root-of-the-thermal-balance)).
 
 - Options: [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops),
+  [COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS](options.md#collisional_heating_two_level_macro_atom_for_boltzmann_levelpops),
   [BFCOOLING_USELEVELPOPNOTIONPOP](options.md#bfcooling_uselevelpopnotionpop),
   [USE_ION_BFHEATING_ESTIMATORS](options.md#use_ion_bfheating_estimators), and
   [WRITE_ION_HEATING_COOLING_RATES](options.md#write_ion_heating_cooling_rates).

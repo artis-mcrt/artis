@@ -37,6 +37,14 @@
 static_assert(!BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR || !USE_LUT_PHOTOION,
               "USE_LUT_PHOTOION must be false when BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR is true");
 
+// the two-level macro atom needs Boltzmann populations at T_e and a macro atom for the lines of the packets
+static_assert(
+    !COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS ||
+        (COLLISIONAL_HEATING_FROM_LEVELPOPS && !LTEPOP_EXCITATION_USE_TJ &&
+         !RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()),
+    "COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS needs COLLISIONAL_HEATING_FROM_LEVELPOPS true, "
+    "LTEPOP_EXCITATION_USE_TJ false, and no value of RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY");
+
 namespace {
 
 THREADLOCALONHOST CellWarningMarker second_T_e_root_warned;
@@ -63,8 +71,8 @@ auto integrand_bfheatingcoeff(const double nu, const double nu_edge, const int n
 // Level populations that are Boltzmann at T_e make this sum equal to the collisional excitation cooling, so the ion
 // then has no net line cooling. With LTEPOP_EXCITATION_USE_TJ false, two groups of ions have such populations. The
 // first group is the ions without NLTE levels. The second group is the ions of an element whose last NLTE solve in
-// the cell fell back to LTE. For each line of these ions, the term of the sum is the energy flow of a two-level
-// macro atom:
+// the cell fell back to LTE. With COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS, the term of the sum
+// for each line of these ions is the energy flow of a two-level macro atom:
 //   [n_l C_lu + (n_l B_lu - n_u B_ul) beta J_nu] dE C_ul / (beta A_ul + C_ul)
 //
 // The first factor is the rate of the excitations of the upper level by collisions and by the net absorption of
@@ -73,12 +81,11 @@ auto integrand_bfheatingcoeff(const double nu, const double nu_edge, const int n
 // The populations are the Boltzmann populations, as for the line opacity of the packets. The net cooling of a line is
 // thus zero when J_nu is the Planck function at T_e. The term ignores the cascades through the other levels.
 //
-// The ions of an element with NLTE levels keep the sum before the first NLTE solve of the cell. All ions keep the sum
-// with RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, because the packets then use no macro atom for the lines.
+// The ions of an element with NLTE levels keep the sum before the first NLTE solve of the cell.
 auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const float T_e,
                                 const float clumpednne) -> double {
   const bool use_two_level_macro_atom =
-      !LTEPOP_EXCITATION_USE_TJ && !RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() &&
+      COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS &&
       (get_nlevels_excited_nlte(element, ion) == 0 || elem_nlte_solve_fell_back_to_lte(nonemptymgi, element));
   const double t_mid = globals::timesteps[globals::timestep].mid;
   double C_deexc = 0.;
@@ -190,38 +197,34 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 // NB: this is not a pure function of T_e. Evaluating it stores T_e in the grid and re-solves the cell's
 // ionisation balance, populations and nne at that temperature, so the cell is left in the state belonging
 // to the last T_e passed in. call_T_e_finder() relies on this and re-evaluates at the final T_e.
-// With LTEPOP_EXCITATION_USE_TJ false, the ionisation rates of the elements without NLTE levels depend on T_e. The
-// function calculates them again when T_e moves by more than 10 percent from T_e_last_gamma_update, the T_e of their
-// last calculation. It also calculates them when force_gamma_update is set. It calculates the partition functions of
-// these elements at every T_e.
+// With LTEPOP_EXCITATION_USE_TJ false, the ionisation rates and the partition functions of the elements without
+// NLTE levels depend on T_e. The function calculates both at every T_e, so the residual is a function of T_e only.
+// An element with FORCE_SAHA_ION_BALANCE needs only the partition functions.
 auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const double t_current,
-                                   HeatingCoolingRates& heatingcoolingrates, const std::span<double> bfheatingcoeffs,
-                                   double& T_e_last_gamma_update, const bool force_gamma_update) -> double {
+                                   HeatingCoolingRates& heatingcoolingrates, const std::span<double> bfheatingcoeffs)
+    -> double {
   const auto T_e_float = static_cast<float>(T_e);
-  const bool update_gamma = force_gamma_update || std::abs(T_e - T_e_last_gamma_update) > 0.1 * T_e_last_gamma_update;
-  if (update_gamma) {
-    T_e_last_gamma_update = T_e;
-  }
 
   // Set new T_e guess for the current cell and update populations
   grid::Te_allcells[nonemptymgi] = T_e_float;
 
   if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
     for (int element = 0; element < get_nelements(); element++) {
-      if (!elem_has_nlte_levels(element)) {
-        if (update_gamma) {
-          // the ionisation rates from the current level populations
-          const int nions = get_nions(element);
-          for (int ion = 0; ion < nions - 1; ion++) {
-            const auto groundcontindex = get_groundcontindex(element, ion);
-            if (groundcontindex >= 0) {
-              globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                      groundcontindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
-            }
+      if (elem_has_nlte_levels(element)) {
+        continue;
+      }
+      if (!FORCE_SAHA_ION_BALANCE(get_atomicnumber(element))) {
+        // the ionisation rates from the current level populations
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions - 1; ion++) {
+          const auto groundcontindex = get_groundcontindex(element, ion);
+          if (groundcontindex >= 0) {
+            globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
+                                    groundcontindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
           }
         }
-        calculate_cellpartfuncts(nonemptymgi, element);
       }
+      calculate_cellpartfuncts(nonemptymgi, element);
     }
   }
 
@@ -413,12 +416,10 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
                      const std::span<double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::Te_allcells[nonemptymgi];
-  double T_e_last_gamma_update = 0.;  // zero, so that the first trial calculates the ionisation rates
   printlog("Finding T_e in cell {} at timestep {}...", modelgridindex, globals::timestep);
 
   const auto f_T_e = [&](double T_e) -> double {
-    return T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs,
-                                         T_e_last_gamma_update, false);
+    return T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs);
   };
 
   const double f_T_min = f_T_e(MINTEMP);
@@ -513,8 +514,6 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
   }
 
   // The final call stores T_e and sets the populations and the heating and cooling rates for it. The last trial
-  // temperature can differ from the final T_e, so the ionisation rates are calculated again without the 10 percent
-  // test.
-  T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs,
-                                T_e_last_gamma_update, true);
+  // temperature can differ from the final T_e.
+  T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs);
 }
