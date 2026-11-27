@@ -248,14 +248,15 @@ constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
 // element fell back to LTE. With this option, the non-thermal excitation energy of such an element therefore goes
 // to the heating, and its packets become k-packets.
 //
-// Level populations that are Boltzmann at T_e make the sum equal to the collisional excitation cooling, so their
-// lines have no net cooling. COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS selects a different
-// term for these ions.
+// Level populations that are Boltzmann at T_e make the sum equal to the collisional excitation cooling. The lines
+// of an ion with such populations therefore have no net cooling.
+// COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS selects a different term for these ions.
 constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
 
 // Give each line of an ion with Boltzmann level populations at T_e the heat of a two-level macro atom. The option
 // needs COLLISIONAL_HEATING_FROM_LEVELPOPS true, LTEPOP_EXCITATION_USE_TJ false, and no value of
-// RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY. With that option, the packets use no macro atom for the lines.
+// RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY. With a value of RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, the
+// packets use no macro atom for the lines.
 //
 // Two groups of ions have such populations. The first group is the ions without NLTE levels. The second group is
 // the ions of an element whose last NLTE solve in the cell fell back to LTE. For each line of these ions, the term

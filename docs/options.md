@@ -596,7 +596,7 @@ The reverse rates come from detailed balance. The rates enter the NLTE rate matr
 
 Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator. The estimator also holds the collisional recombination heating. The sum does not. The level populations of an element without NLTE levels do not follow a non-thermal excitation, so the sum would lose the heat of its collisional de-excitation. The same applies in a cell where the last NLTE solve of an element fell back to LTE. With this option, the non-thermal excitation energy of such an element therefore goes to the heating, and its packets become k-packets.
 
-Level populations that are Boltzmann at T_e make the sum equal to the collisional excitation cooling, so their lines have no net cooling. [COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS](#collisional_heating_two_level_macro_atom_for_boltzmann_levelpops) selects a different term for these ions.
+Level populations that are Boltzmann at T_e make the sum equal to the collisional excitation cooling. The lines of an ion with such populations therefore have no net cooling. [COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS](#collisional_heating_two_level_macro_atom_for_boltzmann_levelpops) selects a different term for these ions.
 
 **Preset values:** classic `false`, kilonova_lte `true`, nltenebular `true`, nltephotospheric `true`
 
@@ -604,7 +604,7 @@ Level populations that are Boltzmann at T_e make the sum equal to the collisiona
 
 `bool COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS`
 
-Give each line of an ion with Boltzmann level populations at T_e the heat of a two-level macro atom. The option needs [COLLISIONAL_HEATING_FROM_LEVELPOPS](#collisional_heating_from_levelpops) true, [LTEPOP_EXCITATION_USE_TJ](#ltepop_excitation_use_tj) false, and no value of [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](#rpkt_boundbound_thermalisation_probability). With that option, the packets use no macro atom for the lines.
+Give each line of an ion with Boltzmann level populations at T_e the heat of a two-level macro atom. The option needs [COLLISIONAL_HEATING_FROM_LEVELPOPS](#collisional_heating_from_levelpops) true, [LTEPOP_EXCITATION_USE_TJ](#ltepop_excitation_use_tj) false, and no value of [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](#rpkt_boundbound_thermalisation_probability). With a value of [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](#rpkt_boundbound_thermalisation_probability), the packets use no macro atom for the lines.
 
 Two groups of ions have such populations. The first group is the ions without NLTE levels. The second group is the ions of an element whose last NLTE solve in the cell fell back to LTE. For each line of these ions, the term of the collisional heating is the energy flow of a two-level macro atom: [n_l C_lu + (n_l B_lu - n_u B_ul) beta J_nu] dE C_ul / (beta A_ul + C_ul). With false, the term is n_u C_ul dE, so the lines of these ions have no net cooling.
 
