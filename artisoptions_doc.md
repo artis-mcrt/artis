@@ -111,8 +111,8 @@ constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage);
 constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ionstage);
 
 // Use the radiation temperature T_J instead of T_e in the Boltzmann factor of the excitation, also for the
-// sublevels of a superlevel. With false, the T_e finder also recomputes the photoionisation rates of the ground
-// continua of the elements without NLTE levels when T_e moves by more than 10 percent.
+// sublevels of a superlevel. With false, the T_e finder also calculates the ionisation rates of the ground
+// continua of the elements without NLTE levels again at each trial T_e.
 // With COLLISIONAL_HEATING_FROM_LEVELPOPS, the value also selects the collisional heating of the ions with Boltzmann
 // populations (see that option).
 constexpr bool LTEPOP_EXCITATION_USE_TJ;
