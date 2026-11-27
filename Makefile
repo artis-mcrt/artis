@@ -440,6 +440,7 @@ endif
 common_files := \
 	chargetransfer.cc \
 	decay.cc \
+	energyinput.cc \
 	gammapkt.cc \
 	grid.cc \
 	grid_geometry.cc \

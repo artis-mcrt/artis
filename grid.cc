@@ -33,6 +33,7 @@
 #include "atomic.h"
 #include "constants.h"
 #include "decay.h"
+#include "energyinput.h"
 #include "globals.h"
 #include "grid_internal.h"
 #include "kpkt.h"
@@ -214,6 +215,19 @@ void allocate_nonemptymodelcells() {
         const double mass_blanked = get_rho_tmin(mgi) * blanked_assocvolume[mgi];
         for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
           totmassnuclide_blanked[nucindex] += mass_blanked * get_modelinitnucmassfrac(mgi, nucindex);
+        }
+      }
+    }
+
+    // the blanked volume removes its share of the input energy, as it removes its share of the mass
+    if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
+      if (globals::rank_in_node == 0) {
+        for (int mgi = 0; mgi < get_npts_model(); mgi++) {
+          if (blanked_assocvolume[mgi] > 0.) {
+            const double remaining_assocvolume = get_modelcell_assocvolume_tmin(mgi);
+            modelgrid_input[mgi].thermal_input_energy *=
+                remaining_assocvolume / (remaining_assocvolume + blanked_assocvolume[mgi]);
+          }
         }
       }
     }
@@ -561,7 +575,8 @@ void read_grid_restart_data(const int timestep) {
 }
 
 // Assign temperatures to the grid cells at the start of the simulation by assuming that all radioactive decay since
-// the snapshot time (plus any snapshot initial cell energy) energy is fully trapped
+// the snapshot time (plus any snapshot initial cell energy) energy is fully trapped. THERMAL_ENERGY_INPUT_FROM_FILES
+// uses the input energy instead.
 void assign_initial_temperatures() {
   MPI_Barrier_allranks();
 
@@ -578,8 +593,12 @@ void assign_initial_temperatures() {
   int cells_above_maxtemp = 0;
 
   // the Bateman factors depend only on the decay path and time, so compute them once and apply them to every
-  // cell's initial abundances
-  const auto endecay_per_massoftopnuc = decay::calc_energy_per_massoftopnuc_decaypath_withexpansion(ts0_tmid);
+  // cell's initial abundances. THERMAL_ENERGY_INPUT_FROM_FILES needs only the released fraction of the cell energy.
+  const auto endecay_per_massoftopnuc = THERMAL_ENERGY_INPUT_FROM_FILES
+                                            ? std::vector<double>{}
+                                            : decay::calc_energy_per_massoftopnuc_decaypath_withexpansion(ts0_tmid);
+  const double thermal_input_fraction_after_expansion =
+      THERMAL_ENERGY_INPUT_FROM_FILES ? energyinput::get_released_fraction_after_expansion(ts0_tmid) : 0.;
 
   // the decayed energy calculation is expensive and the temperature arrays are in node-shared memory, so stripe
   // the cells across the ranks of each node, with each rank writing its own disjoint subset of the shared arrays
@@ -590,13 +609,17 @@ void assign_initial_temperatures() {
     // Both energies refer to ts0_tmid. The model file gives q at t_model with the adiabatic losses before t_model
     // already applied, and the reader scaled it to tmin. The 1/t law of a comoving mass element takes it from
     // tmin to ts0_tmid. The decay term counts the decays between t_model and ts0_tmid, and a decay at t_decay
-    // keeps t_decay / ts0_tmid of its energy under the same law.
+    // keeps t_decay / ts0_tmid of its energy under the same law. THERMAL_ENERGY_INPUT_FROM_FILES replaces both
+    // energies with the input energy that the cell releases before ts0_tmid, under the same law.
     const auto q = INITIAL_PACKETS_ON ? (get_initenergyq(mgi) * globals::tmin / ts0_tmid) : 0.;
-    const double decayedenergy_per_mass =
-        decay::get_modelcell_endecay_per_mass(nonemptymgi, endecay_per_massoftopnuc) + q;
+    const double trapped_energy_per_mass =
+        THERMAL_ENERGY_INPUT_FROM_FILES
+            ? get_thermal_input_energy(mgi) * thermal_input_fraction_after_expansion /
+                  (get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi))
+            : decay::get_modelcell_endecay_per_mass(nonemptymgi, endecay_per_massoftopnuc) + q;
 
     auto T_initial = static_cast<float>(std::pow(
-        CLIGHT / 4 / STEBO * pow3(globals::tmin / ts0_tmid) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
+        CLIGHT / 4 / STEBO * pow3(globals::tmin / ts0_tmid) * get_rho_tmin(mgi) * trapped_energy_per_mass, 1. / 4.));
 
     assert_always(std::isfinite(T_initial));
     if (T_initial < MINTEMP) {
@@ -959,6 +982,11 @@ DEVICE_FUNC auto get_initenergyq(const int modelgridindex) -> double {
   return modelgrid_input[modelgridindex].initenergyq;
 }
 
+// the energy of the model cell from energydistribution.txt [erg] (THERMAL_ENERGY_INPUT_FROM_FILES)
+auto get_thermal_input_energy(const int modelgridindex) -> double {
+  return modelgrid_input[modelgridindex].thermal_input_energy;
+}
+
 [[nodiscard]] auto get_elements_uppermost_ion(const std::ptrdiff_t nonemptymgi, const int element) -> int {
   const auto uppermost_ion = elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element];
   assert_testmodeonly(uppermost_ion >= -1);  // -1 before the first ion balance of the element in the cell
@@ -1197,6 +1225,12 @@ void init_grid() {
         "[warning] {} cells with no mass in the elements of compositiondata.txt became empty. They held {:.3e} "
         "[Msun]. The total input model mass is now {:.3e} [Msun].",
         ncells_emptied, (mtot_input_with_emptied_cells - mtot_input) / MSUN, mtot_input / MSUN);
+  }
+
+  // exspec does not call init_grid(), so it needs neither file
+  if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
+    read_thermal_input_energy_file();
+    energyinput::read_release_table();
   }
 
   if (get_modelgridtype() == prop_gridtype) {

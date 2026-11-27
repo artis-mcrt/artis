@@ -18,12 +18,13 @@ source is in the repository root. A comment at the top of each `.cc` file descri
 | --- | --- |
 | `input.cc` | Reads `input.txt` and the atomic data. |
 | `grid.cc` | Maps the model grid onto the propagation grid, and holds the state of each cell. |
-| `grid_modelinput.cc` | Reads the model: `model.txt`, `abundances.txt`, and `Ye.txt`. |
+| `grid_modelinput.cc` | Reads the model: `model.txt`, `abundances.txt`, `Ye.txt`, and `energydistribution.txt`. |
 | `grid_geometry.cc` | The geometry of the propagation grid, and the distance of a packet to a cell boundary. |
 | `update_grid.cc` | The grid update of each timestep. |
 | `update_packets.cc` | Sorts the packets, and moves each packet to the end of the timestep. |
 | `packet.cc` | Makes the pellets, and reads and writes the packet files. |
 | `decay.cc` | The nuclides, the decay chains, and the decay energies. |
+| `energyinput.cc` | The energy source of `THERMAL_ENERGY_INPUT_FROM_FILES`. |
 | `gammapkt.cc` | The transport and the absorption of the gamma packets. |
 | `nonthermal.cc` | The Spencer-Fano solver and the deposition of the fast particles. |
 | `rpkt.cc` | The opacities and the movement of the r-packets. |

@@ -1,7 +1,8 @@
 // The read of the input ejecta model:
 // - model.txt gives the densities and the mass fractions of the nuclides;
 // - abundances.txt gives the mass fractions of the elements;
-// - the optional Ye.txt gives the electron fractions.
+// - the optional Ye.txt gives the electron fractions;
+// - energydistribution.txt gives the energies of the cells for THERMAL_ENERGY_INPUT_FROM_FILES.
 
 #include <algorithm>
 #include <array>
@@ -11,6 +12,7 @@
 #include <cstdlib>
 #include <deque>
 #include <format>
+#include <istream>
 #include <iterator>
 #include <limits>
 #include <numeric>
@@ -29,6 +31,7 @@
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
+#include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
 #include "decay.h"
@@ -136,6 +139,9 @@ int first_negative_massfrac_a = -1;
 
 // names of model.txt columns that were not recognised, reported after the model read
 std::set<std::string> ignored_model_columns;
+
+// only the initial packets use the q column of model.txt, and THERMAL_ENERGY_INPUT_FROM_FILES replaces their energy
+constexpr bool q_column_has_effect = INITIAL_PACKETS_ON && !THERMAL_ENERGY_INPUT_FROM_FILES;
 
 void count_negative_input_massfrac(const int modelgridindex, const int z, const int a, const double massfrac) {
   n_negative_input_massfrac++;
@@ -381,7 +387,9 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
         fatal_crash("model.txt cell {} has the value {:g} in the column q, but the value must be zero or positive", mgi,
                     valuein);
       }
-      set_initenergyq(mgi, static_cast<float>(valuein * t_model / globals::tmin));
+      if constexpr (q_column_has_effect) {
+        set_initenergyq(mgi, static_cast<float>(valuein * t_model / globals::tmin));
+      }
     } else if (colnames[i] == "tracercount") {
       ;
     } else {
@@ -1082,6 +1090,64 @@ void set_spherical_model_cell_counts(const GridType spherical_model_type) {
 // read the input ejecta model from model.txt, auto-detecting its format version and its dimensionality (1D spherical,
 // 2D cylindrical, 3D Cartesian, 2D spherical, or 3D spherical) and reading the per-cell densities,
 // abundances, and any optional extra columns into the model grid
+// Read energydistribution.txt: the energy of each model cell [erg] for THERMAL_ENERGY_INPUT_FROM_FILES. The file has
+// one row for each model cell, and the cell ids follow model.txt. Call this after read_elem_abundances(), which can
+// empty a model cell.
+void read_thermal_input_energy_file() {
+  // modelgrid_input is in node-shared memory, so only the node leaders read the file and write the energies. The
+  // barrier below synchronises the ranks.
+  if (globals::rank_in_node == 0) {
+    auto filein = istream_required("energydistribution.txt");
+    int nrows = 0;
+    if (!(filein >> nrows) || nrows != get_npts_model()) {
+      fatal_crash("energydistribution.txt: the first line must give the number of model cells, {}", get_npts_model());
+    }
+
+    const int last_mgi = get_npts_model() - 1;
+    auto mgi_has_energy_row = std::vector<bool>(get_npts_model(), false);
+    double total_energy = 0.;
+    for (int row = 0; row < nrows; row++) {
+      int cellnumberin = -1;
+      double cell_energy = 0.;
+      if (!(filein >> cellnumberin >> cell_energy)) {
+        fatal_crash("energydistribution.txt: row {} of {} must give a cell id and an energy [erg]", row + 1, nrows);
+      }
+      const int mgi = cellnumberin - first_input_cellid;
+      if (mgi < 0 || mgi > last_mgi) {
+        fatal_crash("energydistribution.txt: the cell id {} is outside the cell ids [{}..{}] of model.txt",
+                    cellnumberin, first_input_cellid, last_mgi + first_input_cellid);
+      }
+      if (mgi_has_energy_row[mgi]) {
+        fatal_crash("energydistribution.txt: cell id {} has more than one row", cellnumberin);
+      }
+      mgi_has_energy_row[mgi] = true;
+      if (!std::isfinite(cell_energy) || cell_energy < 0.) {
+        fatal_crash("energydistribution.txt: the energy {:g} [erg] of cell id {} must be finite and not negative",
+                    cell_energy, cellnumberin);
+      }
+      if (cell_energy > 0. && get_rho_tmin(mgi) <= 0.) {
+        fatal_crash(
+            "energydistribution.txt: cell id {} has the energy {:g} [erg], but the cell has no mass in model.txt or "
+            "in the elements of compositiondata.txt",
+            cellnumberin, cell_energy);
+      }
+      modelgrid_input[mgi].thermal_input_energy = cell_energy;
+      total_energy += cell_energy;
+    }
+    if (!(filein >> std::ws).eof()) {
+      fatal_crash("energydistribution.txt: the file has more data than the {} rows of the first line", nrows);
+    }
+    if (total_energy <= 0.) {
+      fatal_crash("energydistribution.txt: the total energy of the model cells must be positive");
+    }
+    printlnlog(
+        "energydistribution.txt: {} model cells (ids follow model.txt, first id {}). The total energy is {:g} "
+        "[erg].",
+        nrows, first_input_cellid, total_energy);
+  }
+  MPI_Barrier_allranks();
+}
+
 void read_ejecta_model() {
   auto fmodel = ModelFileReader{.file = istream_required("model.txt"), .lines_read_ahead = {}};
   std::string line;
@@ -1495,6 +1561,12 @@ void read_ejecta_model() {
       printlog(" '{}'", colname);
     }
     printlnlog("");
+  }
+
+  if (!q_column_has_effect && std::ranges::contains(colnames, std::string{"q"})) {
+    printlnlog(
+        "[warning] model.txt has a q column, but it has no effect. Only INITIAL_PACKETS_ON = true with "
+        "THERMAL_ENERGY_INPUT_FROM_FILES = false uses q.");
   }
 
   read_possible_yefile();

@@ -70,6 +70,8 @@ struct ModelGridCellInput {
   float initelectronfrac = -1.;  // Ye: electrons (or protons) per nucleon. Negative until the input sets it
   // q: the trapped radiation energy per mass [erg/g], scaled from t_model to tmin (INITIAL_PACKETS_ON)
   float initenergyq = 0.;
+  // the energy that energydistribution.txt gives to the cell [erg] (THERMAL_ENERGY_INPUT_FROM_FILES)
+  double thermal_input_energy = 0.;
 };
 inline MPI_shared_array<ModelGridCellInput> modelgrid_input{};
 
@@ -147,6 +149,7 @@ void setup_grid_spherical();
 void set_modelinitnucmassfrac(int modelgridindex, int nucindex, float abund);
 auto read_elem_abundances() -> std::tuple<std::vector<float>, int>;
 void set_spherical_model_cell_counts(GridType spherical_model_type);
+void read_thermal_input_energy_file();
 
 }  // namespace grid
 
