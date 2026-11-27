@@ -127,6 +127,9 @@ inline std::vector<double> dep_estimator_alpha;
 inline MPI_shared_array<double> corrphotoionrenorm{};
 
 inline std::vector<double> gammaestimator;
+// For an element without NLTE levels in a cell with a thermal balance: the collisional ionisation rate per ground
+// level population per in-clump electron density [cm^3/s]. It is zero for the other elements and cells.
+inline std::vector<double> col_iongamma_per_gspop_per_clumpednne;
 
 // for USE_ION_BFHEATING_ESTIMATORS = true
 inline std::vector<double> bfheatingestimator{};

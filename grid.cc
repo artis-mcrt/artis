@@ -308,9 +308,11 @@ void allocate_nonemptymodelcells() {
     globals::corrphotoionrenorm = MPI_shared_array<double>(ionestimcount, 1.);
 
     globals::gammaestimator.assign(ionestimcount, 0.);
+    globals::col_iongamma_per_gspop_per_clumpednne.assign(ionestimcount, 0.);
   } else {
     globals::corrphotoionrenorm.reset();
     globals::gammaestimator.clear();
+    globals::col_iongamma_per_gspop_per_clumpednne.clear();
   }
 
   if (USE_ION_BFHEATING_ESTIMATORS && ionestimsize > 0) {
@@ -541,6 +543,7 @@ void read_grid_restart_data(const int timestep) {
   if constexpr (USE_LUT_PHOTOION) {
     read_restart_array(gridsave_file, globals::corrphotoionrenorm);
     read_restart_array(gridsave_file, globals::gammaestimator);
+    read_restart_array(gridsave_file, globals::col_iongamma_per_gspop_per_clumpednne);
   }
 
   // the order of these calls is very important!
@@ -1104,6 +1107,7 @@ void write_grid_restart_data(const int timestep) {
   if constexpr (USE_LUT_PHOTOION) {
     write_restart_array(gridsave_file, globals::corrphotoionrenorm);
     write_restart_array(gridsave_file, globals::gammaestimator);
+    write_restart_array(gridsave_file, globals::col_iongamma_per_gspop_per_clumpednne);
   }
 
   // the order of these calls is very important!

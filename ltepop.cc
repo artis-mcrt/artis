@@ -70,7 +70,8 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
 // N_j,k*/(N_j+1,k* * nne)
 // should have units of [cm^3] so that when multiplied by nne it gives the population ratio of two consecutive
 // ionisation stages
-[[gnu::pure]] [[nodiscard]] auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -> double {
+[[gnu::pure]] [[nodiscard]] auto phi_rate_balance(const int element, const int ion, const int nonemptymgi,
+                                                  const double nne) -> double {
   testmodeassert_valid_ion(element, ion);
 
   assert_testmodeonly(!globals::lte_iteration);
@@ -84,12 +85,14 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
 
   const auto T_e = grid::Te_allcells[nonemptymgi];
 
-  // photoionisation plus collisional ionisation rate coefficient per ground level pop
+  // photoionisation plus collisional ionisation rate coefficient per ground level pop. The collisional part uses
+  // the nne of the caller, e.g. the trial nne of the nne solver.
   const auto groundcontindex = get_groundcontindex(element, ion);
+  const ptrdiff_t ionestimindex = (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
   const double Gamma_groundlevel =
       groundcontindex >= 0
-          ? globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                    groundcontindex]
+          ? globals::gammaestimator[ionestimindex] + (grid::get_clumpfactor(nonemptymgi) * nne *
+                                                      globals::col_iongamma_per_gspop_per_clumpednne[ionestimindex])
           : 0.;
 
   // Convert Gamma to the photoionisation rate per ion pop
@@ -360,7 +363,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
   double pop_ratio_ground_to_upper = 1.;
   for (int ion = 0; ion < uppermost_ion; ion++) {
     const auto phifactor =
-        use_phi_saha ? phi_saha(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
+        use_phi_saha ? phi_saha(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi, nne_hi);
     pop_ratio_ground_to_upper *= nne_hi * phifactor;
 
     if (!std::isfinite(pop_ratio_ground_to_upper)) {
@@ -393,7 +396,7 @@ void calculate_ionfractions(const int element, const int nonemptymgi, const doub
 
   for (int ion = uppermost_ion - 1; ion >= 0; ion--) {
     const auto phifactor =
-        use_phi_saha ? phi_saha(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
+        use_phi_saha ? phi_saha(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi, nne);
     ionfractions[ion] = ionfractions[ion + 1] * nne * phifactor;
     normfactor += ionfractions[ion];
   }

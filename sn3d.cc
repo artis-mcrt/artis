@@ -470,6 +470,10 @@ void mpi_communicate_grid_properties() {
       MPI_Bcast_safe(std::span{globals::gammaestimator}.subspan(root_nstart_nonempty * globals::nbfcontinua_ground,
                                                                 root_ndo_nonempty * globals::nbfcontinua_ground),
                      root, MPI_COMM_WORLD);
+      MPI_Bcast_safe(
+          std::span{globals::col_iongamma_per_gspop_per_clumpednne}.subspan(
+              root_nstart_nonempty * globals::nbfcontinua_ground, root_ndo_nonempty * globals::nbfcontinua_ground),
+          root, MPI_COMM_WORLD);
     }
 
     radfield::do_MPI_Bcast(root_nstart_nonempty, root_ndo_nonempty, root, root_node_id);

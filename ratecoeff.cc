@@ -1111,8 +1111,8 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
 // Return true if the ionisation rate out of an ion is zero, so that callers can skip the ion without
 // evaluating the full rate. The top ion of an element is always treated as having zero rate. The
 // ground-state ionisation rate estimator holds either the Monte Carlo photoionisation estimator or the
-// radiative-plus-collisional rate from calculate_iongamma_per_gspop(). The only caller uses this
-// function for an element without NLTE levels.
+// radiative rate from set_iongamma_per_gspop(). The collisional part is in col_iongamma_per_gspop_per_clumpednne.
+// The only caller uses this function for an element without NLTE levels.
 auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -> bool {
   assert_testmodeonly(!elem_has_nlte_levels(element));
   const int nions = get_nions(element);
@@ -1124,25 +1124,31 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
   if (groundcontindex < 0) {
     return true;
   }
-  return (
-      globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex] ==
-      0);
+  const ptrdiff_t ionestimindex = (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
+  return globals::gammaestimator[ionestimindex] == 0 &&
+         globals::col_iongamma_per_gspop_per_clumpednne[ionestimindex] == 0;
 }
 
-// ionisation rate coefficient. multiply by get_groundlevelpop to get a rate [s^-1]
-auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, const int ion) -> double {
-  const int nions = get_nions(element);
-  if (ion >= nions - 1) {
-    return 0.;
+// Store the radiative ionisation rate per ground level population [1/s] in gammaestimator. Store the collisional
+// ionisation rate per ground level population per in-clump electron density [cm^3/s] in
+// col_iongamma_per_gspop_per_clumpednne. The collisional rate is linear in the electron density, so the nne solver
+// can apply its trial nne.
+void set_iongamma_per_gspop(const int nonemptymgi, const int element, const int ion) {
+  if (ion >= get_nions(element) - 1) {
+    return;
   }
+  const auto groundcontindex = get_groundcontindex(element, ion);
+  if (groundcontindex < 0) {
+    return;
+  }
+  const ptrdiff_t ionestimindex = (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
 
   const auto T_e = grid::Te_allcells[nonemptymgi];
-  const float clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
 
   const int nlevels_ionising = get_nlevels_ionising(element, ion);
 
   double ionisation_rate_rad = 0.;
-  double ionisation_rate_coll = 0.;
+  double ionisation_rate_coll_per_clumpednne = 0.;
   for (int level = 0; level < nlevels_ionising; level++) {
     const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
     const int nphixstargets = get_nphixstargets(element, ion, level);
@@ -1151,18 +1157,20 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
 
       const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
 
-      ionisation_rate_coll +=
-          nnlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans);
+      ionisation_rate_coll_per_clumpednne +=
+          nnlevel * col_ionisation_ratecoeff(T_e, 1.F, element, ion, level, phixstargetindex, epsilon_trans);
     }
   }
-  const auto ionisation_rate = (ionisation_rate_rad + ionisation_rate_coll);
   const auto groundlevelpop = get_groundlevelpop(nonemptymgi, element, ion);
-  // groundlevelpop is exactly zero only for an absent element (massfrac == 0), where ionisation_rate is
-  // also zero. Avoid the resulting 0/0 = NaN being stored in the gamma estimator.
+  // groundlevelpop is exactly zero only for an absent element (massfrac == 0), where the rates are also zero.
+  // Avoid the resulting 0/0 = NaN.
   if (groundlevelpop <= 0.) {
-    return 0.;
+    globals::gammaestimator[ionestimindex] = 0.;
+    globals::col_iongamma_per_gspop_per_clumpednne[ionestimindex] = 0.;
+    return;
   }
-  return ionisation_rate / groundlevelpop;
+  globals::gammaestimator[ionestimindex] = ionisation_rate_rad / groundlevelpop;
+  globals::col_iongamma_per_gspop_per_clumpednne[ionestimindex] = ionisation_rate_coll_per_clumpednne / groundlevelpop;
 }
 
 // ionisation rate coefficient. Multiply by the lower ion population to get a rate. Only the estimators file uses it.

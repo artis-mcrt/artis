@@ -239,16 +239,20 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
       }
       std::println(estimators_file);
       // This line keeps its label for artistools. In a cell with a thermal balance, only an element with NLTE levels
-      // keeps the normalised Monte Carlo estimator here. For each other element, the grid update replaces it with
-      // calculate_iongamma_per_gspop(), the analytic radiative and collisional ionisation rate per ground level
-      // population. That rate includes corrphotoionrenorm (see iongamma_is_zero() in ratecoeff.cc). In an LTE
-      // timestep and in a grey cell, every element keeps the normalised Monte Carlo estimator.
+      // keeps the normalised Monte Carlo estimator here. For each other element, the line gives the analytic
+      // radiative and collisional ionisation rate per ground level population from set_iongamma_per_gspop(), with
+      // the collisional part at the stored nne. That rate includes corrphotoionrenorm (see iongamma_is_zero() in
+      // ratecoeff.cc). In an LTE timestep and in a grey cell, every element keeps the normalised Monte Carlo
+      // estimator.
+      const double clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
       std::print(estimators_file, "gammaestimator     Z={:2d}", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         if (get_groundcontindex(element, ion) >= 0) {
+          const ptrdiff_t ionestimindex =
+              (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + get_groundcontindex(element, ion);
           std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
-                     globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                             get_groundcontindex(element, ion)]);
+                     globals::gammaestimator[ionestimindex] +
+                         (clumpednne * globals::col_iongamma_per_gspop_per_clumpednne[ionestimindex]));
         }
       }
       std::println(estimators_file);
@@ -743,7 +747,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
 
       // with LTEPOP_EXCITATION_USE_TJ false, the T_e finder calculates these rates during the solve
       if (LTEPOP_EXCITATION_USE_TJ && !elem_has_nlte_levels(element)) {
-        globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
+        set_iongamma_per_gspop(nonemptymgi, element, ion);
       }
 
       if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
@@ -856,6 +860,10 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
                  static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground, globals::nbfcontinua_ground)) {
           gammaestimator *= estimator_normfactor / H;
         }
+        std::ranges::fill(
+            std::span{globals::col_iongamma_per_gspop_per_clumpednne}.subspan(
+                static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground, globals::nbfcontinua_ground),
+            0.);
       }
 
       // the Saha populations replace the NLTE solution. The partition functions must not read the
