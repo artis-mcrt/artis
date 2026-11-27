@@ -292,8 +292,10 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   }
 }
 
-void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates& heatingcoolingrates) {
+// Return true if the last call of the T_e finder gave the final populations, so that its cooling rates stay valid.
+auto solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates& heatingcoolingrates) -> bool {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+  bool cooling_rates_match_populations = false;
   THREADLOCALONHOST auto bfheatingcoeffs = std::vector<double>(get_includedlevels());
   if constexpr (!BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR) {
     // bfheating coefficients are needed for the T_e solver, but they only depend on the radiation field, which is
@@ -392,6 +394,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
       printlnlog(
           "Grid solver cell {} timestep {}: time spent on: Spencer-Fano {:.1f}s, partfuncs/gamma {:.1f}s, T_e {:.1f}s",
           mgi, nts, duration_solve_spencerfano, duration_solve_partfuncs, duration_solve_T_e);
+      cooling_rates_match_populations = true;
       break;  // no iteration is needed without nlte pops
     }
 
@@ -464,6 +467,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
               "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: converged with an estimated error "
               "{:g} <= {:g} (T_e change {:g}, nne change {:g}, map changed {})",
               mgi, nts, nlte_iter, error_estimate, NLTE_TE_NNE_RELTOL, change[0], change[1], map_changed ? 1 : 0);
+          // this pass stops before the element solves
+          cooling_rates_match_populations = true;
           break;
         }
         if (nlte_iter == last_nlte_iter || map_changed) {
@@ -672,6 +677,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
       "cell {} timestep {}: heat-capacity term of the thermal balance {:.5e} [erg/s/cm^3], k-packet energy factor "
       "{:.5f}",
       mgi, nts, heatingcoolingrates.cooling_heatcapacity, kpkt_energy_factor);
+  return cooling_rates_match_populations;
 }
 
 void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi, const double estimator_normfactor) {
@@ -808,6 +814,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
   const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
   const double estimator_normfactor_over4pi = (1. / (4 * PI)) * estimator_normfactor;
+  bool cooling_rates_match_populations = false;
 
   if (nts == globals::timestep_initial) {
     // For the initial timestep, temperatures have already been assigned
@@ -891,7 +898,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       // full-spectrum and binned J and nuJ estimators
       radfield::fit_parameters(nonemptymgi, nts);
 
-      solve_Te_nltepops(nonemptymgi, nts, heatingcoolingrates);
+      cooling_rates_match_populations = solve_Te_nltepops(nonemptymgi, nts, heatingcoolingrates);
     }
     const auto temperature_corrections_duration =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_temperature_corrections)
@@ -953,6 +960,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     // flag with negative numbers to indicate that the rates are invalid
     const auto ioncooling_contribs = kpkt::get_cell_ion_cooling_contribs(nonemptymgi);
     std::ranges::fill(ioncooling_contribs, -1.);
+  } else if (cooling_rates_match_populations) {
+    // the T_e finder calculated the cooling rates of these populations
   } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial &&
              kpkt::get_cell_ion_cooling_contribs(nonemptymgi)[0] >= 0.) {
     // the gridsave file holds valid cooling rates for this timestep
