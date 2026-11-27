@@ -81,8 +81,8 @@ The {term}`LTE` timesteps and the grey cells:
 At the start of a new simulation, `sn3d` writes the rank count and the standard comments to `input.txt`.
 It saves a copy in `input-newrun.txt`. At each restart point, it updates only `input.txt`.
 
-If the model folder has no plain `input.txt`, both programs look for a plain `input-newrun.txt` first.
-If they find it, they restore it to `input.txt`, even when `input.txt.zst` holds newer parameters.
+If the model folder has no `input.txt` and no `input.txt.zst`, both programs look for a plain `input-newrun.txt`.
+If they find it, they restore it to `input.txt`. A plain `input.txt` takes priority over `input.txt.zst`.
 The [input check](running.md#check-the-input-before-a-job) reads the same parameters without restoring the file.
 
 ## model.txt

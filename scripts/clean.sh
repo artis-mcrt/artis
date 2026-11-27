@@ -7,9 +7,10 @@ if [ $# -gt 1 ] || { [ $# -eq 1 ] && [ "$1" != -y ]; }; then
 fi
 
 # for the +([0-9]) patterns that only match generated filenames (e.g. output_0-0.txt but not output_0-0_backup.txt)
+# +([0-9]).slurm/ matches only the job folders of older job scripts, e.g. 12411848.slurm, and not submit.slurm
 shopt -s extglob
 
-paths="input.txt.tmp input-newrun.txt.tmp gridsave*.tmp packets*.tmp vspecpol*.tmp vpackets*.tmp vpkt_grid*.tmp *.out *.out.* out.txt?(.zst) output_+([0-9])-+([0-9]).txt?(.zst|.gz|.xz) exspec*.txt* machine.file.* core.* *.slurm job_from_ts+([0-9]) inputcheck packets vspecpol vpackets vpkt_grid speclc_angle_res bflist.dat ratecoeff.dat line_list.txt syn_dir.txt logfiles.tar*"
+paths="input.txt.tmp input-newrun.txt.tmp gridsave*.tmp packets*.tmp vspecpol*.tmp vpackets*.tmp vpkt_grid*.tmp *.out *.out.* out.txt?(.zst) output_+([0-9])-+([0-9]).txt?(.zst|.gz|.xz) exspec*.txt* machine.file.* core.* +([0-9]).slurm/ job_from_ts+([0-9]) inputcheck packets vspecpol vpackets vpkt_grid speclc_angle_res bflist.dat ratecoeff.dat line_list.txt syn_dir.txt logfiles.tar*"
 
 if [ 0 -lt $(ls -d -- $paths 2>/dev/null | wc -w) ]; then
   echo "The following ARTIS run files will be deleted:"

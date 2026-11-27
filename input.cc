@@ -2112,11 +2112,14 @@ void setup_nlte_levels() {
 }
 
 // The name of the file with the input parameters. This is input-newrun.txt if the model folder has that file and no
-// input.txt, e.g. after a cleanup of the model folder.
+// input.txt, e.g. after a cleanup of the model folder. istream_required() opens input.txt also as input.txt.zst, so
+// the test accepts both forms. Otherwise a compressed input.txt of a restart starts a new simulation, which removes the
+// files of the previous simulation.
 auto get_parameterfile_name() -> std::string_view {
   const std::filesystem::path modelfolder{globals::path_to_modelfolder};
-  const bool use_newrun_copy =
-      !std::filesystem::exists(modelfolder / "input.txt") && std::filesystem::exists(modelfolder / "input-newrun.txt");
+  const bool has_input_txt =
+      std::filesystem::exists(modelfolder / "input.txt") || std::filesystem::exists(modelfolder / "input.txt.zst");
+  const bool use_newrun_copy = !has_input_txt && std::filesystem::exists(modelfolder / "input-newrun.txt");
   return use_newrun_copy ? "input-newrun.txt" : "input.txt";
 }
 
