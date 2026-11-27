@@ -1129,13 +1129,13 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
       0);
 }
 
-// ionisation rate coefficient. multiply by get_groundlevelpop to get a rate [s^-1]
-auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, const int ion) -> double {
-  const int nions = get_nions(element);
-  if (ion >= nions - 1) {
-    return 0.;
-  }
+namespace {
 
+// Return the radiative and the collisional ionisation rates [cm^-3 s^-1] out of the ionising levels of an ion.
+// A rate that the template arguments exclude stays zero.
+template <bool include_radiative, bool include_collisional>
+auto calculate_ionisation_rates_rad_coll(const int nonemptymgi, const int element, const int ion)
+    -> std::pair<double, double> {
   const auto T_e = grid::Te_allcells[nonemptymgi];
   const float clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
 
@@ -1147,22 +1147,70 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
     const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
     const int nphixstargets = get_nphixstargets(element, ion, level);
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-      ionisation_rate_rad += nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, false);
+      if constexpr (include_radiative) {
+        ionisation_rate_rad +=
+            nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, false);
+      }
 
-      const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
+      if constexpr (include_collisional) {
+        const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
 
-      ionisation_rate_coll +=
-          nnlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans);
+        ionisation_rate_coll +=
+            nnlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans);
+      }
     }
   }
-  const auto ionisation_rate = (ionisation_rate_rad + ionisation_rate_coll);
+  return {ionisation_rate_rad, ionisation_rate_coll};
+}
+
+// Return the ionisation rate divided by the ground level population. An absent element (massfrac == 0) has a ground
+// level population and an ionisation rate of exactly zero, so the function returns zero and not 0/0 = NaN.
+auto ionisation_rate_per_gspop(const int nonemptymgi, const int element, const int ion, const double ionisation_rate)
+    -> double {
   const auto groundlevelpop = get_groundlevelpop(nonemptymgi, element, ion);
-  // groundlevelpop is exactly zero only for an absent element (massfrac == 0), where ionisation_rate is
-  // also zero. Avoid the resulting 0/0 = NaN being stored in the gamma estimator.
   if (groundlevelpop <= 0.) {
     return 0.;
   }
   return ionisation_rate / groundlevelpop;
+}
+
+}  // anonymous namespace
+
+// ionisation rate coefficient. multiply by get_groundlevelpop to get a rate [s^-1]
+auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, const int ion) -> double {
+  const int nions = get_nions(element);
+  if (ion >= nions - 1) {
+    return 0.;
+  }
+
+  const auto [ionisation_rate_rad, ionisation_rate_coll] =
+      calculate_ionisation_rates_rad_coll<true, true>(nonemptymgi, element, ion);
+  return ionisation_rate_per_gspop(nonemptymgi, element, ion, ionisation_rate_rad + ionisation_rate_coll);
+}
+
+// photoionisation rate coefficient (corrected for stimulated emission). Multiply by get_groundlevelpop to get a rate
+// [s^-1].
+auto calculate_iongamma_radiative_per_gspop(const int nonemptymgi, const int element, const int ion) -> double {
+  const int nions = get_nions(element);
+  if (ion >= nions - 1) {
+    return 0.;
+  }
+
+  const double ionisation_rate_rad = calculate_ionisation_rates_rad_coll<true, false>(nonemptymgi, element, ion).first;
+  return ionisation_rate_per_gspop(nonemptymgi, element, ion, ionisation_rate_rad);
+}
+
+// collisional ionisation rate coefficient at the T_e and nne of the cell. Multiply by get_groundlevelpop to get a
+// rate [s^-1].
+auto calculate_iongamma_collisional_per_gspop(const int nonemptymgi, const int element, const int ion) -> double {
+  const int nions = get_nions(element);
+  if (ion >= nions - 1) {
+    return 0.;
+  }
+
+  const double ionisation_rate_coll =
+      calculate_ionisation_rates_rad_coll<false, true>(nonemptymgi, element, ion).second;
+  return ionisation_rate_per_gspop(nonemptymgi, element, ion, ionisation_rate_coll);
 }
 
 // ionisation rate coefficient. Multiply by the lower ion population to get a rate. Only the estimators file uses it.

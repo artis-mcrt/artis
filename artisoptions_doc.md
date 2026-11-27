@@ -111,9 +111,10 @@ constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage);
 constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ionstage);
 
 // Use the radiation temperature T_J instead of T_e in the Boltzmann factor of the excitation, also for the
-// sublevels of a superlevel. With false, the T_e finder also calculates the ionisation rates of the ground
-// continua of the elements without NLTE levels again at each trial T_e. An element with FORCE_SAHA_ION_BALANCE
-// gets no such rate, because the Saha balance does not use it.
+// sublevels of a superlevel. The T_e finder calculates the ionisation rates of the ground continua of the elements
+// without NLTE levels again at each trial T_e. With true, only the collisional ionisation rate changes. The
+// photoionisation rate keeps the W and T_R that the grid update uses to normalise the Monte Carlo estimators. An
+// element with FORCE_SAHA_ION_BALANCE gets no such rate, because the Saha balance does not use it.
 // COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS needs the value false.
 constexpr bool LTEPOP_EXCITATION_USE_TJ;
 

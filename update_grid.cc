@@ -293,7 +293,9 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
 }
 
 // Return true if the last call of the T_e finder gave the final populations, so that its cooling rates stay valid.
-auto solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates& heatingcoolingrates) -> bool {
+// photoion_gamma_per_gspop goes to the T_e finder (see call_T_e_finder()).
+auto solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates& heatingcoolingrates,
+                       const std::span<const double> photoion_gamma_per_gspop) -> bool {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   bool cooling_rates_match_populations = false;
   THREADLOCALONHOST auto bfheatingcoeffs = std::vector<double>(get_includedlevels());
@@ -378,7 +380,8 @@ auto solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
 
     // Find T_e as solution for thermal balance. The densities of the cell are at the mid time of timestep nts, so
     // the adiabatic cooling 3p/t uses the same time.
-    call_T_e_finder(nonemptymgi, globals::timesteps[nts].mid, heatingcoolingrates, bfheatingcoeffs);
+    call_T_e_finder(nonemptymgi, globals::timesteps[nts].mid, heatingcoolingrates, bfheatingcoeffs,
+                    photoion_gamma_per_gspop);
     cooling_rates_match_populations = true;
 
     const auto duration_solve_T_e =
@@ -679,7 +682,11 @@ auto solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
   return cooling_rates_match_populations;
 }
 
-void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi, const double estimator_normfactor) {
+// With LTEPOP_EXCITATION_USE_TJ, the function writes the photoionisation rate per ground level population of each
+// element without NLTE levels and without FORCE_SAHA_ION_BALANCE into photoion_gamma_per_gspop, at the index of the
+// ground-level continuum. The T_e finder adds the collisional ionisation rate at each trial T_e.
+void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi, const double estimator_normfactor,
+                                                          const std::span<double> photoion_gamma_per_gspop) {
   if constexpr (USE_LUT_PHOTOION) {
     const auto W = grid::W_allcells[nonemptymgi];
     const auto T_R = grid::TR_allcells[nonemptymgi];
@@ -746,10 +753,12 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
       const ptrdiff_t ionestimindex =
           (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
 
-      // with LTEPOP_EXCITATION_USE_TJ false, the T_e finder calculates these rates during the solve
+      // The T_e finder calculates the ionisation rates of these elements at each trial T_e. With
+      // LTEPOP_EXCITATION_USE_TJ false, it calculates the full rates there. With LTEPOP_EXCITATION_USE_TJ, the
+      // photoionisation rate uses the W and T_R of corrphotoionrenorm, so this function calculates it here.
       if (LTEPOP_EXCITATION_USE_TJ && !elem_has_nlte_levels(element) &&
           !FORCE_SAHA_ION_BALANCE(get_atomicnumber(element))) {
-        globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
+        photoion_gamma_per_gspop[groundcontindex] = calculate_iongamma_radiative_per_gspop(nonemptymgi, element, ion);
       }
 
       if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
@@ -889,15 +898,18 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       // The renormalisation factors divide the Monte Carlo estimators by the analytic rates of the W and T_R that the
       // cell holds before fit_parameters(). Usually those values are the fit to the estimators of the timestep before
       // the previous timestep. With LTEPOP_EXCITATION_USE_TJ, the ion balance of an element without NLTE levels uses
-      // the Gamma that the function below stores with the same W and T_R. The other rates, for example those of the
-      // next propagation, multiply the factors by the rates of the new fit. A change of this order changes the results.
-      update_gamma_corrphotoionrenorm_bfheating_estimators(nonemptymgi, estimator_normfactor);
+      // the photoionisation part of Gamma that the function below calculates with the same W and T_R. The other rates,
+      // for example those of the next propagation, multiply the factors by the rates of the new fit. A change of this
+      // order changes the results.
+      THREADLOCALONHOST auto photoion_gamma_per_gspop = std::vector<double>(globals::nbfcontinua_ground);
+      update_gamma_corrphotoionrenorm_bfheating_estimators(nonemptymgi, estimator_normfactor, photoion_gamma_per_gspop);
 
       // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the
       // full-spectrum and binned J and nuJ estimators
       radfield::fit_parameters(nonemptymgi, nts);
 
-      cooling_rates_match_populations = solve_Te_nltepops(nonemptymgi, nts, heatingcoolingrates);
+      cooling_rates_match_populations =
+          solve_Te_nltepops(nonemptymgi, nts, heatingcoolingrates, photoion_gamma_per_gspop);
     }
     const auto temperature_corrections_duration =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_temperature_corrections)
