@@ -30,25 +30,6 @@
 
 namespace {
 
-// The conditions behind the warnings below can persist across the many evaluations that the nne and
-// T_e root solvers make for a single cell, so each one is reported only on its first occurrence for
-// a given cell and timestep. The check is made at the warning site so that the warnings are still
-// reported when the NLTE solver calls into these functions itself.
-struct CellWarningMarker {
-  ptrdiff_t nonemptymgi{-1};
-  int timestep{-1};
-
-  // returns true the first time it is called for a particular cell and timestep
-  auto is_first_occurrence(const ptrdiff_t nonemptymgi_in) -> bool {
-    if (nonemptymgi_in == nonemptymgi && globals::timestep == timestep) {
-      return false;
-    }
-    nonemptymgi = nonemptymgi_in;
-    timestep = globals::timestep;
-    return true;
-  }
-};
-
 THREADLOCALONHOST CellWarningMarker neutralcell_warned;
 THREADLOCALONHOST CellWarningMarker nne_maxit_warned;
 THREADLOCALONHOST CellWarningMarker uppermost_ion_warned;

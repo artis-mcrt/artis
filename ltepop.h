@@ -16,6 +16,24 @@
 #include "grid.h"
 #include "mpi_logging.h"
 
+// A warning condition can persist across the many evaluations that the nne and T_e root solvers make for one
+// cell. A CellWarningMarker reports such a warning only at its first occurrence for a cell and timestep. The check
+// is at the warning site, so the warnings also come when the NLTE solver calls the functions itself.
+struct CellWarningMarker {
+  ptrdiff_t nonemptymgi{-1};
+  int timestep{-1};
+
+  // returns true the first time it is called for a particular cell and timestep
+  auto is_first_occurrence(const ptrdiff_t nonemptymgi_in) -> bool {
+    if (nonemptymgi_in == nonemptymgi && globals::timestep == timestep) {
+      return false;
+    }
+    nonemptymgi = nonemptymgi_in;
+    timestep = globals::timestep;
+    return true;
+  }
+};
+
 // Floor of nne. The stored nne is a float, and a fast-math build flushes a denormal float to zero.
 constexpr double MINNNE = std::max(MINPOP, static_cast<double>(std::numeric_limits<float>::min()));
 

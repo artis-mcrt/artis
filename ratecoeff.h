@@ -46,7 +46,6 @@ void setup_photoion_luts();
 
 [[nodiscard]] auto iongamma_is_zero(int nonemptymgi, int element, int ion) -> bool;
 
-[[nodiscard]] auto calculate_iongamma_per_gspop(int nonemptymgi, int element, int ion) -> double;
 [[nodiscard]] auto calculate_iongamma_radiative_per_gspop(int nonemptymgi, int element, int ion) -> double;
 [[nodiscard]] auto calculate_iongamma_collisional_per_gspop(int nonemptymgi, int element, int ion) -> double;
 [[nodiscard]] auto calculate_iongamma_per_ionpop(int nonemptymgi, int element, int lowerion, bool force_bfintegral)
