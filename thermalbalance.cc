@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <optional>
 #include <ranges>
 #include <span>
 #include <vector>
@@ -191,15 +192,16 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
   heatingcoolingrates.heating_ff = globals::ffheatingestimator[nonemptymgi];
 }
 
-THREADLOCALONHOST CellWarningMarker nne_ionisation_rates_warned;
+THREADLOCALONHOST CellWarningMarker ionisation_rates_warned;
 
 // Set the ionisation rates per ground level population of the elements without NLTE levels and without
 // FORCE_SAHA_ION_BALANCE. Each rate is photoion_gamma_per_gspop(element, ion, groundcontindex) plus the collisional
-// ionisation rate at the T_e and the nne that the cell holds now. Return true if the cell contains such an element.
+// ionisation rate at the T_e, the nne, and the populations that the cell holds now. Return the largest relative change
+// of a rate, or no value if the cell contains no such element.
 template <typename PhotoionGammaFunc>
 auto set_gammaestimator_without_nlte_levels(const int nonemptymgi, const PhotoionGammaFunc& photoion_gamma_per_gspop)
-    -> bool {
-  bool has_rate_balance_element = false;
+    -> std::optional<double> {
+  std::optional<double> max_relative_change_of_rates;
   for (int element = 0; element < get_nelements(); element++) {
     if (elem_has_nlte_levels(element) || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element)) ||
         grid::get_elem_numberdens(nonemptymgi, element) <= 0.) {
@@ -211,45 +213,50 @@ auto set_gammaestimator_without_nlte_levels(const int nonemptymgi, const Photoio
       if (groundcontindex < 0) {
         continue;
       }
-      has_rate_balance_element = true;
       const ptrdiff_t ionestimindex =
           (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
-      globals::gammaestimator[ionestimindex] = photoion_gamma_per_gspop(element, ion, groundcontindex) +
-                                               calculate_iongamma_collisional_per_gspop(nonemptymgi, element, ion);
+      const double previous_rate = globals::gammaestimator[ionestimindex];
+      const double rate = photoion_gamma_per_gspop(element, ion, groundcontindex) +
+                          calculate_iongamma_collisional_per_gspop(nonemptymgi, element, ion);
+      globals::gammaestimator[ionestimindex] = rate;
+      const double larger_rate = std::max(std::abs(rate), std::abs(previous_rate));
+      const double relative_change = larger_rate > 0. ? std::abs(rate - previous_rate) / larger_rate : 0.;
+      max_relative_change_of_rates = std::max(max_relative_change_of_rates.value_or(0.), relative_change);
     }
   }
-  return has_rate_balance_element;
+  return max_relative_change_of_rates;
 }
 
-// Solve the ion balance and nne of the cell at the T_e that the cell holds. The collisional ionisation rate of an
-// element without NLTE levels is proportional to nne, and the ion balance gives nne. The function therefore repeats
-// the rates and the ion balance until nne changes by less than the accuracy of the nne solver.
+// Solve the ion balance and nne of the cell at the T_e that the cell holds. The ionisation rates of an element without
+// NLTE levels depend on nne, and some also depend on the ion populations. The ion balance gives nne and the ion
+// populations. The function therefore repeats the rates and the ion balance until no rate changes by more than the
+// accuracy of the nne solver. Then the populations of the last ion balance agree with the rates.
 template <typename PhotoionGammaFunc>
 void calculate_ion_balance_nne_with_ionisation_rates(const int nonemptymgi,
                                                      const PhotoionGammaFunc& photoion_gamma_per_gspop) {
-  // the same accuracy as find_converged_nne() in ltepop.cc
-  constexpr double nne_fractional_accuracy = 1e-3;
-  constexpr int max_nne_iterations = 10;
+  // the same fractional accuracy as the nne solver find_converged_nne() in ltepop.cc
+  constexpr double rates_fractional_accuracy = 1e-3;
+  constexpr int max_ion_balance_passes = 10;
 
-  for (int nne_iteration = 1;; nne_iteration++) {
-    const double nne_of_rates = grid::get_nne(nonemptymgi);
-    const bool has_rate_balance_element = set_gammaestimator_without_nlte_levels(nonemptymgi, photoion_gamma_per_gspop);
+  for (int ion_balance_pass = 1;; ion_balance_pass++) {
+    const auto max_relative_change_of_rates =
+        set_gammaestimator_without_nlte_levels(nonemptymgi, photoion_gamma_per_gspop);
+    // The first pass needs an ion balance, because the populations of the cell belong to the previous T_e.
+    if (ion_balance_pass > 1 && max_relative_change_of_rates.value_or(0.) <= rates_fractional_accuracy) {
+      return;
+    }
     calculate_ion_balance_nne(nonemptymgi);
-    if (!has_rate_balance_element) {
-      // the ion balance uses no ionisation rate, so the first nne is correct
+    if (!max_relative_change_of_rates.has_value()) {
+      // the ion balance uses no ionisation rate, so one pass is sufficient
       return;
     }
-    const double nne_of_ion_balance = grid::get_nne(nonemptymgi);
-    if (std::abs(nne_of_ion_balance - nne_of_rates) <= nne_fractional_accuracy * nne_of_ion_balance) {
-      return;
-    }
-    if (nne_iteration >= max_nne_iterations) {
-      if (nne_ionisation_rates_warned.is_first_occurrence(nonemptymgi)) {
+    if (ion_balance_pass >= max_ion_balance_passes) {
+      if (ionisation_rates_warned.is_first_occurrence(nonemptymgi)) {
         printlnlog(
-            "[warning] T_e finder: cell {} timestep {}: nne of the ionisation rates did not converge within {} "
-            "iterations (T_e {:g} [K], nne of the rates {:g}, nne of the ion balance {:g} [cm^-3]; repeats suppressed)",
-            grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, max_nne_iterations,
-            grid::Te_allcells[nonemptymgi], nne_of_rates, nne_of_ion_balance);
+            "[warning] T_e finder: cell {} timestep {}: the ionisation rates did not converge within {} passes of the "
+            "ion balance (T_e {:g} [K], largest relative change of a rate {:g}; repeats suppressed)",
+            grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, max_ion_balance_passes,
+            grid::Te_allcells[nonemptymgi], *max_relative_change_of_rates);
       }
       return;
     }
@@ -263,7 +270,7 @@ void calculate_ion_balance_nne_with_ionisation_rates(const int nonemptymgi,
 //
 // The ionisation rates of the elements without NLTE levels depend on T_e. The function calculates them at every T_e.
 // The collisional part of these rates also depends on nne, so the function repeats the rates and the ion balance
-// until nne is consistent. An element with FORCE_SAHA_ION_BALANCE needs no ionisation rates.
+// until they agree. An element with FORCE_SAHA_ION_BALANCE needs no ionisation rates.
 // - With LTEPOP_EXCITATION_USE_TJ false, the function calculates the partition functions at T_e. It calculates the
 //   photoionisation rates again in each pass, because the stimulated recombination factor of the bound-free
 //   integral depends on nne and on the ion populations.
