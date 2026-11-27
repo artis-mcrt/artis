@@ -226,9 +226,9 @@ minus cooling at the T_e from the start of the iteration. A sign change between 
 shows a possible second root.
 
 The sign change is not a proof. Without
-[LTEPOP_EXCITATION_USE_TJ](options.md#ltepop_excitation_use_tj), each evaluation takes the ionisation rates of the
-elements without NLTE levels from the populations of an earlier evaluation. Two evaluations at different times can
-therefore use different rates.
+[LTEPOP_EXCITATION_USE_TJ](options.md#ltepop_excitation_use_tj), an element without NLTE levels that uses the rate
+balance gets its ionisation rates from the nne and the populations of the previous evaluation. The value at one T_e
+can therefore change a little with the order of the evaluations.
 
 The log then gives `call_T_e_finder: cell ... timestep ...: the thermal balance changes sign in ... outside the solver
 interval, so it can have a second root`, once for each cell and timestep. The message gives the range of the sign
