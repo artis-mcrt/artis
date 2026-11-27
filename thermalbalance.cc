@@ -195,12 +195,14 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 // NB: this is not a pure function of T_e. Evaluating it stores T_e in the grid and re-solves the cell's
 // ionisation balance, populations and nne at that temperature, so the cell is left in the state belonging
 // to the last T_e passed in. call_T_e_finder() relies on this and re-evaluates at the final T_e.
-// The ionisation rates of the elements without NLTE levels depend on T_e. The function calculates them at every T_e,
-// so the residual is a function of T_e only. An element with FORCE_SAHA_ION_BALANCE needs no ionisation rates.
+//
+// The ionisation rates of the elements without NLTE levels depend on T_e. The function calculates them at every T_e.
+// The collisional part of these rates uses the nne that the cell holds before the call, so the residual also depends
+// on the previous state of the cell. An element with FORCE_SAHA_ION_BALANCE needs no ionisation rates.
 // - With LTEPOP_EXCITATION_USE_TJ false, the function calculates the full ionisation rates and the partition functions.
-// - With LTEPOP_EXCITATION_USE_TJ true, the radiative rates stay at photoion_gamma_per_gspop, which the grid update
-//   calculates with the W and T_R of the Monte Carlo estimators. The function adds the collisional rates at T_e.
-//   The partition functions use T_J, so they do not depend on T_e.
+// - With LTEPOP_EXCITATION_USE_TJ true, the photoionisation rates stay at photoion_gamma_per_gspop. The grid update
+//   calculates them with the W and T_R that it uses to normalise the Monte Carlo estimators. The function adds the
+//   collisional rates at T_e. The partition functions use T_J, so they do not depend on T_e.
 auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const double t_current,
                                    HeatingCoolingRates& heatingcoolingrates, const std::span<double> bfheatingcoeffs,
                                    const std::span<const double> photoion_gamma_per_gspop) -> double {

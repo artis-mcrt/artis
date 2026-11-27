@@ -239,9 +239,11 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
       }
       std::println(estimators_file);
       // This line keeps its label for artistools. In a cell with a thermal balance, an element with NLTE levels or
-      // with FORCE_SAHA_ION_BALANCE keeps the normalised Monte Carlo estimator here. For each other element, the grid
-      // update replaces it with calculate_iongamma_per_gspop(), the analytic radiative and collisional ionisation rate
-      // per ground level population. That rate includes corrphotoionrenorm (see iongamma_is_zero() in ratecoeff.cc).
+      // with FORCE_SAHA_ION_BALANCE keeps the normalised Monte Carlo estimator here. For each other element, the T_e
+      // finder replaces it with the analytic photoionisation and collisional ionisation rate per ground level
+      // population at the final T_e. With LTEPOP_EXCITATION_USE_TJ, the photoionisation part uses the W and T_R that
+      // the cell holds before radfield::fit_parameters(). That rate includes corrphotoionrenorm (see iongamma_is_zero()
+      // in ratecoeff.cc).
       // In an LTE timestep and in a grey cell, every element keeps the normalised Monte Carlo estimator.
       std::print(estimators_file, "gammaestimator     Z={:2d}", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
@@ -743,9 +745,9 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions - 1; ion++) {
-      // Reuse the gammaestimator array as temporary storage of the Gamma values during
-      // the remaining part of the update_grid phase. Afterwards it is reset to record
-      // the next timesteps gamma estimators.
+      // The T_e finder reuses the gammaestimator array to store the Gamma values of the elements without NLTE levels
+      // and without FORCE_SAHA_ION_BALANCE for the remaining part of the update_grid phase. zero_estimators() resets
+      // the array before the next propagation.
       const int groundcontindex = get_groundcontindex(element, ion);
       if (groundcontindex < 0) {
         continue;

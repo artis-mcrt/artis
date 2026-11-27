@@ -73,8 +73,8 @@ struct HeatingCoolingRates {
 // BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR, the function calculates them at each trial T_e, and they
 // are the coefficients of the final T_e when the function returns. With LTEPOP_EXCITATION_USE_TJ,
 // photoion_gamma_per_gspop holds the photoionisation rate per ground level population of each ground-level continuum
-// of the cell, and the function adds the collisional ionisation rate at each trial T_e. Without that option, the span
-// is not used.
+// of an element without NLTE levels and without FORCE_SAHA_ION_BALANCE. The function adds the collisional ionisation
+// rate to it at each trial T_e. Without that option, the function does not use the span.
 void call_T_e_finder(int nonemptymgi, double t_current, HeatingCoolingRates& heatingcoolingrates,
                      std::span<double> bfheatingcoeffs, std::span<const double> photoion_gamma_per_gspop);
 void calculate_ion_heating_cooling_rates(int nonemptymgi, HeatingCoolingRates& heatingcoolingrates,
