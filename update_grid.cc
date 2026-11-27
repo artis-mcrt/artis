@@ -964,7 +964,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     // the gridsave file holds valid cooling rates for this timestep
     assert_always(kpkt::get_cell_ion_cooling_contribs(nonemptymgi).back() >= 0.);
   } else if (!cooling_rates_match_populations) {
-    // otherwise the T_e finder already calculated the cooling rates of these populations
+    // the populations changed after the last T_e finder call, or the cell had no T_e solve
     // Cooling rates depend only on cell properties, precalculate total cooling
     // and ion contributions inside update grid and communicate between MPI tasks
     const auto sys_time_start_calc_kpkt_rates = std::chrono::steady_clock::now();
