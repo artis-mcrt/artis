@@ -629,8 +629,8 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   unreadable line. Use that helper for a new line. At the start of a
   new simulation, `sn3d` writes `input.txt` again with the standard comments
   and with its rank count in the `nprocs_exspec` line, and it writes the same
-  content to `input-newrun.txt`. If `input.txt` is absent at the start of a
-  run, rank 0 restores it from that copy. `exspec` does the same and changes no other
+  content to `input-newrun.txt`. If `input.txt` and `input.txt.zst` are both
+  absent at the start of a run, rank 0 restores `input.txt` from that copy. `exspec` does the same and changes no other
   input file.
 - The model files use a different helper. `model.txt`, `abundances.txt`, and
   `transitiondata.txt` take each number with `parse_next_token()`, which
