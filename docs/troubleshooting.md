@@ -123,7 +123,7 @@ The `git version` and `git status` lines at the start of the log of each job giv
 
 Keep the parameters for the saved timestep in `input.txt` or `input.txt.zst`.
 If both are absent, `sn3d` restores `input.txt` from `input-newrun.txt` and starts a new simulation.
-A plain `input.txt` takes priority over `input.txt.zst`, so remove a plain file that holds older parameters.
+A plain `input.txt` takes priority over `input.txt.zst`. Remove a plain `input.txt` that holds older parameters.
 
 Run the [input check](running.md#check-the-input-before-a-job) with the rank count of the saved run.
 Read the selected mode and timestep in its log.

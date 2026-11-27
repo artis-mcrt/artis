@@ -2117,9 +2117,10 @@ void setup_nlte_levels() {
 // files of the previous simulation.
 auto get_parameterfile_name() -> std::string_view {
   const std::filesystem::path modelfolder{globals::path_to_modelfolder};
-  const bool has_input_txt =
+  const bool has_plain_or_compressed_input_txt =
       std::filesystem::exists(modelfolder / "input.txt") || std::filesystem::exists(modelfolder / "input.txt.zst");
-  const bool use_newrun_copy = !has_input_txt && std::filesystem::exists(modelfolder / "input-newrun.txt");
+  const bool use_newrun_copy =
+      !has_plain_or_compressed_input_txt && std::filesystem::exists(modelfolder / "input-newrun.txt");
   return use_newrun_copy ? "input-newrun.txt" : "input.txt";
 }
 
