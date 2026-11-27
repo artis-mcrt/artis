@@ -113,8 +113,7 @@ constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ion
 // Use the radiation temperature T_J instead of T_e in the Boltzmann factor of the excitation, also for the
 // sublevels of a superlevel. With false, the T_e finder also recomputes the photoionisation rates of the ground
 // continua of the elements without NLTE levels when T_e moves by more than 10 percent.
-// With COLLISIONAL_HEATING_FROM_LEVELPOPS, the value also selects the collisional heating of the ions with Boltzmann
-// populations (see that option).
+// COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM needs the value false.
 constexpr bool LTEPOP_EXCITATION_USE_TJ;
 
 // Force the Saha ionisation balance of an element. The NLTE solver replaces the ground level row of each ion
@@ -249,13 +248,19 @@ constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
 // element fell back to LTE. With this option, the non-thermal excitation energy of such an element therefore goes
 // to the heating, and its packets become k-packets.
 //
-// Level populations that are Boltzmann at T_e make the sum equal to the collisional excitation cooling. With
-// LTEPOP_EXCITATION_USE_TJ false, two groups of ions have such populations. The first group is the ions without NLTE
-// levels. The second group is the ions of an element whose last NLTE solve in the cell fell back to LTE. For each
-// line of these ions, the term of the sum is therefore the energy flow of a two-level macro atom:
+// Level populations that are Boltzmann at T_e make the sum equal to the collisional excitation cooling, so their
+// lines have no net cooling. COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM selects a different term for these ions.
+constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
+
+// Give each line of an ion with Boltzmann level populations at T_e the heat of a two-level macro atom. The option
+// needs COLLISIONAL_HEATING_FROM_LEVELPOPS true, LTEPOP_EXCITATION_USE_TJ false, and no value of
+// RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY. With that option, the packets use no macro atom for the lines.
+//
+// Two groups of ions have such populations. The first group is the ions without NLTE levels. The second group is
+// the ions of an element whose last NLTE solve in the cell fell back to LTE. For each line of these ions, the term
+// of the collisional heating is the energy flow of a two-level macro atom:
 // [n_l C_lu + (n_l B_lu - n_u B_ul) beta J_nu] dE C_ul / (beta A_ul + C_ul).
-// With RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, the packets use no macro atom for the lines, so all ions keep the
-// sum.
+// With false, the term is n_u C_ul dE, so the lines of these ions have no net cooling.
 //
 // The first factor is the rate of the excitations of the upper level by collisions and by the net absorption of
 // radiation. C_ul / (beta A_ul + C_ul) is the probability of a collisional de-excitation. The populations are the
@@ -271,7 +276,7 @@ constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
 // - beta: the Sobolev escape probability of Kromer & Sim (2009), MNRAS, 398, 1809-1826,
 //   doi:10.1111/j.1365-2966.2009.15256.x;
 // - J_nu: the mean intensity of the radiation field model of the cell.
-constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
+constexpr bool COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM;
 
 // The bound-free cooling coefficient of each (level, target) continuum is per population of the target level of
 // the upper ion, like the spontaneous recombination coefficient alpha_sp. True multiplies it by the population

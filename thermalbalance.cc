@@ -37,6 +37,13 @@
 static_assert(!BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR || !USE_LUT_PHOTOION,
               "USE_LUT_PHOTOION must be false when BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR is true");
 
+// the two-level macro atom needs Boltzmann populations at T_e and a macro atom for the lines of the packets
+static_assert(!COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM ||
+                  (COLLISIONAL_HEATING_FROM_LEVELPOPS && !LTEPOP_EXCITATION_USE_TJ &&
+                   !RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()),
+              "COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM needs COLLISIONAL_HEATING_FROM_LEVELPOPS true, "
+              "LTEPOP_EXCITATION_USE_TJ false, and no value of RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY");
+
 namespace {
 
 // Integrand to calculate the rate coefficient for bfheating. With
@@ -61,8 +68,8 @@ auto integrand_bfheatingcoeff(const double nu, const double nu_edge, const int n
 // Level populations that are Boltzmann at T_e make this sum equal to the collisional excitation cooling, so the ion
 // then has no net line cooling. With LTEPOP_EXCITATION_USE_TJ false, two groups of ions have such populations. The
 // first group is the ions without NLTE levels. The second group is the ions of an element whose last NLTE solve in
-// the cell fell back to LTE. For each line of these ions, the term of the sum is the energy flow of a two-level
-// macro atom:
+// the cell fell back to LTE. With COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM, the term of the sum for each line of
+// these ions is the energy flow of a two-level macro atom:
 //   [n_l C_lu + (n_l B_lu - n_u B_ul) beta J_nu] dE C_ul / (beta A_ul + C_ul)
 //
 // The first factor is the rate of the excitations of the upper level by collisions and by the net absorption of
@@ -71,12 +78,11 @@ auto integrand_bfheatingcoeff(const double nu, const double nu_edge, const int n
 // The populations are the Boltzmann populations, as for the line opacity of the packets. The net cooling of a line is
 // thus zero when J_nu is the Planck function at T_e. The term ignores the cascades through the other levels.
 //
-// The ions of an element with NLTE levels keep the sum before the first NLTE solve of the cell. All ions keep the sum
-// with RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, because the packets then use no macro atom for the lines.
+// The ions of an element with NLTE levels keep the sum before the first NLTE solve of the cell.
 auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const float T_e,
                                 const float clumpednne) -> double {
   const bool use_two_level_macro_atom =
-      !LTEPOP_EXCITATION_USE_TJ && !RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() &&
+      COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM &&
       (get_nlevels_excited_nlte(element, ion) == 0 || elem_nlte_solve_fell_back_to_lte(nonemptymgi, element));
   const double t_mid = globals::timesteps[globals::timestep].mid;
   double C_deexc = 0.;
