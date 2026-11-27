@@ -92,6 +92,24 @@ constexpr int RATECOEFF_TABLESIZE;
 constexpr double MINTEMP;
 constexpr double MAXTEMP;
 
+// Find the T_e of the thermal balance from the T_e at the start of the solve (T_e_old), and not from all of
+// [MINTEMP, MAXTEMP]. Let f = heating - cooling. The solver calculates f(T_e_old). Then it steps to
+// T_e_old * 1.2^k if f > 0, or to T_e_old / 1.2^k if f < 0, for k = 1, 2, 3, ..., until f changes sign. Each step
+// stops at MINTEMP or MAXTEMP. The solver then finds the root inside the last step. If f has no sign change before
+// the limit, T_e gets that limit. If T_e_old is outside [MINTEMP, MAXTEMP], the solver searches all of that range
+// and writes a line to the log.
+//
+// f decreases through zero at the first sign change in the direction of f, so that root is stable. With the thermal
+// energy density U and dU/dt = f, U moves from T_e_old to this root. A cell thus stays on its branch of the balance until that branch
+// disappears. Without this option, a balance with three roots can give a different stable root in each timestep,
+// e.g. with FORCE_SAHA_ION_BALANCE in a dense kilonova cell.
+//
+// The step factor 1.2 sets the resolution. If one step holds two roots, f has the same sign at its ends, and the
+// solver steps over both roots. Each pass of the grid update starts at the T_e of the previous pass. A step of
+// NLTE_TE_NNE_USE_ANDERSON_ACCEL between two passes can move T_e over an unstable root. The limit of each solve to a
+// factor of two from T_e_old stays.
+constexpr bool TE_SOLVER_FOLLOW_PREVIOUS_ROOT;
+
 // The temperature [K] at which the code calibrates the total recombination rate of each ion to
 // recombrates.txt, if that file exists.
 constexpr double RECOMBCALIBRATION_T_ELEC;

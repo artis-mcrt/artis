@@ -68,6 +68,8 @@ constexpr int RATECOEFF_TABLESIZE = 200;
 constexpr double MINTEMP = 3000.;
 constexpr double MAXTEMP = 150000.;
 
+constexpr bool TE_SOLVER_FOLLOW_PREVIOUS_ROOT = false;
+
 constexpr double RECOMBCALIBRATION_T_ELEC = 6000.;
 
 constexpr double MINPOP = 1e-40;

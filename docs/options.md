@@ -46,6 +46,7 @@ description.
 | [RATECOEFF_TABLESIZE](#ratecoeff_tablesize) | The number of temperature points of the rate coefficient tables, spaced in log T between [MINTEMP](#mintemp) and [MAXTEMP](#maxtemp). | classic `100`, kilonova_lte `200`, nltenebular `100`, nltephotospheric `100` |
 | [MINTEMP](#mintemp) | The limits [K] of T_e, T_J, the initial temperature, and the T_R of the whole spectrum. | classic `3500.`, kilonova_lte `500.`, nltenebular `1000.`, nltephotospheric `3500.` |
 | [MAXTEMP](#maxtemp) | The limits [K] of T_e, T_J, the initial temperature, and the T_R of the whole spectrum. | classic `140000.`, kilonova_lte `150000.`, nltenebular `30000.`, nltephotospheric `140000.` |
+| [TE_SOLVER_FOLLOW_PREVIOUS_ROOT](#te_solver_follow_previous_root) | Find the T_e of the thermal balance from the T_e at the start of the solve (T_e_old), and not from all of [[MINTEMP](#mintemp), [MAXTEMP](#maxtemp)]. | every preset: `false` |
 | [RECOMBCALIBRATION_T_ELEC](#recombcalibration_t_elec) | The temperature [K] at which the code calibrates the total recombination rate of each ion to recombrates.txt, if that file exists. | every preset: `6000.` |
 | [MINPOP](#minpop) | The lower bound of the level populations, the ion populations, and the electron density nne [cm^-3]. | classic `1e-30`, kilonova_lte `1e-40`, nltenebular `1e-40`, nltephotospheric `1e-40` |
 
@@ -331,6 +332,18 @@ The limits [K] of T_e, T_J, the initial temperature, and the T_R of the whole sp
 The limits [K] of T_e, T_J, the initial temperature, and the T_R of the whole spectrum. The code clamps them into this range. The rate coefficient tables cover this range, and the accelerator rejects a step outside it. The bins of the radiation field have their own T_R limits in radfield.cc.
 
 **Preset values:** classic `140000.`, kilonova_lte `150000.`, nltenebular `30000.`, nltephotospheric `140000.`
+
+### TE_SOLVER_FOLLOW_PREVIOUS_ROOT
+
+`bool TE_SOLVER_FOLLOW_PREVIOUS_ROOT`
+
+Find the T_e of the thermal balance from the T_e at the start of the solve (T_e_old), and not from all of [[MINTEMP](#mintemp), [MAXTEMP](#maxtemp)]. Let f = heating - cooling. The solver calculates f(T_e_old). Then it steps to T_e_old * 1.2^k if f > 0, or to T_e_old / 1.2^k if f \< 0, for k = 1, 2, 3, ..., until f changes sign. Each step stops at [MINTEMP](#mintemp) or [MAXTEMP](#maxtemp). The solver then finds the root inside the last step. If f has no sign change before the limit, T_e gets that limit. If T_e_old is outside [[MINTEMP](#mintemp), [MAXTEMP](#maxtemp)], the solver searches all of that range and writes a line to the log.
+
+f decreases through zero at the first sign change in the direction of f, so that root is stable. With the thermal energy density U and dU/dt = f, U moves from T_e_old to this root. A cell thus stays on its branch of the balance until that branch disappears. Without this option, a balance with three roots can give a different stable root in each timestep, e.g. with [FORCE_SAHA_ION_BALANCE](#force_saha_ion_balance) in a dense kilonova cell.
+
+The step factor 1.2 sets the resolution. If one step holds two roots, f has the same sign at its ends, and the solver steps over both roots. Each pass of the grid update starts at the T_e of the previous pass. A step of [NLTE_TE_NNE_USE_ANDERSON_ACCEL](#nlte_te_nne_use_anderson_accel) between two passes can move T_e over an unstable root. The limit of each solve to a factor of two from T_e_old stays.
+
+**Every preset:** `false`
 
 ### RECOMBCALIBRATION_T_ELEC
 

@@ -359,11 +359,19 @@ The solver tests the difference between heating and cooling at [MINTEMP](options
 and logs a warning. It then applies the limit on the temperature change in one iteration.
 See [warnings about the temperature limits](troubleshooting.md#warnings-of-the-temperature-limits).
 
+If the balance has three roots, this search can take a different stable root in each timestep. With
+[TE_SOLVER_FOLLOW_PREVIOUS_ROOT](options.md#te_solver_follow_previous_root), the solver starts at the value of T_e at
+the start of the iteration. It multiplies or divides T_e by 1.2 in each step, in the direction of the sign of heating
+minus cooling, until the sign changes. It then finds the root inside the last step. That root is stable, so the cell
+stays on its branch of the balance until that branch disappears. If no sign change occurs before MINTEMP or MAXTEMP,
+the solver selects that limit.
+
 - Options: [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops),
   [COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS](options.md#collisional_heating_two_level_macro_atom_for_boltzmann_levelpops),
   [BFCOOLING_USELEVELPOPNOTIONPOP](options.md#bfcooling_uselevelpopnotionpop),
-  [USE_ION_BFHEATING_ESTIMATORS](options.md#use_ion_bfheating_estimators), and
-  [WRITE_ION_HEATING_COOLING_RATES](options.md#write_ion_heating_cooling_rates).
+  [USE_ION_BFHEATING_ESTIMATORS](options.md#use_ion_bfheating_estimators),
+  [WRITE_ION_HEATING_COOLING_RATES](options.md#write_ion_heating_cooling_rates), and
+  [TE_SOLVER_FOLLOW_PREVIOUS_ROOT](options.md#te_solver_follow_previous_root).
 
 ## The radiation field model
 
