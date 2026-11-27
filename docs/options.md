@@ -46,7 +46,6 @@ description.
 | [RATECOEFF_TABLESIZE](#ratecoeff_tablesize) | The number of temperature points of the rate coefficient tables, spaced in log T between [MINTEMP](#mintemp) and [MAXTEMP](#maxtemp). | classic `100`, kilonova_lte `200`, nltenebular `100`, nltephotospheric `100` |
 | [MINTEMP](#mintemp) | The limits [K] of T_e, T_J, the initial temperature, and the T_R of the whole spectrum. | classic `3500.`, kilonova_lte `500.`, nltenebular `1000.`, nltephotospheric `3500.` |
 | [MAXTEMP](#maxtemp) | The limits [K] of T_e, T_J, the initial temperature, and the T_R of the whole spectrum. | classic `140000.`, kilonova_lte `150000.`, nltenebular `30000.`, nltephotospheric `140000.` |
-| [TE_SOLVER_FOLLOW_PREVIOUS_ROOT](#te_solver_follow_previous_root) | Find the T_e of the thermal balance from the T_e at the start of the solve (T_e_old), and not from all of [[MINTEMP](#mintemp), [MAXTEMP](#maxtemp)]. | every preset: `false` |
 | [RECOMBCALIBRATION_T_ELEC](#recombcalibration_t_elec) | The temperature [K] at which the code calibrates the total recombination rate of each ion to recombrates.txt, if that file exists. | every preset: `6000.` |
 | [MINPOP](#minpop) | The lower bound of the level populations, the ion populations, and the electron density nne [cm^-3]. | classic `1e-30`, kilonova_lte `1e-40`, nltenebular `1e-40`, nltephotospheric `1e-40` |
 
@@ -73,6 +72,7 @@ description.
 
 | Option | Description | Preset values |
 | --- | --- | --- |
+| [TE_SOLVER_FOLLOW_PREVIOUS_ROOT](#te_solver_follow_previous_root) | Solve the thermal balance from the T_e at the start of the solve, and not over all of [[MINTEMP](#mintemp), [MAXTEMP](#maxtemp)]. | every preset: `false` |
 | [COLLISIONAL_HEATING_FROM_LEVELPOPS](#collisional_heating_from_levelpops) | Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator. | classic `false`, kilonova_lte `true`, nltenebular `true`, nltephotospheric `true` |
 | [COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS](#collisional_heating_two_level_macro_atom_for_boltzmann_levelpops) | Give each line of an ion with Boltzmann level populations at T_e the heat of a two-level macro atom. | every preset: `false` |
 | [BFCOOLING_USELEVELPOPNOTIONPOP](#bfcooling_uselevelpopnotionpop) | The bound-free cooling coefficient of each (level, target) continuum is per population of the target level of the upper ion, like the spontaneous recombination coefficient alpha_sp. | classic `false`, kilonova_lte `false`, nltenebular `true`, nltephotospheric `true` |
@@ -333,18 +333,6 @@ The limits [K] of T_e, T_J, the initial temperature, and the T_R of the whole sp
 
 **Preset values:** classic `140000.`, kilonova_lte `150000.`, nltenebular `30000.`, nltephotospheric `140000.`
 
-### TE_SOLVER_FOLLOW_PREVIOUS_ROOT
-
-`bool TE_SOLVER_FOLLOW_PREVIOUS_ROOT`
-
-Find the T_e of the thermal balance from the T_e at the start of the solve (T_e_old), and not from all of [[MINTEMP](#mintemp), [MAXTEMP](#maxtemp)]. Let f = heating - cooling. The solver calculates f(T_e_old). Then it steps to T_e_old * 1.2^k if f > 0, or to T_e_old / 1.2^k if f \< 0, for k = 1, 2, 3, ..., until f changes sign. Each step stops at [MINTEMP](#mintemp) or [MAXTEMP](#maxtemp). The solver then finds the root inside the last step. If f has no sign change before the limit, T_e gets that limit. If T_e_old is outside [[MINTEMP](#mintemp), [MAXTEMP](#maxtemp)], the solver searches all of that range and writes a line to the log.
-
-f decreases through zero at the first sign change in the direction of f, so that root is stable. With the thermal energy density U and dU/dt = f, U moves from T_e_old to this root. A cell thus stays on its branch of the balance until that branch disappears. Without this option, a balance with three roots can give a different stable root in each timestep, e.g. with [FORCE_SAHA_ION_BALANCE](#force_saha_ion_balance) in a dense kilonova cell.
-
-The step factor 1.2 sets the resolution. If one step holds two roots, f has the same sign at its ends, and the solver steps over both roots. Each pass of the grid update starts at the T_e of the previous pass. A step of [NLTE_TE_NNE_USE_ANDERSON_ACCEL](#nlte_te_nne_use_anderson_accel) between two passes can move T_e over an unstable root. The limit of each solve to a factor of two from T_e_old stays.
-
-**Every preset:** `false`
-
 ### RECOMBCALIBRATION_T_ELEC
 
 `double RECOMBCALIBRATION_T_ELEC`
@@ -602,6 +590,26 @@ The reverse rates come from detailed balance. The rates enter the NLTE rate matr
 **Every preset:** `false`
 
 ## Heating and cooling
+
+### TE_SOLVER_FOLLOW_PREVIOUS_ROOT
+
+`bool TE_SOLVER_FOLLOW_PREVIOUS_ROOT`
+
+Solve the thermal balance from the T_e at the start of the solve, and not over all of [[MINTEMP](#mintemp), [MAXTEMP](#maxtemp)]. Let f be heating minus cooling, and let T_e_start be the T_e at the start of the solve, limited to [[MINTEMP](#mintemp), [MAXTEMP](#maxtemp)]. The solver does these steps:
+
+- it calculates f(T_e_start);
+
+- it steps to T_e_start * 1.2^k if f > 0, or to T_e_start / 1.2^k if f \< 0, for k = 1, 2, 3, ..., until f changes sign;
+
+- it finds the root inside the last step.
+
+The steps stop at a factor of two from T_e_start and at [MINTEMP](#mintemp) or [MAXTEMP](#maxtemp), because the solve limits T_e to these values. If f has no sign change before the limit, T_e gets that limit.
+
+f decreases through zero at the first sign change in the direction of f. If the last step holds one root, that root is stable. The thermal energy density U has dU/dt = f, so T_e moves from T_e_start to this root. A cell thus stays on its branch of the balance until that branch disappears. Without this option, a balance with three roots can give a different stable root in each timestep, e.g. with [FORCE_SAHA_ION_BALANCE](#force_saha_ion_balance) in a dense kilonova cell.
+
+The step factor 1.2 sets the resolution. If one step holds two roots, f has the same sign at its ends, and the solver steps over both roots. If one step holds three roots, the solver can find any of them. Each pass of the grid update starts at the T_e of the previous pass. A step of [NLTE_TE_NNE_USE_ANDERSON_ACCEL](#nlte_te_nne_use_anderson_accel) between two passes can move T_e over an unstable root.
+
+**Every preset:** `false`
 
 ### COLLISIONAL_HEATING_FROM_LEVELPOPS
 

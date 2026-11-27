@@ -58,8 +58,6 @@ constexpr int RATECOEFF_TABLESIZE = 200;
 constexpr double MINTEMP = 500.;
 constexpr double MAXTEMP = 150000.;
 
-constexpr bool TE_SOLVER_FOLLOW_PREVIOUS_ROOT = false;
-
 constexpr double RECOMBCALIBRATION_T_ELEC = 6000.;
 
 constexpr double MINPOP = 1e-40;
@@ -97,6 +95,8 @@ constexpr std::optional<double> NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTP
 constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = false;
 
 // --- Heating and cooling ---
+
+constexpr bool TE_SOLVER_FOLLOW_PREVIOUS_ROOT = false;
 
 constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS = true;
 

@@ -196,7 +196,8 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 // ionisation balance, populations and nne at that temperature, so the cell is left in the state belonging
 // to the last T_e passed in. call_T_e_finder() relies on this and re-evaluates at the final T_e.
 // With LTEPOP_EXCITATION_USE_TJ false, the ionisation rates and the partition functions of the elements without
-// NLTE levels depend on T_e. The function calculates both at every T_e, so the residual is a function of T_e only.
+// NLTE levels depend on T_e. The function calculates both at every T_e. The ionisation rates also use the nne and the
+// populations that the previous evaluation left in the grid, so the residual also depends on that state.
 // An element with FORCE_SAHA_ION_BALANCE needs only the partition functions.
 auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const double t_current,
                                    HeatingCoolingRates& heatingcoolingrates, const std::span<double> bfheatingcoeffs)
@@ -407,10 +408,10 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
 }
 
 // Solve the thermal balance (heating = cooling) for the electron temperature T_e of a cell between MINTEMP and
-// MAXTEMP, and store the result in the grid. With TE_SOLVER_FOLLOW_PREVIOUS_ROOT, the root is the first root from
-// the T_e before this call in the direction of heating minus cooling. If the residual has no sign change in the
-// searched range, T_e gets the bound that the residual points to. The function then limits the change from the T_e
-// before this call to a factor of two in each direction. solve_Te_nltepops() calls it once in each pass.
+// MAXTEMP, and store the result in the grid. With TE_SOLVER_FOLLOW_PREVIOUS_ROOT, the solver searches from the T_e
+// before this call in the direction of the residual, to the first sign change. If the residual has no sign change in
+// the searched range, T_e gets the bound that the residual points to. The function then limits the change from the
+// T_e before this call to a factor of two in each direction. solve_Te_nltepops() calls it once in each pass.
 void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCoolingRates& heatingcoolingrates,
                      const std::span<double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -425,42 +426,41 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
   double T_e_upper = MAXTEMP;
   double f_T_e_lower{NAN};
   double f_T_e_upper{NAN};
-  const bool follow_previous_root = TE_SOLVER_FOLLOW_PREVIOUS_ROOT && T_e_old >= MINTEMP && T_e_old <= MAXTEMP;
-  if (follow_previous_root) {
-    // step from T_e_old in the direction of heating minus cooling, to the first sign change
+  if constexpr (TE_SOLVER_FOLLOW_PREVIOUS_ROOT) {
+    // step in the direction of the residual to the first sign change. The steps stop at the limits of the damping
+    // below, because T_e cannot pass them.
     constexpr double T_e_step_factor = 1.2;
-    T_e_lower = T_e_old;
-    T_e_upper = T_e_old;
-    f_T_e_lower = f_T_e(T_e_old);
-    f_T_e_upper = f_T_e_lower;
-    const double f_T_e_old = f_T_e_lower;
+    const double T_e_step_min = std::max(0.5 * T_e_old, MINTEMP);
+    const double T_e_step_max = std::min(2 * T_e_old, MAXTEMP);
+    const double T_e_start = std::clamp(T_e_old, MINTEMP, MAXTEMP);
+    const double f_T_e_start = f_T_e(T_e_start);
+    T_e_lower = T_e_start;
+    T_e_upper = T_e_start;
+    f_T_e_lower = f_T_e_start;
+    f_T_e_upper = f_T_e_start;
     int n_T_e_steps = 0;
-    if (f_T_e_old > 0) {
-      while (f_T_e_upper > 0 && T_e_upper < MAXTEMP) {
+    if (f_T_e_start > 0) {
+      while (f_T_e_upper > 0 && T_e_upper < T_e_step_max) {
         T_e_lower = T_e_upper;
         f_T_e_lower = f_T_e_upper;
-        T_e_upper = std::min(T_e_step_factor * T_e_upper, MAXTEMP);
+        T_e_upper = std::min(T_e_step_factor * T_e_upper, T_e_step_max);
         f_T_e_upper = f_T_e(T_e_upper);
         n_T_e_steps++;
       }
     } else {
-      while (f_T_e_lower < 0 && T_e_lower > MINTEMP) {
+      while (f_T_e_lower < 0 && T_e_lower > T_e_step_min) {
         T_e_upper = T_e_lower;
         f_T_e_upper = f_T_e_lower;
-        T_e_lower = std::max(T_e_lower / T_e_step_factor, MINTEMP);
+        T_e_lower = std::max(T_e_lower / T_e_step_factor, T_e_step_min);
         f_T_e_lower = f_T_e(T_e_lower);
         n_T_e_steps++;
       }
     }
     printlnlog(
-        "T_e solver follows the root from the previous T_e {:g} [K] (heating - cooling {:g}): {} steps to the "
-        "interval [{:g}, {:g}] [K]",
-        T_e_old, f_T_e_old, n_T_e_steps, T_e_lower, T_e_upper);
+        "the T_e solver steps from T_e_start {:g} [K] (residual {:g}) in {} steps to the interval [{:g}, {:g}] [K] "
+        "(residuals {:g}, {:g})",
+        T_e_start, f_T_e_start, n_T_e_steps, T_e_lower, T_e_upper, f_T_e_lower, f_T_e_upper);
   } else {
-    if constexpr (TE_SOLVER_FOLLOW_PREVIOUS_ROOT) {
-      printlnlog("T_e solver: the previous T_e {:g} [K] is outside [{:g}, {:g}] [K], so the solver searches all of it",
-                 T_e_old, MINTEMP, MAXTEMP);
-    }
     f_T_e_lower = f_T_e(MINTEMP);
     f_T_e_upper = f_T_e(MAXTEMP);
   }
@@ -486,8 +486,10 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
         toms748_solve(f_T_e, T_e_lower, T_e_upper, f_T_e_lower, f_T_e_upper, ftol<fractional_accuracy>, iternum);
     T_e = 0.5 * (result.first + result.second);
     if (iternum >= maxit) {
-      printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations. interval [{:g}, {:g}] [K]",
-                 iternum, result.first, result.second);
+      printlnlog(
+          "[warning] call_T_e_finder: T_e did not converge within {} iterations in modelcell {}. interval [{:g}, {:g}] "
+          "[K]",
+          iternum, modelgridindex, result.first, result.second);
     } else {
       printlnlog("after {} iterations, T_e = {:g} [K], interval [{:g}, {:g}] [K]", iternum, T_e, result.first,
                  result.second);
@@ -495,19 +497,23 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
   } else if (TE_SOLVER_FOLLOW_PREVIOUS_ROOT && (f_T_e_lower == 0 || f_T_e_upper == 0)) {
     T_e = (f_T_e_lower == 0) ? T_e_lower : T_e_upper;
   } else if (f_T_e_upper < 0) {
-    // Thermal balance equation always negative ===> T_e = T_min
-    T_e = MINTEMP;
-    printlnlog(
-        "[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary {:g} in modelcell {} "
-        "(T_R={:g},W={:g}). T_e forced to be MINTEMP",
-        MINTEMP, modelgridindex, grid::TR_allcells[nonemptymgi], grid::W_allcells[nonemptymgi]);
+    // cooling is bigger than heating at both ends ===> T_e = T_e_lower
+    T_e = T_e_lower;
+    if (T_e == MINTEMP) {
+      printlnlog(
+          "[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary {:g} in modelcell {} "
+          "(T_R={:g},W={:g}). T_e forced to be MINTEMP",
+          MINTEMP, modelgridindex, grid::TR_allcells[nonemptymgi], grid::W_allcells[nonemptymgi]);
+    }
   } else {
-    // Thermal balance equation always positive ===> T_e = T_max
-    T_e = MAXTEMP;
-    printlnlog(
-        "[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [{:g},{:g}] in modelcell {} "
-        "(T_R={:g},W={:g}). T_e forced to be MAXTEMP",
-        MINTEMP, MAXTEMP, modelgridindex, grid::TR_allcells[nonemptymgi], grid::W_allcells[nonemptymgi]);
+    // heating is bigger than cooling at both ends ===> T_e = T_e_upper
+    T_e = T_e_upper;
+    if (T_e == MAXTEMP) {
+      printlnlog(
+          "[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [{:g},{:g}] in modelcell "
+          "{} (T_R={:g},W={:g}). T_e forced to be MAXTEMP",
+          T_e_lower, T_e_upper, modelgridindex, grid::TR_allcells[nonemptymgi], grid::W_allcells[nonemptymgi]);
+    }
   }
 
   if (T_e > 2 * T_e_old) {
