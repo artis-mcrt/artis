@@ -113,7 +113,7 @@ constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ion
 // Use the radiation temperature T_J instead of T_e in the Boltzmann factor of the excitation, also for the
 // sublevels of a superlevel. With false, the T_e finder also recomputes the photoionisation rates of the ground
 // continua of the elements without NLTE levels when T_e moves by more than 10 percent.
-// COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM needs the value false.
+// COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS needs the value false.
 constexpr bool LTEPOP_EXCITATION_USE_TJ;
 
 // Force the Saha ionisation balance of an element. The NLTE solver replaces the ground level row of each ion
@@ -249,7 +249,8 @@ constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
 // to the heating, and its packets become k-packets.
 //
 // Level populations that are Boltzmann at T_e make the sum equal to the collisional excitation cooling, so their
-// lines have no net cooling. COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM selects a different term for these ions.
+// lines have no net cooling. COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS selects a different
+// term for these ions.
 constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
 
 // Give each line of an ion with Boltzmann level populations at T_e the heat of a two-level macro atom. The option
@@ -276,7 +277,7 @@ constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
 // - beta: the Sobolev escape probability of Kromer & Sim (2009), MNRAS, 398, 1809-1826,
 //   doi:10.1111/j.1365-2966.2009.15256.x;
 // - J_nu: the mean intensity of the radiation field model of the cell.
-constexpr bool COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM;
+constexpr bool COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS;
 
 // The bound-free cooling coefficient of each (level, target) continuum is per population of the target level of
 // the upper ion, like the spontaneous recombination coefficient alpha_sp. True multiplies it by the population

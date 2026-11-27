@@ -73,7 +73,7 @@ description.
 | Option | Description | Preset values |
 | --- | --- | --- |
 | [COLLISIONAL_HEATING_FROM_LEVELPOPS](#collisional_heating_from_levelpops) | Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator. | classic `false`, kilonova_lte `true`, nltenebular `true`, nltephotospheric `true` |
-| [COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM](#collisional_heating_two_level_macro_atom) | Give each line of an ion with Boltzmann level populations at T_e the heat of a two-level macro atom. | every preset: `false` |
+| [COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS](#collisional_heating_two_level_macro_atom_for_boltzmann_levelpops) | Give each line of an ion with Boltzmann level populations at T_e the heat of a two-level macro atom. | every preset: `false` |
 | [BFCOOLING_USELEVELPOPNOTIONPOP](#bfcooling_uselevelpopnotionpop) | The bound-free cooling coefficient of each (level, target) continuum is per population of the target level of the upper ion, like the spontaneous recombination coefficient alpha_sp. | classic `false`, kilonova_lte `false`, nltenebular `true`, nltephotospheric `true` |
 | [USE_ION_BFHEATING_ESTIMATORS](#use_ion_bfheating_estimators) | Store a bound-free heating estimator for each ground continuum. | classic `true`, kilonova_lte `false`, nltenebular `false`, nltephotospheric `false` |
 | [BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR](#bfheating_use_departure_ratio_and_te_not_lte_tr) | Select the stimulated recombination factor of the analytic bound-free heating. | every preset: `false` |
@@ -434,7 +434,7 @@ nltephotospheric
 
 `bool LTEPOP_EXCITATION_USE_TJ`
 
-Use the radiation temperature T_J instead of T_e in the Boltzmann factor of the excitation, also for the sublevels of a superlevel. With false, the T_e finder also recomputes the photoionisation rates of the ground continua of the elements without NLTE levels when T_e moves by more than 10 percent. [COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM](#collisional_heating_two_level_macro_atom) needs the value false.
+Use the radiation temperature T_J instead of T_e in the Boltzmann factor of the excitation, also for the sublevels of a superlevel. With false, the T_e finder also recomputes the photoionisation rates of the ground continua of the elements without NLTE levels when T_e moves by more than 10 percent. [COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS](#collisional_heating_two_level_macro_atom_for_boltzmann_levelpops) needs the value false.
 
 **Preset values:** classic `true`, kilonova_lte `false`, nltenebular `false`, nltephotospheric `false`
 
@@ -596,13 +596,13 @@ The reverse rates come from detailed balance. The rates enter the NLTE rate matr
 
 Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator. The estimator also holds the collisional recombination heating. The sum does not. The level populations of an element without NLTE levels do not follow a non-thermal excitation, so the sum would lose the heat of its collisional de-excitation. The same applies in a cell where the last NLTE solve of an element fell back to LTE. With this option, the non-thermal excitation energy of such an element therefore goes to the heating, and its packets become k-packets.
 
-Level populations that are Boltzmann at T_e make the sum equal to the collisional excitation cooling, so their lines have no net cooling. [COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM](#collisional_heating_two_level_macro_atom) selects a different term for these ions.
+Level populations that are Boltzmann at T_e make the sum equal to the collisional excitation cooling, so their lines have no net cooling. [COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS](#collisional_heating_two_level_macro_atom_for_boltzmann_levelpops) selects a different term for these ions.
 
 **Preset values:** classic `false`, kilonova_lte `true`, nltenebular `true`, nltephotospheric `true`
 
-### COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM
+### COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS
 
-`bool COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM`
+`bool COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS`
 
 Give each line of an ion with Boltzmann level populations at T_e the heat of a two-level macro atom. The option needs [COLLISIONAL_HEATING_FROM_LEVELPOPS](#collisional_heating_from_levelpops) true, [LTEPOP_EXCITATION_USE_TJ](#ltepop_excitation_use_tj) false, and no value of [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](#rpkt_boundbound_thermalisation_probability). With that option, the packets use no macro atom for the lines.
 
