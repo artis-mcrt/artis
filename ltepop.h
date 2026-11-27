@@ -19,6 +19,23 @@
 // Floor of nne. The stored nne is a float, and a fast-math build flushes a denormal float to zero.
 constexpr double MINNNE = std::max(MINPOP, static_cast<double>(std::numeric_limits<float>::min()));
 
+// The condition of a warning can persist over the many evaluations that the nne and T_e solvers make for one cell.
+// A marker reports the warning only at its first occurrence for each cell and timestep.
+struct CellWarningMarker {
+  ptrdiff_t nonemptymgi{-1};
+  int timestep{-1};
+
+  // returns true the first time it is called for a particular cell and timestep
+  auto is_first_occurrence(const ptrdiff_t nonemptymgi_in) -> bool {
+    if (nonemptymgi_in == nonemptymgi && globals::timestep == timestep) {
+      return false;
+    }
+    nonemptymgi = nonemptymgi_in;
+    timestep = globals::timestep;
+    return true;
+  }
+};
+
 // Level population [cm^-3]: NLTE where the solver provided one, else Boltzmann off the ground level. Floored at
 // MINPOP when the element is present (0 when it is absent), except where the underlying calculation flags that
 // the floor should be skipped, which it does for populations that came from the NLTE solver.

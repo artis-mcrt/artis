@@ -359,6 +359,11 @@ The solver tests the difference between heating and cooling at [MINTEMP](options
 and logs a warning. It then applies the limit on the temperature change in one iteration.
 See [warnings about the temperature limits](troubleshooting.md#warnings-of-the-temperature-limits).
 
+The solver finds one root between the limits. After a change of T_e of more than 20% in one iteration, the code
+evaluates the balance at the T_e from the start of the iteration. A sign change between that T_e and the opposite
+limit shows a possible second root, and the log gets a warning (see
+[Troubleshooting](troubleshooting.md#a-warning-of-a-possible-second-root-of-the-thermal-balance)).
+
 - Options: [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops),
   [COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS](options.md#collisional_heating_two_level_macro_atom_for_boltzmann_levelpops),
   [BFCOOLING_USELEVELPOPNOTIONPOP](options.md#bfcooling_uselevelpopnotionpop),
