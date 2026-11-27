@@ -26,11 +26,8 @@ light travel time. A far-side packet can escape before the requested end and arr
 escape at 9.5 days can contribute to an arrival bin at 10.5 days.
 
 A near-side packet that escapes after the requested end can arrive before it. The packet files cover escape
-times through the requested end only. Arrival bins that are incomplete therefore start before the requested end. The complete range of arrival
-times ends earlier than the requested end.
-
-After a partial run, later arrival bins can also hold nonzero flux. An incomplete bin can hold nonzero flux.
-Extend the simulation to obtain the contributions of the later escapes.
+times through the requested end only. An arrival bin can therefore have nonzero flux and still lack contributions
+from later escapes. Extend the simulation to include those contributions.
 
 Run `exspec` in the model folder. Use one rank or more, up to the number of packet files.
 
@@ -38,14 +35,19 @@ Run `exspec` in the model folder. Use one rank or more, up to the number of pack
 mpirun -np 1 artis/exspec
 ```
 
-`exspec` reads the same `input.txt`, model, and atomic data files as `sn3d`.
+`exspec` replaces the spectra and light curves in the model folder. Keep a copy of the original files if you need
+to compare the two calculations.
+
+Use the model and atomic data files from the simulation. The line indices in the packet files refer to the
+original line list. Build `exspec` from the same source version as `sn3d`.
+Keep the values of `POL_ON` and `SAMPLE_RPKT_EMISSION`. These options select columns in the packet files.
 The `nprocs_exspec` line of `input.txt` gives the number of `sn3d` ranks that wrote the packet files.
 
 :::{warning}
-If `input.txt` is absent, `exspec` copies `input-newrun.txt` to `input.txt`. This copy holds the parameters for a new
-simulation. In this case, restore the `input.txt` for your restart files before you resume `sn3d`.
-Check that `timestep_start` matches those files and that `simulation_continued_from_saved` is 1.
-A new simulation [removes previous output and restart files](outputfiles.md#a-new-simulation-removes-the-files-of-the-previous-one).
+If `input.txt` is absent, `exspec` copies a plain `input-newrun.txt` to `input.txt` when it finds one.
+This copy takes priority even if `input.txt.zst` holds newer parameters.
+Before you resume `sn3d`, [check the mode and timestep](troubleshooting.md#the-run-starts-again-from-the-first-timestep)
+against your restart files. A new simulation [removes the previous output and restart files](outputfiles.md#a-new-simulation-removes-the-files-of-the-previous-one).
 :::
 
 Rank 0 writes the log to `exspec.txt`. It writes one line to the standard output at the start and one at the end.
@@ -53,7 +55,29 @@ Rank 0 writes the log to `exspec.txt`. It writes one line to the standard output
 `artis/exspec --version` gives the git version, the preset, and the compiler of the build. An unknown option or
 argument stops `exspec` before it reads a file.
 
-It writes `light_curve.out`, `spec.out`, `emission.out`, `emissiontrue.out`, and `absorption.out`. A run with
-`KEEP_ESCAPED_GAMMAS` also gets `gamma_light_curve.out` and `gamma_spec.out`, and a run with `POL_ON` also gets
-`specpol.out`, `emissionpol.out`, and `absorptionpol.out`. A 2D or a 3D model also gives the direction-resolved
-files. [Output files](outputfiles.md#the-format-of-the-files) gives the format of each file.
+`exspec` writes its output in the model folder.
+
+| Quantity | Files | Builds that write the files |
+| --- | --- | --- |
+| Light curve | `light_curve.out` | All builds |
+| Spectrum | `spec.out` | All builds |
+| Spectra by atomic process | `emission.out`, `emissiontrue.out`, `absorption.out` | All builds |
+| Gamma rays | `gamma_light_curve.out`, `gamma_spec.out` | `KEEP_ESCAPED_GAMMAS` |
+| Polarisation | `specpol.out`, `emissionpol.out`, `absorptionpol.out` | `POL_ON` |
+
+[Output files](outputfiles.md#the-format-of-the-files) gives the columns and units.
+
+## Read the spectra of each direction
+
+For a 2D or a 3D input model, `sn3d` and `exspec` write the files of each direction bin in `speclc_angle_res/`.
+You can read a single bin directly. Run the merge script in the model folder to prepare the files for artistools.
+
+```sh
+python3 artis/scripts/mergeangleres.py
+```
+
+Run the command again if `sn3d` or `exspec` writes new files for the direction bins.
+The [output file reference](outputfiles.md#the-direction-resolved-files) gives the bin numbers, file layout, and flux normalisation.
+
+For a spectrum along a direction from `vpkt.txt`, use the [virtual packet files](outputfiles.md#the-virtual-packet-files).
+`sn3d` calculates those spectra during the simulation.

@@ -15,24 +15,27 @@ The radiation field is a set of indivisible energy packets. A packet changes its
 form, and the code follows it until it escapes or the simulation ends. [How a simulation works](simulation.md) gives
 the types of the packets.
 
-The sum of the energy of the {term}`pellets <pellet>` of a rank is the energy that the model releases in the simulation:
+Each rank divides the total energy available to its {term}`pellets <pellet>` by its number of packets.
+The reference energy per pellet in the comoving frame is
 
 $$
 \varepsilon = \frac{1}{N_\mathrm{rank}} \sum_\mathrm{cells} V(t_\mathrm{min}) \, \rho(t_\mathrm{min}) \,
 \left( e_\mathrm{decay} + q \right)
 $$
 
-- $\varepsilon$ is the energy of one pellet in the comoving frame.
-- $N_\mathrm{rank}$ is the number of packets of the rank, so each rank holds the energy of the whole model.
+- Every pellet starts with energy $\varepsilon$ when [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies) is true.
+- $N_\mathrm{rank}$ is the number of packets of the rank. Each rank samples the energy of the whole model.
 - $V$ and $\rho$ are the volume and the density of a {term}`propagation cell`.
-- $e_\mathrm{decay}$ is the decay energy per unit mass of the cell in the time range of the simulation.
+- $e_\mathrm{decay}$ is the decay energy per unit mass up to the end of the simulation. The interval starts
+  at the model snapshot with [INITIAL_PACKETS_ON](options.md#initial_packets_on), or at the first timestep otherwise.
 - $q$ is the `q` column of `model.txt`, multiplied by $t_\mathrm{model} / t_\mathrm{min}$ for the adiabatic loss. It is
   zero without [INITIAL_PACKETS_ON](options.md#initial_packets_on).
 
-The code selects a cell in proportion to its energy, and then a decay chain. With
-[UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies), it adds one exponential sample of the mean lifetime for
-each nuclide of the chain to the snapshot time of `model.txt`. It samples again until the result is inside the time
-range of the simulation.
+The code selects a cell in proportion to its energy. Within the cell it selects a decay chain or the initial energy
+$q$ in proportion to each contribution. For a decay chain with uniform pellet energies, it samples the decay time
+from the distribution of the chain within the interval. It normally samples successive exponential lifetimes from
+the snapshot time until it obtains a decay in the interval. If the expected number of trials exceeds one million,
+it inverts the cumulative probability of the chain instead.
 
 - Options:
     - [NUM_PACKETS](options.md#num_packets) sets the number of packets of all ranks together.
@@ -154,10 +157,16 @@ which {term}`preset` selects which mode.
 
 Code: `ltepop.cc` (see [Code map](codemap.md)).
 
-The first `num_lte_timesteps` {term}`timesteps <timestep>` of `input.txt` solve the ionisation balance in local thermodynamic equilibrium
-({term}`LTE`). After these timesteps, an element without NLTE levels gets a photoionisation equilibrium for its ions and
-Boltzmann populations for its levels. An element that [FORCE_SAHA_ION_BALANCE](options.md#force_saha_ion_balance)
-selects keeps the Saha ionisation balance. The kilonova preset selects each element except Sr, Y, and Zr.
+The first update of a new run uses the Saha ionisation balance. The code also uses this balance in the first
+`num_lte_timesteps` {term}`timesteps <timestep>` and after a timestep with {term}`grey opacity` in the cell.
+In other updates, [FORCE_SAHA_ION_BALANCE](options.md#force_saha_ion_balance) selects the elements that keep the
+Saha ionisation balance. For other elements without NLTE levels, the code balances ionisation against spontaneous
+recombination between adjacent ion stages. Ionisation includes photoionisation, collisional ionisation, and
+non-thermal ionisation when active. The levels within each ion have Boltzmann populations.
+
+The `kilonova_lte` preset selects the Saha ionisation balance for all elements except strontium, yttrium, and
+zirconium. Outside an LTE or grey update, it uses ionisation and recombination rates for these three elements.
+It uses Boltzmann excitation at the electron temperature for every ion.
 
 - Options:
     - [LTEPOP_EXCITATION_USE_TJ](options.md#ltepop_excitation_use_tj) selects the temperature of the Boltzmann
@@ -194,11 +203,11 @@ non-thermal electrons until T_e and the electron density change by less than a t
 the populations of the significant ions. With the acceleration, it also needs an estimate of the remaining error below
 the tolerance.
 
-The iteration also stops after [NLTE_TE_NNE_MAXITER](options.md#nlte_te_nne_maxiter) + 1 passes. With
-[COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), the cell makes one more pass when an
-element falls back to {term}`LTE` in the last pass. That pass removes the element from the stored list of non-thermal
-excitations. The cell makes at most one extra pass for each element. The cell then keeps the last solution, and the log
-of the rank has a message with the text `failed to converge`.
+The usual limit is [NLTE_TE_NNE_MAXITER](options.md#nlte_te_nne_maxiter) + 1 passes. With the Spencer-Fano solver and
+[COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), a new fallback to {term}`LTE`
+in the last pass permits another pass. The solver then updates the list of non-thermal excitations to exclude the
+element. The number of extra passes cannot exceed the number of elements. If the solution fails to converge by the
+final pass, the cell keeps that solution and the rank logs `failed to converge`.
 
 From the timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep), the
 equations of the ion populations have a time term. The ion populations are then not in a statistical equilibrium,
@@ -210,12 +219,16 @@ $$
 = -\frac{n_\mathrm{ion}^\mathrm{old}}{\Delta t}
 $$
 
-$n_\mathrm{ion}$ is the sum of the populations of the ion, and $n_\mathrm{ion}^\mathrm{old}$ is its value at the
-grid update before. $\Delta t$ is the time between the two grid updates. The sum over the levels of an ion removes the transitions inside the ion, so the sum is the
-backward Euler step of the ion population. The
-time term needs a complete NLTE solution of the cell from the timestep before. A cell without one keeps the
-equations with no time term for that timestep, e.g. after an LTE timestep, after the {term}`grey opacity`, or after a
-fallback to LTE.
+$n_\mathrm{ion}$ is the number density of the ion. To obtain $n_\mathrm{ion}^\mathrm{old}$, the solver first
+normalises the previous ion fractions over the ion stages in the current matrix. It multiplies each fraction by the
+current number density of the element. This accounts for expansion and changes in abundance between the two grid
+updates. $\Delta t$ is the time between these updates. The transitions within an ion cancel in the sum over
+its levels. The sum gives the backward Euler step for that ion.
+
+The time term needs a complete NLTE solution of the cell from the previous timestep. The solver omits the term after
+an LTE update, a grey update, or a fallback to LTE. It always omits the term for an element with a prescribed Saha
+balance. The solver also omits it for an element with zero previous population in all its retained ion stages.
+A new decay daughter can meet this condition.
 
 If the solution of an element fails, the solver removes one ion and solves again, or the element falls back to
 LTE. The log of the rank has a warning for each fallback to LTE.
@@ -254,9 +267,8 @@ LTE. The log of the rank has a warning for each fallback to LTE.
 
 Code: `thermalbalance.cc` (see [Code map](codemap.md)).
 
-A cell in an LTE timestep, and a cell with the grey opacity, have no thermal balance. The code sets their T_e to the
-temperature of the mean intensity. The first timestep of a new simulation is different: each cell keeps its initial
-temperature.
+The first timestep of a new simulation uses the initial temperature of each cell. Later LTE updates set $T_e$ to
+the temperature of the mean intensity. A cell that used grey opacity in the previous timestep gets the same treatment.
 
 The code calculates the initial temperature from the energy of the decays between the snapshot time of `model.txt`
 and the midpoint of the first timestep. With [INITIAL_PACKETS_ON](options.md#initial_packets_on), it adds the energy
@@ -293,14 +305,19 @@ bound-free heating (see [the radiation field model](#the-radiation-field-model))
 [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), the collisional heating comes
 from a Monte Carlo estimator, which also holds the collisional recombination heating.
 
-With [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), the collisional heating
-is the sum of $n_u C_{ul} \Delta E$ over the lines. $C_{ul}$ and $C_{lu}$ are the collisional rates of a line for
-each atom, and $\Delta E$ is the energy of the line. Level populations that are Boltzmann at $T_e$ make this sum equal
-to the collisional excitation cooling. With [LTEPOP_EXCITATION_USE_TJ](options.md#ltepop_excitation_use_tj) false,
-two groups of ions have such populations. The first group is the ions without NLTE levels. The second group is the
-ions of an element whose last NLTE solve in the cell fell back to {term}`LTE`.
+With [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), the code calculates
+collisional heating for each line. A line with upper population $n_u$ usually gives $n_u C_{ul}\Delta E$ of heating
+per unit volume and time. $C_{ul}$ and $C_{lu}$ are the collisional rates per atom. $\Delta E$ is the energy of the
+transition. For Boltzmann populations at $T_e$, this heating exactly cancels the collisional excitation cooling
+$n_l C_{lu}\Delta E$.
 
-For each line of these ions, the term of the sum is therefore the energy flow of a two-level macro atom:
+The code uses a two-level macro atom for the heating of a line when all three conditions hold.
+
+- [LTEPOP_EXCITATION_USE_TJ](options.md#ltepop_excitation_use_tj) is false, so Boltzmann excitation uses $T_e$.
+- [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](options.md#rpkt_boundbound_thermalisation_probability) has no value.
+- The ion has no excited NLTE levels, or its element fell back to {term}`LTE` in the last NLTE solve of the cell.
+
+The two-level macro atom gives the heating rate
 
 $$
 H_{ul} = \left[ n_l C_{lu} + \left( n_l B_{lu} - n_u B_{ul} \right) \beta J_\nu \right] \Delta E \,
@@ -313,12 +330,11 @@ $\beta$ is the Sobolev escape probability $(1 - e^{-\tau_{lu}}) / \tau_{lu}$ of 
 $\tau_{lu}$ at the middle of the timestep and $\beta = 1$ for $\tau_{lu} = 0$. $J_\nu$ is the mean intensity of the
 radiation field model of the cell.
 
-The populations are the Boltzmann populations, as for the line opacity, so the formula is different from the
-statistical equilibrium of the two levels. The net cooling of a line is zero when $J_\nu$ is the Planck function at
-$T_e$. The formula uses only the rates of the line, so it ignores the cascades through the other levels of the ion. It
-also has no term for a macro atom that an ionisation or a recombination activates. With
-[RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](options.md#rpkt_boundbound_thermalisation_probability), the packets use
-no macro atom for the lines, so all ions keep the sum.
+The line opacity and the collisional excitation cooling use the same Boltzmann populations. The net line cooling
+is $n_l C_{lu}\Delta E-H_{ul}$. With $J_\nu=0$, radiation removes the fraction
+$\beta A_{ul}/(\beta A_{ul}+C_{ul})$ of the excitation energy from collisions. With a Planck field at $T_e$, the net
+line cooling is zero. The two-level approximation omits cascades through other levels and activation by ionisation
+or recombination.
 
 The cooling rates $C$ are the free-free, the free-bound, and the collisional cooling, and the adiabatic cooling of
 the expansion. With the gas pressure $p = (n_\mathrm{ion} + n_e) \, k_\mathrm{B} T_e$ and a volume that grows as
@@ -332,12 +348,14 @@ C_\mathrm{time} = \frac{3}{2} k_\mathrm{B} \,
 \frac{n_\mathrm{tot} \left( T_e - T_e^\mathrm{old} \right) + T_e^\mathrm{old} \left( n_e - n_e^\mathrm{old} \right)}{\Delta t}
 $$
 
-$n_\mathrm{tot}$ is $n_\mathrm{ion} + n_e$. This term has the same condition as the time
-term of the ion populations: the cell needs a complete NLTE solution from the timestep before.
+$n_\mathrm{tot}$ is $n_\mathrm{ion} + n_e$. The code calculates $n_e^\mathrm{old}$ from the previous ion fractions
+and the current number density of each element. This term needs a complete NLTE solution of the cell from the
+previous timestep.
 
-The code keeps T_e between [MINTEMP](options.md#mintemp) and [MAXTEMP](options.md#maxtemp). A cell at one of these
-limits has no thermal balance, and the log of its rank has a warning (see
-[Troubleshooting](troubleshooting.md#the-log)).
+The solver tests the difference between heating and cooling at [MINTEMP](options.md#mintemp) and
+[MAXTEMP](options.md#maxtemp). If the difference has the same sign at both temperatures, the solver selects a limit
+and logs a warning. It then applies the limit on the temperature change in one iteration.
+See [warnings about the temperature limits](troubleshooting.md#warnings-of-the-temperature-limits).
 
 The solver finds one root between the limits. After a change of T_e of more than 20% in one iteration, the code
 evaluates the balance at the T_e from the start of the iteration. A sign change between that T_e and the opposite
@@ -365,10 +383,10 @@ of that timestep. $\varepsilon_\mathrm{cmf}$ is the comoving energy of a packet,
 the cell. The sum holds the paths of all ranks. Each rank holds the energy of the whole model, so the code divides by
 $N_\mathrm{ranks}$. The estimator of $\nu J$ has the additional factor $\nu_\mathrm{cmf}$ in the sum.
 
-The grid update fits a dilute
-blackbody to the full spectrum of each cell, with a dilution factor W and a radiation temperature T_R. With the
-multibin model, it also fits a dilute blackbody to each frequency bin. The last bin is an exception: its temperature
-is the electron temperature of the cell, and only its dilution factor comes from the fit.
+Outside an LTE update, a cell that used detailed transport in the previous timestep gets a dilute blackbody fit.
+The full spectrum gives the dilution factor W and the radiation temperature T_R. With the multibin model,
+the code also fits a dilute blackbody to each frequency bin. In the last bin, the code sets the temperature to the
+electron temperature of the cell and fits only the dilution factor.
 
 The rates of the photoionisation and of the bound-free heating use these fits. The photoionisation rate of a
 continuum with a detailed bound-free estimator is an exception (see the next section). The bound-free heating of
@@ -380,9 +398,9 @@ code divides that estimator by the bound-free heating of the same continuum from
 bound-free heating of each level from the fits by this ratio of the ground continuum with the nearest threshold. If
 the heating from the fits is zero, the ratio becomes 1 and the log has a warning.
 
-A cell in an LTE timestep, and a cell with the grey opacity, get no fit. The code then sets T_R to the temperature
-of the mean intensity, and W to 1. In the first timestep of a new simulation, T_R is the initial temperature of the
-cell (see [the thermal balance](#the-thermal-balance)).
+A cell in an LTE timestep, or a cell that used grey opacity in the previous timestep, gets no fit. The code then
+sets T_R to the temperature of the mean intensity, and W to 1. In the first timestep of a new simulation, T_R is
+the initial temperature of the cell (see [the thermal balance](#the-thermal-balance)).
 
 - Options:
     - [MULTIBIN_RADFIELD_FIRST_TIMESTEP](options.md#multibin_radfield_first_timestep) sets the first timestep that
