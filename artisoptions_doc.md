@@ -114,8 +114,8 @@ constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ion
 // sublevels of a superlevel. The T_e finder calculates the ionisation rates of the ground continua of the elements
 // without NLTE levels again at each trial T_e. With true, only the collisional ionisation rate changes. The
 // photoionisation rate keeps the W and T_R that the grid update uses to normalise the Monte Carlo estimators. The
-// collisional ionisation rate is proportional to nne, so the T_e finder repeats it and the ion balance until nne
-// changes by less than 0.1%. An element with FORCE_SAHA_ION_BALANCE gets no such rate, because the Saha balance does
+// collisional ionisation rate is proportional to nne, so the T_e finder repeats the ionisation rates and the ion
+// balance until nne changes by less than 0.1%. An element with FORCE_SAHA_ION_BALANCE gets no such rate, because the Saha balance does
 // not use it.
 // COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS needs the value false.
 constexpr bool LTEPOP_EXCITATION_USE_TJ;
