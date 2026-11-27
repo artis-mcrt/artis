@@ -197,6 +197,7 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 // to the last T_e passed in. call_T_e_finder() relies on this and re-evaluates at the final T_e.
 // With LTEPOP_EXCITATION_USE_TJ false, the ionisation rates and the partition functions of the elements without
 // NLTE levels depend on T_e. The function calculates both at every T_e, so the residual is a function of T_e only.
+// An element with FORCE_SAHA_ION_BALANCE needs only the partition functions.
 auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const double t_current,
                                    HeatingCoolingRates& heatingcoolingrates, const std::span<double> bfheatingcoeffs)
     -> double {
@@ -208,13 +209,15 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
   if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
     for (int element = 0; element < get_nelements(); element++) {
       if (!elem_has_nlte_levels(element)) {
-        // the ionisation rates from the current level populations
-        const int nions = get_nions(element);
-        for (int ion = 0; ion < nions - 1; ion++) {
-          const auto groundcontindex = get_groundcontindex(element, ion);
-          if (groundcontindex >= 0) {
-            globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                    groundcontindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
+        if (!FORCE_SAHA_ION_BALANCE(get_atomicnumber(element))) {
+          // the ionisation rates from the current level populations
+          const int nions = get_nions(element);
+          for (int ion = 0; ion < nions - 1; ion++) {
+            const auto groundcontindex = get_groundcontindex(element, ion);
+            if (groundcontindex >= 0) {
+              globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
+                                      groundcontindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
+            }
           }
         }
         calculate_cellpartfuncts(nonemptymgi, element);

@@ -434,7 +434,7 @@ nltephotospheric
 
 `bool LTEPOP_EXCITATION_USE_TJ`
 
-Use the radiation temperature T_J instead of T_e in the Boltzmann factor of the excitation, also for the sublevels of a superlevel. With false, the T_e finder also calculates the ionisation rates of the ground continua of the elements without NLTE levels again at each trial T_e. [COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS](#collisional_heating_two_level_macro_atom_for_boltzmann_levelpops) needs the value false.
+Use the radiation temperature T_J instead of T_e in the Boltzmann factor of the excitation, also for the sublevels of a superlevel. With false, the T_e finder also calculates the ionisation rates of the ground continua of the elements without NLTE levels again at each trial T_e. An element with [FORCE_SAHA_ION_BALANCE](#force_saha_ion_balance) gets no such rate, because the Saha balance does not use it. [COLLISIONAL_HEATING_TWO_LEVEL_MACRO_ATOM_FOR_BOLTZMANN_LEVELPOPS](#collisional_heating_two_level_macro_atom_for_boltzmann_levelpops) needs the value false.
 
 **Preset values:** classic `true`, kilonova_lte `false`, nltenebular `false`, nltephotospheric `false`
 

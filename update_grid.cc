@@ -238,11 +238,11 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
         }
       }
       std::println(estimators_file);
-      // This line keeps its label for artistools. In a cell with a thermal balance, only an element with NLTE levels
-      // keeps the normalised Monte Carlo estimator here. For each other element, the grid update replaces it with
-      // calculate_iongamma_per_gspop(), the analytic radiative and collisional ionisation rate per ground level
-      // population. That rate includes corrphotoionrenorm (see iongamma_is_zero() in ratecoeff.cc). In an LTE
-      // timestep and in a grey cell, every element keeps the normalised Monte Carlo estimator.
+      // This line keeps its label for artistools. In a cell with a thermal balance, an element with NLTE levels or
+      // with FORCE_SAHA_ION_BALANCE keeps the normalised Monte Carlo estimator here. For each other element, the grid
+      // update replaces it with calculate_iongamma_per_gspop(), the analytic radiative and collisional ionisation rate
+      // per ground level population. That rate includes corrphotoionrenorm (see iongamma_is_zero() in ratecoeff.cc).
+      // In an LTE timestep and in a grey cell, every element keeps the normalised Monte Carlo estimator.
       std::print(estimators_file, "gammaestimator     Z={:2d}", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         if (get_groundcontindex(element, ion) >= 0) {
@@ -742,7 +742,8 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
           (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
 
       // with LTEPOP_EXCITATION_USE_TJ false, the T_e finder calculates these rates during the solve
-      if (LTEPOP_EXCITATION_USE_TJ && !elem_has_nlte_levels(element)) {
+      if (LTEPOP_EXCITATION_USE_TJ && !elem_has_nlte_levels(element) &&
+          !FORCE_SAHA_ION_BALANCE(get_atomicnumber(element))) {
         globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
       }
 
