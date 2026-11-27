@@ -86,12 +86,13 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
   const auto T_e = grid::Te_allcells[nonemptymgi];
 
   // photoionisation plus collisional ionisation rate coefficient per ground level pop. The collisional part uses
-  // the nne of the caller, e.g. the trial nne of the nne solver.
+  // the nne of the caller, e.g. the trial nne of the nne solver. The solver also tries nne = 0, and a zero
+  // radiative rate then gives no ionisation. The floor at MINNNE, the lowest stored nne, prevents this.
   const auto groundcontindex = get_groundcontindex(element, ion);
   const ptrdiff_t ionestimindex = (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
   const double Gamma_groundlevel =
       groundcontindex >= 0
-          ? globals::gammaestimator[ionestimindex] + (grid::get_clumpfactor(nonemptymgi) * nne *
+          ? globals::gammaestimator[ionestimindex] + (grid::get_clumpfactor(nonemptymgi) * std::max(nne, MINNNE) *
                                                       globals::col_iongamma_per_gspop_per_clumpednne[ionestimindex])
           : 0.;
 
