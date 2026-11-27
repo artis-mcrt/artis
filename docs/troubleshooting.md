@@ -203,17 +203,22 @@ of the cells of a timestep are at a limit.
 [Example: a nebular spectrum](example.md) shows a cell without enough cooling, because its elements have no atomic
 data.
 
-### A warning of a second root of the thermal balance
+### A warning of a possible second root of the thermal balance
 
 Heating minus cooling can have more than one root between [MINTEMP](options.md#mintemp) and
 [MAXTEMP](options.md#maxtemp). The solver then finds only one of them, and T_e can change between two roots from one
 timestep to the next. A change of T_e of more than 20% in one iteration starts a test. The solver evaluates heating
 minus cooling at the T_e from the start of the iteration. A sign change between that T_e and the opposite limit
-proves a second root.
+shows a possible second root.
 
-The log then gives `call_T_e_finder: cell ... timestep ...: the thermal balance has a second root in ...`, once for
-each cell and timestep. The message gives the range of the second root and the change of T_e. The run continues
-with the root that the solver found.
+The sign change is not a proof. Without
+[LTEPOP_EXCITATION_USE_TJ](options.md#ltepop_excitation_use_tj), each evaluation takes the ionisation rates of the
+elements without NLTE levels from the populations of an earlier evaluation. Two evaluations at different times can
+therefore use different rates.
+
+The log then gives `call_T_e_finder: cell ... timestep ...: the thermal balance changes sign in ... outside the solver
+interval, so it can have a second root`, once for each cell and timestep. The message gives the range of the sign
+change and the change of T_e. The run continues with the root that the solver found.
 
 ### Warnings that need a check of the input
 

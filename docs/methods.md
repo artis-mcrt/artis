@@ -341,8 +341,8 @@ limits has no thermal balance, and the log of its rank has a warning (see
 
 The solver finds one root between the limits. After a change of T_e of more than 20% in one iteration, the code
 evaluates the balance at the T_e from the start of the iteration. A sign change between that T_e and the opposite
-limit proves a second root, and the log gets a warning (see
-[Troubleshooting](troubleshooting.md#a-warning-of-a-second-root-of-the-thermal-balance)).
+limit shows a possible second root, and the log gets a warning (see
+[Troubleshooting](troubleshooting.md#a-warning-of-a-possible-second-root-of-the-thermal-balance)).
 
 - Options: [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops),
   [BFCOOLING_USELEVELPOPNOTIONPOP](options.md#bfcooling_uselevelpopnotionpop),

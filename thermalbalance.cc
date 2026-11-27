@@ -452,7 +452,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
                  T_e_root_upper);
     }
 
-    // after a large change of T_e, a sign change between T_e_old and the opposite limit proves a second root
+    // after a large change of T_e, a sign change between T_e_old and the opposite limit shows a possible second root
     constexpr double T_e_fractional_change_for_second_root_test = 0.2;
     if (T_e_old >= MINTEMP && T_e_old <= MAXTEMP &&
         std::abs((T_e / T_e_old) - 1.) > T_e_fractional_change_for_second_root_test) {
@@ -467,14 +467,15 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
       std::ranges::copy(groundlevelpops_of_solution, groundlevelpops.begin());
       grid::set_nne(nonemptymgi, nne_of_solution);
 
-      const bool second_root_below_T_e_old = (T_e_old < T_e_root_lower) && (f_T_e_old * f_T_min < 0);
-      const bool second_root_above_T_e_old = (T_e_old > T_e_root_upper) && (f_T_e_old * f_T_max < 0);
-      if ((second_root_below_T_e_old || second_root_above_T_e_old) &&
+      const bool sign_change_below_T_e_old = (T_e_old < T_e_root_lower) && (f_T_e_old * f_T_min < 0);
+      const bool sign_change_above_T_e_old = (T_e_old > T_e_root_upper) && (f_T_e_old * f_T_max < 0);
+      if ((sign_change_below_T_e_old || sign_change_above_T_e_old) &&
           second_T_e_root_warned.is_first_occurrence(nonemptymgi)) {
-        const double T_e_opposite_limit = second_root_below_T_e_old ? MINTEMP : MAXTEMP;
+        const double T_e_opposite_limit = sign_change_below_T_e_old ? MINTEMP : MAXTEMP;
         printlnlog(
-            "[warning] call_T_e_finder: cell {} timestep {}: the thermal balance has a second root in [{:g}, {:g}] "
-            "[K]. The solver changed T_e from {:g} to {:g} [K] (repeats suppressed)",
+            "[warning] call_T_e_finder: cell {} timestep {}: the thermal balance changes sign in [{:g}, {:g}] [K], "
+            "outside the solver interval, so it can have a second root. The solver changed T_e from {:g} to {:g} [K] "
+            "(repeats suppressed)",
             modelgridindex, globals::timestep, std::min(T_e_old, T_e_opposite_limit),
             std::max(T_e_old, T_e_opposite_limit), T_e_old, T_e);
       }
