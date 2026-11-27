@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <optional>
 #include <ranges>
 #include <span>
 #include <vector>
@@ -191,18 +192,91 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
   heatingcoolingrates.heating_ff = globals::ffheatingestimator[nonemptymgi];
 }
 
+THREADLOCALONHOST CellWarningMarker ionisation_rates_warned;
+
+// Set the ionisation rates per ground level population of the elements without NLTE levels and without
+// FORCE_SAHA_ION_BALANCE. Each rate is photoion_gamma_per_gspop(element, ion, groundcontindex) plus the collisional
+// ionisation rate at the T_e, the nne, and the populations that the cell holds now. Return the largest relative change
+// of a rate, or no value if the cell contains no such element.
+template <typename PhotoionGammaFunc>
+auto set_gammaestimator_without_nlte_levels(const int nonemptymgi, const PhotoionGammaFunc& photoion_gamma_per_gspop)
+    -> std::optional<double> {
+  std::optional<double> max_relative_change_of_rates;
+  for (int element = 0; element < get_nelements(); element++) {
+    if (elem_has_nlte_levels(element) || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element)) ||
+        grid::get_elem_numberdens(nonemptymgi, element) <= 0.) {
+      continue;
+    }
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions - 1; ion++) {
+      const auto groundcontindex = get_groundcontindex(element, ion);
+      if (groundcontindex < 0) {
+        continue;
+      }
+      const ptrdiff_t ionestimindex =
+          (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
+      const double previous_rate = globals::gammaestimator[ionestimindex];
+      const double rate = photoion_gamma_per_gspop(element, ion, groundcontindex) +
+                          calculate_iongamma_collisional_per_gspop(nonemptymgi, element, ion);
+      globals::gammaestimator[ionestimindex] = rate;
+      const double larger_rate = std::max(std::abs(rate), std::abs(previous_rate));
+      const double relative_change = larger_rate > 0. ? std::abs(rate - previous_rate) / larger_rate : 0.;
+      max_relative_change_of_rates = std::max(max_relative_change_of_rates.value_or(0.), relative_change);
+    }
+  }
+  return max_relative_change_of_rates;
+}
+
+// Solve the ion balance and nne of the cell at the T_e that the cell holds. The ionisation rates of an element without
+// NLTE levels depend on nne, and some also depend on the ion populations. The ion balance gives nne and the ion
+// populations. The function therefore repeats the rates and the ion balance until no rate changes by more than the
+// accuracy of the nne solver. Then the populations of the last ion balance agree with the rates.
+template <typename PhotoionGammaFunc>
+void calculate_ion_balance_nne_with_ionisation_rates(const int nonemptymgi,
+                                                     const PhotoionGammaFunc& photoion_gamma_per_gspop) {
+  // the same fractional accuracy as the nne solver find_converged_nne() in ltepop.cc
+  constexpr double rates_fractional_accuracy = 1e-3;
+  constexpr int max_ion_balance_passes = 10;
+
+  for (int ion_balance_pass = 1;; ion_balance_pass++) {
+    const auto max_relative_change_of_rates =
+        set_gammaestimator_without_nlte_levels(nonemptymgi, photoion_gamma_per_gspop);
+    // The first pass needs an ion balance, because the populations of the cell belong to the previous T_e.
+    if (ion_balance_pass > 1 && max_relative_change_of_rates.value_or(0.) <= rates_fractional_accuracy) {
+      return;
+    }
+    calculate_ion_balance_nne(nonemptymgi);
+    if (!max_relative_change_of_rates.has_value()) {
+      // the ion balance uses no ionisation rate, so one pass is sufficient
+      return;
+    }
+    if (ion_balance_pass >= max_ion_balance_passes) {
+      if (ionisation_rates_warned.is_first_occurrence(nonemptymgi)) {
+        printlnlog(
+            "[warning] T_e finder: cell {} timestep {}: the ionisation rates did not converge within {} passes of the "
+            "ion balance (T_e {:g} [K], largest relative change of a rate {:g}; repeats suppressed)",
+            grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, max_ion_balance_passes,
+            grid::Te_allcells[nonemptymgi], *max_relative_change_of_rates);
+      }
+      return;
+    }
+  }
+}
+
 // Residual (total heating minus total cooling) of the thermal balance equation, as a function of T_e.
 // NB: this is not a pure function of T_e. Evaluating it stores T_e in the grid and re-solves the cell's
 // ionisation balance, populations and nne at that temperature, so the cell is left in the state belonging
 // to the last T_e passed in. call_T_e_finder() relies on this and re-evaluates at the final T_e.
 //
 // The ionisation rates of the elements without NLTE levels depend on T_e. The function calculates them at every T_e.
-// The collisional part of these rates uses the nne that the cell holds before the call, so the residual also depends
-// on the previous state of the cell. An element with FORCE_SAHA_ION_BALANCE needs no ionisation rates.
-// - With LTEPOP_EXCITATION_USE_TJ false, the function calculates the full ionisation rates and the partition functions.
+// The collisional part of these rates also depends on nne, so the function repeats the rates and the ion balance
+// until they agree. An element with FORCE_SAHA_ION_BALANCE needs no ionisation rates.
+// - With LTEPOP_EXCITATION_USE_TJ false, the function calculates the partition functions at T_e. It calculates the
+//   photoionisation rates again in each pass, because the stimulated recombination factor of the bound-free
+//   integral depends on nne and on the ion populations.
 // - With LTEPOP_EXCITATION_USE_TJ true, the photoionisation rates stay at photoion_gamma_per_gspop. The grid update
-//   calculates them with the W and T_R that it uses to normalise the Monte Carlo estimators. The function adds the
-//   collisional rates at T_e. The partition functions use T_J, so they do not depend on T_e.
+//   calculates them with the W and T_R that it uses to normalise the Monte Carlo estimators. The partition functions
+//   use T_J, so they do not depend on T_e.
 auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const double t_current,
                                    HeatingCoolingRates& heatingcoolingrates, const std::span<double> bfheatingcoeffs,
                                    const std::span<const double> photoion_gamma_per_gspop) -> double {
@@ -211,34 +285,23 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
   // Set new T_e guess for the current cell and update populations
   grid::Te_allcells[nonemptymgi] = T_e_float;
 
-  for (int element = 0; element < get_nelements(); element++) {
-    if (elem_has_nlte_levels(element)) {
-      continue;
-    }
-    if (!FORCE_SAHA_ION_BALANCE(get_atomicnumber(element))) {
-      // the ionisation rates from the current level populations
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions - 1; ion++) {
-        const auto groundcontindex = get_groundcontindex(element, ion);
-        if (groundcontindex < 0) {
-          continue;
-        }
-        const ptrdiff_t ionestimindex =
-            (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
-        if constexpr (LTEPOP_EXCITATION_USE_TJ) {
-          globals::gammaestimator[ionestimindex] = photoion_gamma_per_gspop[groundcontindex] +
-                                                   calculate_iongamma_collisional_per_gspop(nonemptymgi, element, ion);
-        } else {
-          globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
-        }
+  if constexpr (LTEPOP_EXCITATION_USE_TJ) {
+    calculate_ion_balance_nne_with_ionisation_rates(
+        nonemptymgi, [photoion_gamma_per_gspop](const int /*element*/, const int /*ion*/, const int groundcontindex) {
+          return photoion_gamma_per_gspop[groundcontindex];
+        });
+  } else {
+    for (int element = 0; element < get_nelements(); element++) {
+      if (!elem_has_nlte_levels(element)) {
+        calculate_cellpartfuncts(nonemptymgi, element);
       }
     }
-    if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
-      calculate_cellpartfuncts(nonemptymgi, element);
-    }
+    calculate_ion_balance_nne_with_ionisation_rates(
+        nonemptymgi, [nonemptymgi](const int element, const int ion, const int /*groundcontindex*/) {
+          return calculate_iongamma_radiative_per_gspop(nonemptymgi, element, ion);
+        });
   }
 
-  calculate_ion_balance_nne(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
   const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
 
