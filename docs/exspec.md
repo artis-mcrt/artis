@@ -44,8 +44,8 @@ Keep the values of `POL_ON` and `SAMPLE_RPKT_EMISSION`. These options select col
 The `nprocs_exspec` line of `input.txt` gives the number of `sn3d` ranks that wrote the packet files.
 
 :::{warning}
-If `input.txt` is absent, `exspec` copies a plain `input-newrun.txt` to `input.txt` when it finds one.
-This copy takes priority even if `input.txt.zst` holds newer parameters.
+If `input.txt` and `input.txt.zst` are both absent, `exspec` copies a plain `input-newrun.txt` to `input.txt` when it
+finds one.
 Before you resume `sn3d`, [check the mode and timestep](troubleshooting.md#the-run-starts-again-from-the-first-timestep)
 against your restart files. A new simulation [removes the previous output and restart files](outputfiles.md#a-new-simulation-removes-the-files-of-the-previous-one).
 :::

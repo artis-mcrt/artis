@@ -856,13 +856,22 @@ void remove_previous_simulation_files() {
   const std::regex generated_name{
       R"((gridsave|packets|vspecpol|vpackets|vpkt_grid).*\.tmp|input(-newrun)?\.txt\.tmp|.*\.out(\..*)?|)"
       R"(output_[0-9]+-[0-9]+\.txt(\.zst|\.gz|\.xz)?|)"
-      R"(exspec.*\.txt.*|.*\.slurm|job_from_ts[0-9]+|packets|vspecpol|vpackets|vpkt_grid|speclc_angle_res|)"
+      R"(exspec.*\.txt.*|job_from_ts[0-9]+|packets|vspecpol|vpackets|vpkt_grid|speclc_angle_res|)"
       R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|syn_dir\.txt|logfiles\.tar.*|out\.txt(\.zst)?|inputcheck)"};
+  // Older job scripts made a job folder with the name of the Slurm job ID, e.g. 12411848.slurm. A symlink of this name
+  // also goes, also if its target is missing. remove_all() removes the symlink but not its target. A file such as the
+  // submission script submit.slurm does not match, so it stays.
+  const std::regex legacy_slurm_jobfolder_name{R"([0-9]+\.slurm)"};
   std::vector<std::filesystem::path> paths_to_remove;
   std::error_code ec;
   for (const auto& entry : std::filesystem::directory_iterator(".", ec)) {
     const auto name = entry.path().filename().string();
-    if (std::regex_match(name, generated_name) && !(name.starts_with("slurm-") && name.ends_with(".out"))) {
+    std::error_code entry_type_ec;
+    const bool is_legacy_slurm_jobfolder_or_symlink =
+        std::regex_match(name, legacy_slurm_jobfolder_name) &&
+        (entry.is_symlink(entry_type_ec) || entry.is_directory(entry_type_ec));
+    if ((std::regex_match(name, generated_name) && !(name.starts_with("slurm-") && name.ends_with(".out"))) ||
+        is_legacy_slurm_jobfolder_or_symlink) {
       paths_to_remove.push_back(entry.path());
     }
   }

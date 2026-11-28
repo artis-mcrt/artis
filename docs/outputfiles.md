@@ -485,8 +485,8 @@ Python has no numpy, run the script with uv, e.g. `uv run --with numpy read_spec
 
 A new simulation removes the restart files and the `job_from_ts*` folders. At the top level of the model folder,
 `sn3d` also removes files that match `*.out` or `*.out.*`. This includes personal files such as `analysis.out.zst`.
-It removes both files and folders that match `*.slurm`, including a submission script such as `submit.slurm`.
-Keep such scripts in a subfolder, for example `artis/scripts/`.
+It also removes the job folders of older job scripts, which have the name of the Slurm job ID, e.g. `12411848.slurm`.
+A submission script such as `submit.slurm` stays.
 `sn3d` keeps the default Slurm output files that match `slurm-*.out`.
 `scripts/clean.sh` also removes those output files and the core files.
 
