@@ -2111,16 +2111,14 @@ void setup_nlte_levels() {
   printlnlog("[info] Total NLTE levels: {}, of which {} are superlevels", globals::total_nlte_levels, n_super_levels);
 }
 
-// The name of the file with the input parameters. This is input-newrun.txt if the model folder has that file and no
-// input.txt, e.g. after a cleanup of the model folder. istream_required() opens input.txt also as input.txt.zst, so
-// the test accepts both forms. Otherwise a compressed input.txt of a restart starts a new simulation, which removes the
-// files of the previous simulation.
+// The name of the file with the input parameters. This is input-newrun.txt if the model folder has that file and
+// istream_required() cannot find input.txt, e.g. after a cleanup of the model folder. inputfile_exists() searches the
+// same folders and the same plain and compressed forms as istream_required(), e.g. data/input.txt.zst. Otherwise an
+// input.txt that only the reader finds starts a new simulation, which removes the files of the previous simulation.
 auto get_parameterfile_name() -> std::string_view {
   const std::filesystem::path modelfolder{globals::path_to_modelfolder};
-  const bool has_plain_or_compressed_input_txt =
-      std::filesystem::exists(modelfolder / "input.txt") || std::filesystem::exists(modelfolder / "input.txt.zst");
   const bool use_newrun_copy =
-      !has_plain_or_compressed_input_txt && std::filesystem::exists(modelfolder / "input-newrun.txt");
+      !inputfile_exists("input.txt") && std::filesystem::exists(modelfolder / "input-newrun.txt");
   return use_newrun_copy ? "input-newrun.txt" : "input.txt";
 }
 
